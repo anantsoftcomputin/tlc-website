@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -sf http://localhost:3000)",
+      "Bash(break)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(cat /tmp/tlc-dev.log 2>&1 | tail -60)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(curl -s http://localhost:3001)",
+      "Bash(jobs -l)",
+      "Bash(curl -s \"https://unsplash.com/napi/search/photos?query=japan%20temple%20kyoto&per_page=3\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&q=60\")",
+      "Bash(python3 -c \"p='src/app/page.tsx'; s=open\\(p,encoding='utf-8'\\).read\\(\\); bad=chr\\(0xE2\\)+chr\\(0x80\\)+chr\\(0x94\\); print\\('found:', s.count\\(bad\\)\\); s=s.replace\\(bad, chr\\(0x2014\\)\\); open\\(p,'w',encoding='utf-8'\\).write\\(s\\)\")",
+      "WebFetch(domain:www.tourradar.com)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=4500 http://localhost:3001 mobile-home-top.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --full-page --wait-for-timeout=6000 http://localhost:3001 mobile-home-full.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=4000 http://localhost:3001/trips/thailand-family-escape mobile-trip.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=4000 http://localhost:3001 mobile-v2-top.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=4000 http://localhost:3001/trips/thailand-family-escape mobile-v2-trip.png)",
+      "Bash(sips -c 120 390 --cropOffset 724 0 mobile-v2-top.png --out dock-crop.png)",
+      "Bash(sips -z 240 780 dock-crop.png --out dock-crop-big.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=3500 http://localhost:3001/destinations mobile-v2-dest.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=3500 http://localhost:3001/plan-my-trip mobile-v2-plan.png)",
+      "Bash(npx --yes playwright screenshot --channel chrome --viewport-size=390,844 --wait-for-timeout=3500 http://localhost:3001/destinations mobile-v3-dest.png)"
+    ]
+  }
+}

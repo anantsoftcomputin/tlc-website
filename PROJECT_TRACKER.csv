@@ -1,0 +1,40 @@
+ID,Phase,Workstream,Task,Status,Priority,Owner,Approver,Dependency,Acceptance Criteria
+TLC-001,0,Governance,Nominate one final project approver,Ready for Client,Critical,TLC Project Coordinator,TLC Business Owner,None,One named approver is recorded
+TLC-002,0,Brand,Confirm public brand name and supply master logo,Ready for Client,Critical,TLC Business Owner,TLC Business Owner,None,Brand name and production logo files are approved
+TLC-003,0,Operations,Verify address phones email WhatsApp and business hours,Ready for Client,Critical,TLC Project Coordinator,TLC Business Owner,None,Every public contact path has been tested
+TLC-004,0,Content,Complete legacy content inventory,In Progress,High,Content Owner,TLC Business Owner,TLC-001,Every useful legacy page is classified
+TLC-005,0,SEO,Export legacy URLs from Search Console and analytics,Backlog,High,SEO Owner,TLC Business Owner,Search Console access,Every traffic-bearing URL has a migration decision
+TLC-101,1,Design,Approve design system and homepage direction,Client Review,High,TLC Business Owner,TLC Business Owner,TLC-002,Desktop and mobile design direction is signed off
+TLC-102,1,Engineering,Establish Next.js architecture and quality gates,Approved,Critical,Engineering,Technical Owner,None,Lint typecheck tests and production build pass
+TLC-103,1,Firebase,Configure Firebase web application,Approved,Critical,Technical Owner,Technical Owner,Firebase project,Firebase initialises without exposing server credentials
+TLC-104,1,Hosting,Configure Netlify project and preview deployment,Backlog,Critical,Technical Owner,TLC Business Owner,Repository access,Preview deploy uses correct environment
+TLC-201,2,Content,Select 10 priority destinations,Ready for Client,High,Travel Consultants,TLC Business Owner,TLC-003,Launch destination list is approved
+TLC-202,2,Content,Select 10 to 15 launch packages,Ready for Client,High,Travel Consultants,TLC Business Owner,TLC-003,Launch trip list and current status are approved
+TLC-203,2,Content,Prepare destination content and operational sources,Backlog,High,Content Owner,Travel Consultants,TLC-201,Every destination meets the content template
+TLC-204,2,Content,Prepare trip itineraries inclusions and images,Backlog,High,Content Owner,Travel Consultants,TLC-202,Every trip meets the trip template
+TLC-205,2,Firebase,Create Firestore destination and trip repositories,Backlog,High,Engineering,Technical Owner,TLC-203; TLC-204,Published Firestore content renders without UI changes
+TLC-206,2,Migration,Import approved destination and trip content,Backlog,High,Engineering,Content Owner,TLC-205,Imported records preserve relationships and publication states
+TLC-301,3,Conversion,Approve enquiry fields consent and ownership,Ready for Client,Critical,Sales Lead,TLC Business Owner,TLC-001,Required fields consent and lead owner are documented
+TLC-302,3,Security,Configure Firebase Admin credentials in hosting,Backlog,Critical,Technical Owner,Technical Owner,TLC-104,Credentials are server-only and Admin SDK health check passes
+TLC-303,3,Backend,Implement persistent Firestore inquiry repository,Backlog,Critical,Engineering,Technical Owner,TLC-302,Validated enquiry creates exactly one Firestore record
+TLC-304,3,Conversion,Complete trip customisation form,Backlog,High,Engineering,Sales Lead,TLC-301; TLC-303,Trip context and customer requirements are persisted
+TLC-305,3,Conversion,Persist Plan My Trip submissions,Backlog,Critical,Engineering,Sales Lead,TLC-301; TLC-303,Planner completion creates an actionable lead
+TLC-306,3,Notifications,Send staff and traveller notifications,Backlog,High,Engineering,Sales Lead,TLC-303,Staff receives lead and traveller receives acknowledgement
+TLC-307,3,Analytics,Track core conversion events and attribution,Backlog,High,Engineering,SEO Owner,TLC-301,Approved events appear without sensitive payloads
+TLC-308,3,Testing,Add end-to-end enquiry tests,Backlog,Critical,Engineering,Technical Owner,TLC-304; TLC-305; TLC-306,Automated critical lead journeys pass
+TLC-401,4,Authentication,Implement verified admin sessions and roles,Backlog,Critical,Engineering,Technical Owner,TLC-302,Protected requests verify session and role server-side
+TLC-402,4,Admin,Build destination and trip management,Backlog,High,Engineering,Content Owner,TLC-401; TLC-205,Editor can draft preview publish and archive
+TLC-403,4,Media,Build Firebase Storage media library,Backlog,High,Engineering,Content Owner,TLC-401,Approved users can upload search edit alt text and safely remove assets
+TLC-404,4,Admin,Build enquiry inbox,Backlog,Critical,Engineering,Sales Lead,TLC-401; TLC-303,Sales can view assign filter and update enquiries
+TLC-405,4,Security,Add audit logging,Backlog,High,Engineering,Technical Owner,TLC-401,Material admin actions record actor entity action and timestamp
+TLC-501,5,CRM,Approve sales stages ownership and SLAs,Backlog,High,Sales Lead,TLC Business Owner,TLC-404,Pipeline rules and response targets are documented
+TLC-502,5,CRM,Build contacts leads activities and tasks,Backlog,High,Engineering,Sales Lead,TLC-501,Every enquiry can become an owned managed lead
+TLC-503,5,Quotes,Build quotation records and versioning,Backlog,High,Engineering,Sales Lead,TLC-502,Quote history and status are preserved
+TLC-601,6,SEO,Create three-month editorial calendar,Backlog,Medium,SEO Owner,TLC Business Owner,TLC-201,Topics align with search and sales demand
+TLC-602,6,Content,Publish priority travel stories,Backlog,Medium,Content Owner,SEO Owner,TLC-601,Each article has unique useful reviewed content and internal links
+TLC-603,6,Analytics,Create monthly acquisition and lead report,Backlog,Medium,SEO Owner,TLC Business Owner,TLC-307,Report uses real traffic conversion and lead-quality data
+TLC-604,6,AI,Implement grounded Ask TLC pilot,Backlog,Low,Engineering,Travel Consultants,TLC-205; TLC-303,Assistant recommends only published database content
+TLC-701,Launch,QA,Run responsive accessibility and journey QA,Backlog,Critical,Engineering,TLC Project Coordinator,TLC-308; TLC-402,Launch checklist passes at required viewports
+TLC-702,Launch,SEO,Validate sitemap metadata canonicals and redirects,Backlog,Critical,SEO Owner,Technical Owner,TLC-005; TLC-701,Production URLs validate and priority redirects work
+TLC-703,Launch,Release,Complete production readiness review,Backlog,Critical,Technical Owner,TLC Business Owner,TLC-701; TLC-702,Business content and technical owners approve launch
+TLC-704,Launch,Monitoring,Complete 48-hour launch monitoring,Backlog,High,Technical Owner,TLC Business Owner,TLC-703,Errors lead delivery URLs and redirects remain healthy
