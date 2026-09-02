@@ -61,3 +61,41 @@ Updated: 2026-09-02
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test`, and rules tests pass.
 - [ ] Seed data makes all Phase 1 screens demonstrable.
 - [ ] `docs/DEMO.md` provides a repeatable demo script.
+
+# Phase 2 Plan — Commerce
+
+## Step 7 — Live inventory foundation
+
+- [x] Define normalized flight and hotel provider contracts.
+- [x] Add deterministic mock flight and hotel adapters with source and fetch-time provenance.
+- [ ] Add provider registry, retry/rate-limit logging, and organization-level selection.
+- [ ] Add one credential-backed flight adapter and one credential-backed hotel adapter.
+- [ ] Expose authenticated inventory search and price-check commands.
+
+## Step 8 — Quotes and itineraries
+
+- [ ] Build the quote/cart command service with server-recomputed totals and approval guardrails.
+- [ ] Add versioned quote creation, revision, send, view, accept, reject, and expiry workflows.
+- [ ] Build the staff quote builder with flight/hotel inventory selection.
+- [ ] Build secure shareable itinerary pages and printable PDF output.
+
+## Step 9 — Booking workflow
+
+- [ ] Convert accepted quotes into bookings with traveller details.
+- [ ] Add per-item supplier confirmation, PNR, failure, and partial-confirmation states.
+- [ ] Add booking timeline, document checklist, and human approval controls.
+
+## Step 10 — Payments and ledger
+
+- [ ] Define payment provider contracts and deterministic mock.
+- [ ] Add Razorpay payment links, verified webhooks, partial payments, and reminders.
+- [ ] Add receivable/payable ledger entries and payment reconciliation.
+
+## Checkpoint 2 exit criteria
+
+- [ ] A staff user can search sourced inventory, build and version a quote, and share an itinerary.
+- [ ] A customer can view and accept an itinerary without accessing internal pricing.
+- [ ] An authorized staff user can create a booking and collect advance/balance payments.
+- [ ] Every quote, booking, and payment mutation is organization-scoped and audited.
+- [ ] Mocks make the full commerce flow demonstrable without provider credentials.
+- [ ] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete flow.

@@ -31,3 +31,7 @@ All quote items use one currency. Customer sell total is base sell plus service 
 ## ADR-008 — Physical analytics collection names
 
 The brief's conceptual `analytics/daily/{id}` and `analytics/staff/{id}` paths do not alternate collection and document segments and therefore are not valid Firestore document paths. Physical collections are `analyticsDaily/{orgId_date}` and `analyticsStaff/{uid_month}`.
+
+## ADR-009 — Inventory provenance and human booking approval
+
+Flight and hotel results are normalized at the adapter boundary and always returned with a provider `source` and ISO `fetchedAt` value. Provider offer identifiers must be price-checked before booking. Booking, cancellation, and reissue contracts require an authenticated human approver and an idempotency key where the command can create supplier inventory.
