@@ -1,0 +1,16 @@
+import { AlertTriangle, BellRing, CheckCircle2, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { AlertActions } from "@/components/admin/alert-actions";
+import { requireAdminUser } from "@/lib/auth/session";
+import { FirestoreAlertRepository } from "@/repositories/firebase/firestore-alert-repository";
+
+const managerRoles = new Set(["super_admin", "owner", "manager", "admin"]);
+function formatDate(value: string) { return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(value)); }
+export default async function AlertsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const user = await requireAdminUser("crm:read"); const params = await searchParams; const selected = ["open", "acknowledged", "resolved"].includes(params.status || "") ? params.status : "open";
+  const alerts = await new FirestoreAlertRepository(user.orgId, { uid: user.uid, canViewAll: managerRoles.has(user.role) }).listAlerts(); const shown = alerts.filter((item) => item.status === selected);
+  const critical = alerts.filter((item) => item.status !== "resolved" && item.severity === "CRITICAL").length; const active = alerts.filter((item) => item.status !== "resolved").length;
+  return <><header className="admin-page-head"><div><p className="eyebrow">AI supervisor</p><h1>Alerts centre</h1><p>Explainable operational risks that always remain under human control.</p></div><span className="admin-count"><BellRing/>{active} active</span></header><div className="admin-metrics alert-metrics"><article className="admin-metric"><div><span>Active alerts</span><strong>{active}</strong><small>Open or acknowledged</small></div><i><AlertTriangle/></i></article><article className="admin-metric"><div><span>Critical</span><strong>{critical}</strong><small>Requires immediate attention</small></div><i><ShieldAlert/></i></article><article className="admin-metric"><div><span>Resolved</span><strong>{alerts.filter((item) => item.status === "resolved").length}</strong><small>Closed by team or supervisor</small></div><i><CheckCircle2/></i></article></div>
+    <nav className="alert-tabs">{["open", "acknowledged", "resolved"].map((status) => <Link className={selected === status ? "active" : ""} href={`/admin/alerts?status=${status}`} key={status}>{status}<span>{alerts.filter((item) => item.status === status).length}</span></Link>)}</nav>
+    <section className="alert-list">{shown.map((alert) => <article className={`alert-card severity-${alert.severity.toLowerCase()}`} key={alert.id}><header><span>{alert.severity}</span><div><b>{alert.ruleKey.replaceAll("_", " ")}</b><small>{formatDate(alert.updatedAt)}</small></div></header><p>{alert.reasoning}</p><ul>{alert.evidence.map((item, index) => <li key={`${item.label}-${index}`}><span>{item.label}</span><b>{String(item.value)}</b></li>)}</ul><footer><Link href={alert.href}>Open {alert.entity.type}</Link><AlertActions alertId={alert.id} status={alert.status}/></footer></article>)}{!shown.length && <div className="admin-empty"><span><CheckCircle2/></span><h3>No {selected} alerts</h3><p>The supervisor runs every 15 minutes and only creates alerts with explicit evidence.</p></div>}</section></>;
+}

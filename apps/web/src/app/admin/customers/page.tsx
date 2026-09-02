@@ -1,0 +1,18 @@
+import { Crown, Search, Upload, UserRoundCheck, UsersRound } from "lucide-react";
+import Link from "next/link";
+import { requireAdminUser } from "@/lib/auth/session";
+import { FirestoreCustomerRepository } from "@/repositories/firebase/firestore-customer-repository";
+import { hasPermission } from "@/lib/auth/roles";
+
+export default async function AdminCustomersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const user = await requireAdminUser("crm:read");
+  const customers = await new FirestoreCustomerRepository(user.orgId).listCustomers();
+  const query = (await searchParams).q?.trim().toLowerCase() || "";
+  const filtered = query ? customers.filter((customer) => [customer.name, customer.city, ...customer.phones, ...customer.emails, ...customer.tags].some((value) => value?.toLowerCase().includes(query))) : customers;
+  const active = customers.filter((customer) => ["active", "repeat", "vip"].includes(customer.lifecycleStage)).length;
+  const vip = customers.filter((customer) => customer.lifecycleStage === "vip").length;
+
+  return <><header className="admin-page-head"><div><p className="eyebrow">Customer intelligence</p><h1>Customer directory</h1><p>One trusted profile for every traveller, interaction and preference.</p></div>{hasPermission(user.role, "users:manage") && <Link className="button primary" href="/admin/customers/import"><Upload/>Import customers</Link>}</header>
+    <div className="admin-metrics customer-metrics"><article className="admin-metric"><div><span>Total customers</span><strong>{customers.length}</strong><small>Unified customer records</small></div><i><UsersRound/></i></article><article className="admin-metric"><div><span>Active relationships</span><strong>{active}</strong><small>Active, repeat and VIP</small></div><i><UserRoundCheck/></i></article><article className="admin-metric"><div><span>VIP travellers</span><strong>{vip}</strong><small>High-value relationships</small></div><i><Crown/></i></article></div>
+    <section className="admin-panel"><header><div><span><UsersRound/></span><div><h2>All customers</h2><p>{filtered.length} of {customers.length} records shown</p></div></div><form className="customer-search"><Search/><input name="q" defaultValue={query} placeholder="Name, phone, city or tag"/><button type="submit">Search</button></form></header>{filtered.length ? <div className="admin-table-wrap"><table className="admin-table customer-table"><thead><tr><th>Customer</th><th>Contact</th><th>City</th><th>Lifecycle</th><th>Signals</th><th>Last activity</th><th></th></tr></thead><tbody>{filtered.map((customer) => <tr key={customer.id}><td><b>{customer.name}</b><span>{customer.tags.slice(0, 3).join(" · ") || "No tags yet"}</span></td><td>{customer.phones[0] || "—"}<span>{customer.emails[0] || "No email"}</span></td><td>{customer.city || "—"}</td><td><span className={`status-pill lifecycle-${customer.lifecycleStage}`}>{customer.lifecycleStage}</span></td><td>{customer.segments[0]?.label || (customer.clv ? `CLV ${customer.clv.score}` : "Learning")}</td><td>{customer.lastActivityAt ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(customer.lastActivityAt)) : "No activity"}</td><td><Link href={`/admin/customers/${customer.id}`}>Open 360°</Link></td></tr>)}</tbody></table></div> : <div className="admin-empty"><span><UsersRound/></span><h3>{query ? "No matching customers" : "Your customer directory is empty"}</h3><p>{query ? "Try a broader name, phone number, city or tag." : "Import your existing customer list to start building unified traveller profiles."}</p></div>}</section></>;
+}

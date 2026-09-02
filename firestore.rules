@@ -1,8 +1,0 @@
-rules_version = '2';
-service cloud.firestore { match /databases/{database}/documents {
-  function signedIn() { return request.auth != null; }
-  function isAdmin() { return signedIn() && request.auth.token.role in ['super_admin','admin','content_editor']; }
-  match /{collection}/{document} { allow read: if collection in ['destinations','trips','travelStyles','stories','testimonials','faqs','siteSettings'] && resource.data.status == 'published'; allow write: if isAdmin(); }
-  match /inquiries/{id} { allow create: if request.resource.data.keys().hasAll(['customer','source','createdAt']); allow read, update: if isAdmin(); }
-  match /{document=**} { allow read, write: if false; }
-}}

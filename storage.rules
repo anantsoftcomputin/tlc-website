@@ -1,2 +1,0 @@
-rules_version = '2';
-service firebase.storage { match /b/{bucket}/o { match /media/{allPaths=**} { allow read: if true; allow write: if request.auth != null && request.auth.token.role in ['super_admin','admin','content_editor'] && request.resource.size < 15 * 1024 * 1024; } } }

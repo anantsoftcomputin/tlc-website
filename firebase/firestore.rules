@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function role() { return signedIn() ? request.auth.token.role : null; }
+    function orgId() { return signedIn() ? request.auth.token.orgId : null; }
+    function hasRole(roles) { return signedIn() && role() in roles; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isPlatformAdmin() { return hasRole(['super_admin']); }
+    function isOwner() { return hasRole(['super_admin', 'owner']); }
+    function isManager() { return hasRole(['super_admin', 'owner', 'manager', 'admin']); }
+    function isContentStaff() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'marketing', 'content_editor']); }
+    function isCRMReader() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'sales', 'travel_consultant', 'accounts', 'marketing', 'readonly']); }
+    function isCRMWriter() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'sales', 'travel_consultant']); }
+    function isFinanceStaff() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'accounts']); }
+    function sameOrg(data) { return isPlatformAdmin() || (orgId() != null && data.orgId == orgId()); }
+    function writesOwnOrg() { return isPlatformAdmin() || (orgId() != null && request.resource.data.orgId == orgId()); }
+    function keepsOrg() { return isPlatformAdmin() || request.resource.data.orgId == resource.data.orgId; }
+    function assignedToUser(data) { return data.assignedUid == request.auth.uid || data.assignedTo == request.auth.uid; }
+    function canAccessAssigned(data) { return isManager() || hasRole(['accounts', 'readonly']) || assignedToUser(data); }
+    function isPublished() { return resource.data.status == 'published'; }
+
+    match /orgs/{id} {
+      allow read: if isPlatformAdmin() || (signedIn() && id == orgId());
+      allow create, update: if isOwner() && writesOwnOrg();
+      allow delete: if false;
+    }
+
+    match /destinations/{id} { allow read: if isPublished() || isContentStaff(); allow create, update, delete: if isContentStaff(); }
+    match /trips/{id} { allow read: if isPublished() || isContentStaff(); allow create, update, delete: if isContentStaff(); }
+    match /tripCategories/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
+    match /travelStyles/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
+    match /stories/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
+    match /testimonials/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
+    match /faqs/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
+    match /navigation/{id} { allow read: if true; allow write: if isContentStaff(); }
+    match /siteSettings/{id} { allow read: if resource.data.public == true || isOwner(); allow write: if isOwner(); }
+    match /seoOverrides/{id} { allow read, write: if isContentStaff(); }
+    match /redirects/{id} { allow read, write: if isContentStaff(); }
+    match /media/{id} { allow read: if resource.data.visibility == 'public' || isContentStaff(); allow write: if isContentStaff(); }
+
+    match /inquiries/{id} {
+      allow read, update: if isCRMReader() && sameOrg(resource.data) && canAccessAssigned(resource.data);
+      allow create, delete: if false;
+    }
+    match /customers/{id} {
+      allow read: if isCRMReader() && sameOrg(resource.data) && (isManager() || hasRole(['accounts', 'marketing', 'readonly']) || resource.data.ownerUid == request.auth.uid);
+      allow create: if isCRMWriter() && writesOwnOrg() && (isManager() || request.resource.data.ownerUid == request.auth.uid);
+      allow update: if isCRMWriter() && sameOrg(resource.data) && keepsOrg() && (isManager() || resource.data.ownerUid == request.auth.uid);
+      allow delete: if isManager() && sameOrg(resource.data);
+      match /travelHistory/{tripId} { allow read: if isCRMReader() && sameOrg(get(/databases/$(database)/documents/customers/$(id)).data); allow create, update: if isCRMWriter() && sameOrg(get(/databases/$(database)/documents/customers/$(id)).data) && writesOwnOrg(); allow delete: if isManager() && sameOrg(get(/databases/$(database)/documents/customers/$(id)).data); }
+      match /events/{eventId} { allow read: if isCRMReader() && sameOrg(get(/databases/$(database)/documents/customers/$(id)).data); allow write: if false; }
+    }
+    match /contacts/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
+    match /leads/{id} {
+      allow read: if isCRMReader() && sameOrg(resource.data) && canAccessAssigned(resource.data);
+      allow create: if isCRMWriter() && writesOwnOrg() && (isManager() || request.resource.data.assignedUid == request.auth.uid);
+      allow update: if isCRMWriter() && sameOrg(resource.data) && keepsOrg() && canAccessAssigned(resource.data);
+      allow delete: if isManager() && sameOrg(resource.data);
+      match /activities/{activityId} {
+        allow read: if isCRMReader() && sameOrg(get(/databases/$(database)/documents/leads/$(id)).data) && canAccessAssigned(get(/databases/$(database)/documents/leads/$(id)).data);
+        allow create: if isCRMWriter() && writesOwnOrg() && sameOrg(get(/databases/$(database)/documents/leads/$(id)).data) && canAccessAssigned(get(/databases/$(database)/documents/leads/$(id)).data);
+        allow update, delete: if false;
+      }
+    }
+    match /deals/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
+    match /activities/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
+    match /tasks/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
+    match /quotes/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
+    match /bookings/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update: if isManager() && sameOrg(resource.data) && keepsOrg(); allow delete: if false; }
+    match /payments/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /ledger/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /suppliers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update, delete: if isManager() && sameOrg(resource.data) && keepsOrg(); }
+    match /offers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && writesOwnOrg(); allow update, delete: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && sameOrg(resource.data) && keepsOrg(); }
+    match /campaigns/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && writesOwnOrg(); allow update, delete: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && sameOrg(resource.data) && keepsOrg(); }
+    match /propensity/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow write: if false; }
+    match /alerts/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow write: if false; }
+    match /conversations/{id} {
+      allow read: if isCRMReader() && sameOrg(resource.data);
+      allow create: if isCRMWriter() && writesOwnOrg();
+      allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg();
+      match /messages/{messageId} { allow read: if isCRMReader() && sameOrg(get(/databases/$(database)/documents/conversations/$(id)).data); allow write: if false; }
+    }
+    match /personas/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isOwner() && writesOwnOrg(); allow update, delete: if isOwner() && sameOrg(resource.data) && keepsOrg(); }
+    match /imports/{id} { allow read: if isManager() && sameOrg(resource.data); allow write: if false; }
+    match /models/{id} { allow read: if isManager() && sameOrg(resource.data); allow write: if false; }
+    match /usage/{id} { allow read: if hasRole(['super_admin', 'owner', 'manager', 'accounts']) && sameOrg(resource.data); allow write: if false; }
+
+    match /users/{uid} {
+      allow get: if isPlatformAdmin() || (sameOrg(resource.data) && (isSelf(uid) || isManager()));
+      allow list: if isManager() && sameOrg(resource.data);
+      allow create, delete: if isOwner() && writesOwnOrg();
+      allow update: if (isOwner() && sameOrg(resource.data) && keepsOrg()) || (isSelf(uid) && sameOrg(resource.data) && keepsOrg() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'phone', 'whatsappNumber', 'updatedAt', 'updatedBy']));
+      match /savedTrips/{tripId} { allow read, write: if isSelf(uid); }
+      match /inquiries/{inquiryId} { allow read: if isSelf(uid); allow write: if false; }
+    }
+
+    match /auditLogs/{id} { allow read: if hasRole(['super_admin', 'owner', 'manager', 'admin', 'accounts']) && sameOrg(resource.data); allow create, update, delete: if false; }
+    match /analyticsDaily/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow write: if false; }
+    match /analyticsStaff/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -1,13 +1,17 @@
 # Dependencies
 /node_modules/
+**/node_modules/
 /.pnp
 .pnp.*
 
 # Next.js and production output
 /.next/
+**/.next/
 /out/
 /build/
 /dist/
+**/dist/
+apps/functions/lib/
 
 # Local environment configuration and secrets
 .env
@@ -42,6 +46,7 @@ firebase-adminsdk-*.json
 # Build and tooling caches
 *.tsbuildinfo
 /.turbo/
+**/.turbo/
 /.cache/
 /.eslintcache
 /.stylelintcache
