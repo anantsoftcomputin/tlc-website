@@ -10,15 +10,5 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
   }
 }

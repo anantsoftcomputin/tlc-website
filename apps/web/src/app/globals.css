@@ -39,6 +39,128 @@
   --section-gap: clamp(56px, 6vw, 88px);
 }
 
+/* Phase 2 commerce inventory */
+.inventory-safety,
+.inventory-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inventory-safety {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #b8e1d8;
+  border-radius: 999px;
+  color: #167463;
+  background: #effaf7;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.inventory-safety svg,
+.inventory-message svg { width: 1rem; height: 1rem; }
+
+.inventory-console {
+  border: 1px solid var(--admin-border, #e5e9ef);
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(11, 37, 69, 0.07);
+  overflow: hidden;
+}
+
+.inventory-tabs { display: flex; gap: 0.35rem; padding: 0.75rem; background: #f5f7fa; }
+.inventory-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.72rem 1rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+.inventory-tabs button.active { background: #0b2545; color: #fff; box-shadow: 0 6px 16px rgba(11, 37, 69, 0.2); }
+.inventory-tabs svg { width: 1rem; height: 1rem; }
+
+.inventory-form {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(100px, 1fr)) auto;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+.inventory-form.hotel { grid-template-columns: 1.5fr repeat(3, 1fr) auto; }
+.inventory-form label { display: grid; gap: 0.4rem; color: #526174; font-size: 0.75rem; font-weight: 750; }
+.inventory-form label small { font-weight: 500; color: #94a3b8; }
+.inventory-form input,
+.inventory-form select {
+  min-width: 0;
+  height: 2.85rem;
+  padding: 0 0.72rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.72rem;
+  background: #fff;
+  color: #14263c;
+  font: inherit;
+}
+.inventory-form .button { min-height: 2.85rem; white-space: nowrap; }
+
+.inventory-message { margin: 1rem 0 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; font-size: 0.86rem; font-weight: 700; }
+.inventory-message.error { color: #a53a3a; background: #fff2f2; }
+.inventory-message.success { color: #167463; background: #effaf7; }
+
+.inventory-results { display: grid; gap: 0.75rem; margin-top: 1.15rem; }
+.inventory-results > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.inventory-results > header h2 { margin: 0; color: #0b2545; font-size: 1.1rem; }
+.inventory-results > header p,
+.inventory-results > header span { margin: 0.2rem 0 0; color: #718096; font-size: 0.75rem; }
+
+.inventory-card {
+  display: grid;
+  grid-template-columns: 200px minmax(220px, 1fr) 190px auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #e3e8ef;
+  border-radius: 1rem;
+  background: #fff;
+}
+.inventory-card > div { display: grid; gap: 0.25rem; }
+.inventory-card span,
+.inventory-card small { color: #718096; font-size: 0.78rem; }
+.inventory-route { grid-template-columns: auto 1fr auto; align-items: center; gap: 0.6rem !important; }
+.inventory-route > span { color: #0b2545; font-size: 1.15rem; font-weight: 850; }
+.inventory-route i { display: flex; align-items: center; color: #f28c45; }
+.inventory-route i::before,
+.inventory-route i::after { content: ""; height: 1px; flex: 1; background: #d5dde7; }
+.inventory-route svg { width: 1rem; margin: 0 0.35rem; }
+.inventory-price { text-align: right; }
+.inventory-price strong { color: #0b2545; font-size: 1.15rem; }
+.inventory-hotel-icon { place-items: center; width: 3.4rem; height: 3.4rem; border-radius: 1rem; background: #fff3e9; color: #d86f25; }
+
+@media (max-width: 1180px) {
+  .inventory-form,
+  .inventory-form.hotel { grid-template-columns: repeat(4, 1fr); }
+  .inventory-card { grid-template-columns: 160px 1fr 170px; }
+  .inventory-card > button { grid-column: 1 / -1; justify-self: end; }
+}
+
+@media (max-width: 700px) {
+  .inventory-safety { display: none; }
+  .inventory-form,
+  .inventory-form.hotel { grid-template-columns: 1fr 1fr; }
+  .inventory-form label:first-child,
+  .inventory-form .button { grid-column: 1 / -1; }
+  .inventory-results > header { align-items: start; flex-direction: column; }
+  .inventory-card,
+  .inventory-card.hotel { grid-template-columns: 1fr; }
+  .inventory-card > button { grid-column: auto; width: 100%; }
+  .inventory-price { text-align: left; }
+}
+
 * {
   box-sizing: border-box;
 }

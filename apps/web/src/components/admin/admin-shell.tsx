@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPinned,
+  PlaneTakeoff,
   Search,
   Settings,
   UsersRound,
@@ -64,6 +65,12 @@ const navGroups = [
         href: "/admin/management",
         icon: Gauge,
         permission: "crm:read" as const,
+      },
+      {
+        label: "Live inventory",
+        href: "/admin/inventory",
+        icon: PlaneTakeoff,
+        permission: "quotes:write" as const,
       },
       {
         label: "Quotes",

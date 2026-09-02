@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MockFlightProvider } from "./flights/index.js";
 import { MockHotelProvider } from "./hotels/index.js";
+import { CommerceProviderRegistry } from "./registry.js";
 
 const fixedClock = () => new Date("2026-09-02T10:00:00.000Z");
 
@@ -62,5 +63,14 @@ describe("commerce provider mocks", () => {
     await expect(provider.priceCheck("not-found")).rejects.toThrow(
       "unknown or expired",
     );
+  });
+
+  it("resolves organization provider selections with safe mock defaults", () => {
+    const registry = new CommerceProviderRegistry();
+    expect(registry.resolve().flight.key).toBe("mock-flight");
+    expect(registry.resolve({ flights: "mock" }).flight.key).toBe(
+      "mock-flight",
+    );
+    expect(() => registry.flight("unconfigured")).toThrow("not configured");
   });
 });

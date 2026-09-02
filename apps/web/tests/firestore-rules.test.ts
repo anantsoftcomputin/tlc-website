@@ -20,6 +20,7 @@ beforeAll(async () => {
     await setDoc(doc(context.firestore(), "auditLogs", "one"), { orgId: "tlc-vacations", actorId: "system", action: "seed" });
     await setDoc(doc(context.firestore(), "propensity", "one"), { orgId: "tlc-vacations", customerId: "customer-1", score: 80 });
     await setDoc(doc(context.firestore(), "imports", "one"), { orgId: "tlc-vacations", status: "review" });
+    await setDoc(doc(context.firestore(), "inventoryOffers", "one"), { orgId: "tlc-vacations", kind: "flight", offerId: "provider-offer" });
   });
 });
 
@@ -70,6 +71,12 @@ describe("CRM and audit rules", () => {
     const database = environment.authenticatedContext("admin", { role: "owner", orgId: "tlc-vacations" }).firestore();
     await assertSucceeds(getDoc(doc(database, "propensity", "one")));
     await assertFails(setDoc(doc(database, "propensity", "forged"), { orgId: "tlc-vacations", score: 100 }));
+  });
+
+  it("keeps temporary supplier inventory server-only", async () => {
+    const database = environment.authenticatedContext("admin", { role: "owner", orgId: "tlc-vacations" }).firestore();
+    await assertFails(getDoc(doc(database, "inventoryOffers", "one")));
+    await assertFails(setDoc(doc(database, "inventoryOffers", "forged"), { orgId: "tlc-vacations", kind: "flight" }));
   });
 
   it("lets managers review imports but keeps import writes server-owned", async () => {

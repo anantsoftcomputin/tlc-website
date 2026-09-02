@@ -4,11 +4,34 @@ import { getAuth } from "firebase-admin/auth";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { buildBootstrapDocuments, initialOrgId } from "./bootstrap.js";
-export { commitCustomerImport, previewCustomerImport } from "./customer-import.js";
-export { addLeadActivity, createLeadFromInquiry, updateLead } from "./lead-workflow.js";
-export { captureInboundLead, updateLeadAssignmentSettings } from "./lead-automation.js";
-export { buildFeatureStore, refreshAiCore, runAiSupervisor, updateAlertStatus } from "./ai-jobs.js";
-export { aggregateManagementAnalytics, refreshManagementAnalytics } from "./management-analytics.js";
+export {
+  commitCustomerImport,
+  previewCustomerImport,
+} from "./customer-import.js";
+export {
+  addLeadActivity,
+  createLeadFromInquiry,
+  updateLead,
+} from "./lead-workflow.js";
+export {
+  captureInboundLead,
+  updateLeadAssignmentSettings,
+} from "./lead-automation.js";
+export {
+  buildFeatureStore,
+  refreshAiCore,
+  runAiSupervisor,
+  updateAlertStatus,
+} from "./ai-jobs.js";
+export {
+  aggregateManagementAnalytics,
+  refreshManagementAnalytics,
+} from "./management-analytics.js";
+export {
+  priceCheckInventory,
+  searchFlightInventory,
+  searchHotelInventory,
+} from "./inventory.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 20 });
 
@@ -16,14 +39,24 @@ const app = getApps()[0] ?? initializeApp();
 const database = getFirestore(app);
 
 export const health = onRequest((_, response) => {
-  response.status(200).json({ service: "tlc-travel-os", status: "ok", region: "asia-south1" });
+  response
+    .status(200)
+    .json({ service: "tlc-travel-os", status: "ok", region: "asia-south1" });
 });
 
 export const bootstrapOrganization = onCall(async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Authentication is required.");
-  if (!request.auth.token.email) throw new HttpsError("failed-precondition", "The account requires an email address.");
+  if (!request.auth)
+    throw new HttpsError("unauthenticated", "Authentication is required.");
+  if (!request.auth.token.email)
+    throw new HttpsError(
+      "failed-precondition",
+      "The account requires an email address.",
+    );
   if (!["super_admin", "owner"].includes(String(request.auth.token.role))) {
-    throw new HttpsError("permission-denied", "Only the platform administrator can bootstrap an organization.");
+    throw new HttpsError(
+      "permission-denied",
+      "Only the platform administrator can bootstrap an organization.",
+    );
   }
 
   const now = new Date().toISOString();
@@ -39,10 +72,29 @@ export const bootstrapOrganization = onCall(async (request) => {
     const userRef = database.collection("users").doc(request.auth!.uid);
     const existing = await transaction.get(orgRef);
     if (existing.exists && existing.data()?.ownerUid !== request.auth!.uid) {
-      throw new HttpsError("already-exists", "The TLC organization has already been bootstrapped.");
+      throw new HttpsError(
+        "already-exists",
+        "The TLC organization has already been bootstrapped.",
+      );
     }
-    transaction.set(orgRef, { ...documents.organization, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    transaction.set(userRef, { ...documents.user, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(
+      orgRef,
+      {
+        ...documents.organization,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    transaction.set(
+      userRef,
+      {
+        ...documents.user,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
     transaction.set(database.collection("auditLogs").doc(), {
       orgId: initialOrgId,
       actorUid: request.auth!.uid,

@@ -29,6 +29,9 @@ importers:
       '@tlc/ai-core':
         specifier: file:vendor/ai-core
         version: file:apps/functions/vendor/ai-core
+      '@tlc/integrations':
+        specifier: file:vendor/integrations
+        version: file:apps/functions/vendor/integrations
       '@tlc/shared':
         specifier: file:vendor/shared
         version: file:apps/functions/vendor/shared
@@ -1570,6 +1573,9 @@ packages:
 
   '@tlc/ai-core@file:apps/functions/vendor/ai-core':
     resolution: {directory: apps/functions/vendor/ai-core, type: directory}
+
+  '@tlc/integrations@file:apps/functions/vendor/integrations':
+    resolution: {directory: apps/functions/vendor/integrations, type: directory}
 
   '@tlc/shared@file:apps/functions/vendor/shared':
     resolution: {directory: apps/functions/vendor/shared, type: directory}
@@ -6468,6 +6474,8 @@ snapshots:
       '@types/react-dom': 19.2.5(@types/react@19.2.18)
 
   '@tlc/ai-core@file:apps/functions/vendor/ai-core': {}
+
+  '@tlc/integrations@file:apps/functions/vendor/integrations': {}
 
   '@tlc/shared@file:apps/functions/vendor/shared':
     dependencies:

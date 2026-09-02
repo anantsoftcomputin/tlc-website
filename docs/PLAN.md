@@ -68,9 +68,11 @@ Updated: 2026-09-02
 
 - [x] Define normalized flight and hotel provider contracts.
 - [x] Add deterministic mock flight and hotel adapters with source and fetch-time provenance.
-- [ ] Add provider registry, retry/rate-limit logging, and organization-level selection.
+- [x] Add provider registry and organization-level selection.
+- [ ] Add retry, rate-limit, usage, and cost logging around provider calls.
 - [ ] Add one credential-backed flight adapter and one credential-backed hotel adapter.
-- [ ] Expose authenticated inventory search and price-check commands.
+- [x] Expose authenticated inventory search and price-check commands.
+- [x] Add a responsive staff inventory-search workspace.
 
 ## Step 8 — Quotes and itineraries
 
