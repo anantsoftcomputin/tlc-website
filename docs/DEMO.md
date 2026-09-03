@@ -21,3 +21,16 @@ For a large local demonstration, start the emulators, run `pnpm ai:seed`, and th
 6. Use **Print / save PDF** to demonstrate the A4 itinerary output.
 7. Accept the proposal and return to the CRM to show its quote, audit, customer-event, and lead-timeline evidence.
 8. Try responding a second time or opening an older revision to demonstrate lifecycle and version protections.
+
+## Phase 2 booking and payment
+
+1. Open the accepted quote and choose **Create booking**. Enter every traveller's name, date of birth, nationality, and optional encrypted passport reference.
+2. Open **Bookings** and select the new record. Show that supplier fulfilment is locked until a manager chooses **Approve booking**.
+3. Approve it and show the automatically created customer receivable and item-level supplier payables.
+4. Confirm one item with its supplier reference and PNR, and mark another failed or pending to demonstrate partial confirmation.
+5. Move passport/visa checklist entries from required to received and verified. Confirm every change appears in the timeline.
+6. Under **Payment collection**, create an advance link. With mocks enabled, open the deterministic link and then choose **Record received** to emulate the verified provider result.
+7. Create a balance link, record it, and show the booking change from partial to paid. Choose **Reconcile** for each captured receipt.
+8. Open **Payments** and **Audit trail** to confirm organization-scoped financial and mutation history.
+
+Running `pnpm seed` against the emulators also creates a realistic partially confirmed booking, traveller documents, an advance receipt, and open ledger entries so every Phase 2 screen has data without external credentials.

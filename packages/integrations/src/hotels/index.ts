@@ -135,3 +135,5 @@ export class MockHotelProvider implements HotelProvider {
     return sourced(booking, this.key, this.clock);
   }
 }
+
+export { HotelbedsHotelProvider } from "./hotelbeds.js";

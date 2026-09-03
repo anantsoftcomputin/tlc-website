@@ -81,6 +81,21 @@ beforeAll(async () => {
       leadId: "other-salesperson",
       status: "draft",
     });
+    await setDoc(doc(context.firestore(), "bookings", "booking-one"), {
+      orgId: "tlc-vacations",
+      leadId: "assigned-sales",
+      status: "processing",
+    });
+    await setDoc(doc(context.firestore(), "payments", "payment-one"), {
+      orgId: "tlc-vacations",
+      bookingId: "booking-one",
+      status: "captured",
+    });
+    await setDoc(doc(context.firestore(), "ledger", "ledger-one"), {
+      orgId: "tlc-vacations",
+      bookingId: "booking-one",
+      type: "receivable",
+    });
   });
 });
 
@@ -212,6 +227,34 @@ describe("CRM and audit rules", () => {
   it("does not expose quote documents directly to public itinerary visitors", async () => {
     const database = environment.unauthenticatedContext().firestore();
     await assertFails(getDoc(doc(database, "quotes", "assigned-quote")));
+  });
+
+  it("keeps booking and finance mutations server-owned", async () => {
+    const manager = environment
+      .authenticatedContext("manager", {
+        role: "manager",
+        orgId: "tlc-vacations",
+      })
+      .firestore();
+    const accounts = environment
+      .authenticatedContext("accounts", {
+        role: "accounts",
+        orgId: "tlc-vacations",
+      })
+      .firestore();
+    await assertSucceeds(getDoc(doc(manager, "bookings", "booking-one")));
+    await assertSucceeds(getDoc(doc(accounts, "payments", "payment-one")));
+    await assertSucceeds(getDoc(doc(accounts, "ledger", "ledger-one")));
+    await assertFails(
+      updateDoc(doc(manager, "bookings", "booking-one"), {
+        status: "confirmed",
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(accounts, "payments", "payment-one"), {
+        status: "refunded",
+      }),
+    );
   });
 
   it("lets managers review imports but keeps import writes server-owned", async () => {

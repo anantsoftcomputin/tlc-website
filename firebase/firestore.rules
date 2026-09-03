@@ -72,7 +72,7 @@ service cloud.firestore {
       allow read: if isQuoteReader() && sameOrg(resource.data) && canAccessQuote(resource.data);
       allow create, update, delete: if false;
     }
-    match /bookings/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update: if isManager() && sameOrg(resource.data) && keepsOrg(); allow delete: if false; }
+    match /bookings/{id} { allow read: if isCRMReader() && sameOrg(resource.data) && canAccessAssigned(get(/databases/$(database)/documents/leads/$(resource.data.leadId)).data); allow write: if false; }
     match /payments/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /ledger/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /suppliers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update, delete: if isManager() && sameOrg(resource.data) && keepsOrg(); }
@@ -90,6 +90,8 @@ service cloud.firestore {
     match /imports/{id} { allow read: if isManager() && sameOrg(resource.data); allow write: if false; }
     match /models/{id} { allow read: if isManager() && sameOrg(resource.data); allow write: if false; }
     match /usage/{id} { allow read: if hasRole(['super_admin', 'owner', 'manager', 'accounts']) && sameOrg(resource.data); allow write: if false; }
+    match /paymentEvents/{id} { allow read, write: if false; }
+    match /providerRateLimits/{id} { allow read, write: if false; }
 
     match /users/{uid} {
       allow get: if isPlatformAdmin() || (sameOrg(resource.data) && (isSelf(uid) || isManager()));

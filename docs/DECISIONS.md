@@ -43,3 +43,11 @@ Each quote revision is a new Firestore document with an increasing lead-scoped v
 ## ADR-011 — Bearer-token itinerary projection
 
 Customer itinerary links use 192-bit random tokens as bearer credentials and are excluded from search indexing. Public clients never read quote documents from Firestore. A callable resolves the token and returns a customer-safe projection that omits every internal commercial and supplier field. Only the latest sent revision can be answered, terminal responses are immutable, and access-time plus scheduled expiry close stale links.
+
+## ADR-012 — Booking approval and double-entry preparation
+
+Accepted quotes convert once into server-owned bookings. A separate manager approval is mandatory before supplier fulfilment or collection. Approval creates customer receivable and supplier payable records from the immutable quote economics. Phase 2 tracks operational settlement without general-ledger journal accounting; Phase 3 can map these stable entries into Zoho Books, Tally, GST invoices, refunds, and formal double-entry journals.
+
+## ADR-013 — Credential-gated commerce providers
+
+Deterministic flight, hotel, and payment providers remain the safe default. Amadeus, Hotelbeds, and Razorpay implementations register only when server credentials exist and the organization explicitly enables the provider. Inventory calls are rate-limited, retried, and usage/cost logged. Supplier ticketing stays human-confirmed until production fulfilment scopes and commercial contracts are approved.

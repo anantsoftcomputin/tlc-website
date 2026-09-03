@@ -343,11 +343,17 @@ Approved booking, travellers, supplier references and profitability.
 |---|---|---|
 | `id` | string | Yes |
 | `orgId` | string | Yes |
+| `bookingNumber` | string | Yes |
 | `quoteId` | string | Yes |
+| `leadId` | string | Yes |
 | `customerId` | string | Yes |
 | `items` | object[] | Yes |
 | `status` | pendingApproval \| processing \| confirmed \| partiallyConfirmed \| cancelled \| completed | Yes |
 | `travellers` | object[] | Yes |
+| `documents` | object[] | Yes |
+| `timeline` | object[] | Yes |
+| `approvedBy` | string | No |
+| `approvedAt` | string | No |
 | `totals` | object | Yes |
 | `paymentStatus` | unpaid \| partial \| paid \| partiallyRefunded \| refunded | Yes |
 | `cancellation` | object | No |
@@ -380,6 +386,9 @@ Payment and refund lifecycle.
 | `reconciledAt` | string | No |
 | `receiptNo` | string | No |
 | `invoiceNo` | string | No |
+| `dueAt` | string | No |
+| `paidAt` | string | No |
+| `providerEventId` | string | No |
 | `createdAt` | string | Yes |
 | `updatedAt` | string | Yes |
 | `createdBy` | string | Yes |
@@ -404,6 +413,9 @@ Receivable, payable, commission and incentive ledger.
 | `gst` | object | Yes |
 | `dueDate` | string | Yes |
 | `settledAt` | string | No |
+| `settledAmount` | number | Yes |
+| `paymentId` | string | No |
+| `status` | open \| partial \| settled \| cancelled | Yes |
 | `accountingSyncRef` | string | No |
 | `createdAt` | string | Yes |
 | `updatedAt` | string | Yes |

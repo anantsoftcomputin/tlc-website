@@ -50,6 +50,8 @@ Reads may be performed by server components or typed query repositories. Writes 
 
 Browser clients never write audit logs, financial totals or AI scores.
 
+Phase 2 commerce routes are `/admin/inventory`, `/admin/quotes`, `/i/{token}`, `/admin/bookings`, and `/admin/payments`. Quote acceptance is the boundary between sales and operations. Booking approval opens receivable/payable records; verified or manually authorized payment commands update collection state. Firestore denies browser writes to quotes, bookings, payments, ledger, provider rate limits, and webhook idempotency records.
+
 ## AI guardrails
 
 AI outputs are advisory and include `reasoning` plus feature attributions where applicable. Prices and availability originate only from adapter results with `source` and `fetchedAt`. Price changes, discounts, bookings, refunds and broadcasts require explicit human approval unless an organization automation setting deliberately enables that workflow.

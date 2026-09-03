@@ -69,8 +69,8 @@ Updated: 2026-09-02
 - [x] Define normalized flight and hotel provider contracts.
 - [x] Add deterministic mock flight and hotel adapters with source and fetch-time provenance.
 - [x] Add provider registry and organization-level selection.
-- [ ] Add retry, rate-limit, usage, and cost logging around provider calls.
-- [ ] Add one credential-backed flight adapter and one credential-backed hotel adapter.
+- [x] Add retry, rate-limit, usage, and cost logging around provider calls.
+- [x] Add one credential-backed flight adapter and one credential-backed hotel adapter.
 - [x] Expose authenticated inventory search and price-check commands.
 - [x] Add a responsive staff inventory-search workspace.
 
@@ -84,21 +84,21 @@ Updated: 2026-09-02
 
 ## Step 9 — Booking workflow
 
-- [ ] Convert accepted quotes into bookings with traveller details.
-- [ ] Add per-item supplier confirmation, PNR, failure, and partial-confirmation states.
-- [ ] Add booking timeline, document checklist, and human approval controls.
+- [x] Convert accepted quotes into bookings with traveller details.
+- [x] Add per-item supplier confirmation, PNR, failure, and partial-confirmation states.
+- [x] Add booking timeline, document checklist, and human approval controls.
 
 ## Step 10 — Payments and ledger
 
-- [ ] Define payment provider contracts and deterministic mock.
-- [ ] Add Razorpay payment links, verified webhooks, partial payments, and reminders.
-- [ ] Add receivable/payable ledger entries and payment reconciliation.
+- [x] Define payment provider contracts and deterministic mock.
+- [x] Add Razorpay payment links, verified webhooks, partial payments, and reminders.
+- [x] Add receivable/payable ledger entries and payment reconciliation.
 
 ## Checkpoint 2 exit criteria
 
-- [ ] A staff user can search sourced inventory, build and version a quote, and share an itinerary.
-- [ ] A customer can view and accept an itinerary without accessing internal pricing.
-- [ ] An authorized staff user can create a booking and collect advance/balance payments.
-- [ ] Every quote, booking, and payment mutation is organization-scoped and audited.
-- [ ] Mocks make the full commerce flow demonstrable without provider credentials.
-- [ ] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete flow.
+- [x] A staff user can search sourced inventory, build and version a quote, and share an itinerary.
+- [x] A customer can view and accept an itinerary without accessing internal pricing.
+- [x] An authorized staff user can create a booking and collect advance/balance payments.
+- [x] Every quote, booking, and payment mutation is organization-scoped and audited.
+- [x] Mocks make the full commerce flow demonstrable without provider credentials.
+- [x] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete flow.

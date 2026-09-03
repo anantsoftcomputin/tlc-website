@@ -7,8 +7,10 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { QuoteActions } from "@/components/admin/quote-actions";
+import { CreateBookingPanel } from "@/components/admin/create-booking-panel";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreQuoteRepository } from "@/repositories/firebase/firestore-quote-repository";
+import { FirestoreBookingRepository } from "@/repositories/firebase/firestore-booking-repository";
 
 const managerRoles = new Set(["super_admin", "owner", "manager", "admin"]);
 const broadReadRoles = new Set([...managerRoles, "accounts", "readonly"]);
@@ -28,6 +30,13 @@ export default async function QuoteDetailPage({
     canViewAll: broadReadRoles.has(user.role),
   }).get(id);
   if (!quote) notFound();
+  const existingBooking =
+    quote.status === "accepted"
+      ? await new FirestoreBookingRepository(user.orgId || "", {
+          uid: user.uid,
+          canViewAll: broadReadRoles.has(user.role),
+        }).findByQuote(quote.id)
+      : undefined;
   return (
     <>
       <Link className="admin-back" href="/admin/quotes">
@@ -166,6 +175,16 @@ export default async function QuoteDetailPage({
         canWrite={writerRoles.has(user.role)}
         shareToken={quote.shareToken}
       />
+      {existingBooking ? (
+        <Link
+          className="button primary"
+          href={`/admin/bookings/${existingBooking.id}`}
+        >
+          Open booking
+        </Link>
+      ) : quote.status === "accepted" && writerRoles.has(user.role) ? (
+        <CreateBookingPanel quoteId={quote.id} />
+      ) : null}
     </>
   );
 }

@@ -189,3 +189,5 @@ export class MockFlightProvider implements FlightProvider {
     return booking;
   }
 }
+
+export { AmadeusFlightProvider } from "./amadeus.js";

@@ -6,6 +6,8 @@ Flight and hotel inventory is accessed only through `FlightProvider` and `HotelP
 
 Organization provider selection comes from `orgs/{orgId}.settings.integrations`. Disabled or absent inventory integrations use deterministic mock providers, keeping local development and demonstrations independent of third-party credentials.
 
+The credential-backed implementations are Amadeus flight shopping and Hotelbeds hotel availability. They register only when their server-side credentials exist. Provider calls have organization/provider minute limits, bounded retries, latency/success counters, and configurable per-call cost accumulation in `usage`. Live supplier fulfilment remains deliberately human-confirmed in the booking workspace until TLC's ticketing and hotel-booking account scopes are approved.
+
 ## Authenticated commands
 
 The following callable Firebase Functions run in `asia-south1`:
@@ -22,6 +24,15 @@ The following callable Firebase Functions run in `asia-south1`:
 | `getSharedQuote`        | Resolve a private bearer-token itinerary, record its first view, and return a customer-safe projection.                             |
 | `respondToQuote`        | Accept or reject the latest active quote through its private link and append customer and lead events.                              |
 | `expireQuotes`          | Hourly expiry of sent or viewed quotes whose validity window has elapsed.                                                           |
+| `createBooking`         | Convert the latest accepted quote and validated travellers into a pending-approval booking.                                         |
+| `approveBooking`        | Record manager approval, open the receivable/payable ledger, and move the lead to won.                                              |
+| `updateBookingItem`     | Record each supplier confirmation, PNR/reference, failure, or cancellation and derive overall status.                               |
+| `updateBookingDocument` | Maintain the operational document checklist and append its booking timeline evidence.                                               |
+| `createPaymentLink`     | Create an organization-selected Razorpay or mock payment link within the outstanding balance.                                       |
+| `recordPayment`         | Capture an authorized offline receipt and recalculate partial/paid booking and ledger state.                                        |
+| `reconcilePayment`      | Mark a captured payment reconciled with an immutable audit event.                                                                   |
+| `razorpayWebhook`       | Validate Razorpay's raw-body HMAC and idempotently capture payment-link events.                                                     |
+| `sendPaymentReminders`  | Create daily high-priority collection tasks for payment links past their due time.                                                  |
 
 Only authenticated commerce roles can call these commands. The organization is read from verified Firebase custom claims and never accepted from request data.
 
@@ -46,3 +57,9 @@ Only the latest quote version can be opened or answered. A first open transition
 ## Human controls
 
 Provider booking, cancellation, and flight reissue contracts require an explicit `approvedBy` value. Creation commands also require an idempotency key. Quote and booking command services will recheck selected offer identifiers and enforce role, approval, margin, and audit invariants before contacting a supplier.
+
+## Booking and finance boundary
+
+An accepted latest quote can become exactly one booking. The booking begins in `pendingApproval`; only a manager can release it for fulfilment. Approval atomically creates one customer receivable and item-level supplier payables. Supplier items then move independently through pending, confirmed, failed, or cancelled, allowing an overall partially-confirmed state. Traveller documents and every operational change remain on the booking timeline and audit trail.
+
+Payments never mutate directly from the browser. Finance commands prevent over-collection by rechecking captured totals transactionally. Multiple advance/balance links provide partial collection, while a captured payment updates the booking and receivable together. The mock provider supports a credential-free demo; enabling `payments.provider = razorpay` requires Razorpay API credentials and a webhook configured to the deployed `razorpayWebhook` URL.

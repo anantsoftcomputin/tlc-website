@@ -103,6 +103,100 @@ async function providerKeys(orgId: string) {
   };
 }
 
+const providerLimitPerMinute = 60;
+
+async function reserveProviderCall(orgId: string, provider: string) {
+  const minute = new Date()
+    .toISOString()
+    .slice(0, 16)
+    .replace(/[^0-9]/g, "");
+  const ref = database
+    .collection("providerRateLimits")
+    .doc(`${orgId}-${provider}-${minute}`);
+  await database.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const calls = Number(snapshot.data()?.calls || 0);
+    if (calls >= providerLimitPerMinute)
+      throw new HttpsError(
+        "resource-exhausted",
+        "Provider rate limit reached. Try again shortly.",
+      );
+    transaction.set(
+      ref,
+      {
+        orgId,
+        provider,
+        minute,
+        calls: calls + 1,
+        expiresAt: new Date(Date.now() + 120_000).toISOString(),
+      },
+      { merge: true },
+    );
+  });
+}
+
+async function providerCall<T>(
+  orgId: string,
+  provider: string,
+  domain: "flights" | "hotels",
+  work: () => Promise<T>,
+) {
+  await reserveProviderCall(orgId, provider);
+  const started = Date.now();
+  let error: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await work();
+      await logUsage(orgId, provider, domain, true, Date.now() - started);
+      return result;
+    } catch (caught) {
+      error = caught;
+      if (caught instanceof HttpsError || attempt === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+    }
+  }
+  await logUsage(orgId, provider, domain, false, Date.now() - started);
+  throw error;
+}
+
+async function logUsage(
+  orgId: string,
+  provider: string,
+  domain: "flights" | "hotels",
+  success: boolean,
+  latencyMs: number,
+) {
+  const now = new Date().toISOString();
+  const month = now.slice(0, 7);
+  const ref = database
+    .collection("usage")
+    .doc(`${orgId}-${month}-${provider}-${domain}`);
+  const configuredCost = Number(
+    process.env[`PROVIDER_COST_${provider.toUpperCase().replace(/-/g, "_")}`] ||
+      0,
+  );
+  await ref.set(
+    {
+      id: ref.id,
+      orgId,
+      month,
+      provider,
+      domain,
+      calls: FieldValue.increment(1),
+      successfulCalls: FieldValue.increment(success ? 1 : 0),
+      failedCalls: FieldValue.increment(success ? 0 : 1),
+      latencyMsTotal: FieldValue.increment(latencyMs),
+      cost: FieldValue.increment(configuredCost),
+      currency: "INR",
+      createdAt: now,
+      updatedAt: now,
+      createdBy: "inventory-service",
+      updatedBy: "inventory-service",
+    },
+    { merge: true },
+  );
+}
+
 function offerDocumentId(orgId: string, kind: string, offerId: string) {
   return createHash("sha256")
     .update(`${orgId}:${kind}:${offerId}`)
@@ -142,7 +236,12 @@ export const searchFlightInventory = onCall(
       throw new HttpsError("invalid-argument", input.error.issues[0]?.message);
     try {
       const providers = registry.resolve(await providerKeys(orgId));
-      const result = await providers.flight.search(input.data);
+      const result = await providerCall(
+        orgId,
+        providers.flight.key,
+        "flights",
+        () => providers.flight.search(input.data),
+      );
       await cacheOffers(
         orgId,
         "flight",
@@ -169,7 +268,12 @@ export const searchHotelInventory = onCall(
       throw new HttpsError("invalid-argument", input.error.issues[0]?.message);
     try {
       const providers = registry.resolve(await providerKeys(orgId));
-      const result = await providers.hotel.search(input.data);
+      const result = await providerCall(
+        orgId,
+        providers.hotel.key,
+        "hotels",
+        () => providers.hotel.search(input.data),
+      );
       await cacheOffers(
         orgId,
         "hotel",

@@ -1,6 +1,7 @@
 export * from "./common.js";
 export * from "./flights/index.js";
 export * from "./hotels/index.js";
+export * from "./payments/index.js";
 export * from "./registry.js";
 
 import type { HealthCheckableProvider } from "./common.js";

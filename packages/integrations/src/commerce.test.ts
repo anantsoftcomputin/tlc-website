@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MockFlightProvider } from "./flights/index.js";
 import { MockHotelProvider } from "./hotels/index.js";
 import { CommerceProviderRegistry } from "./registry.js";
+import { MockPaymentProvider } from "./payments/index.js";
 
 const fixedClock = () => new Date("2026-09-02T10:00:00.000Z");
 
@@ -72,5 +73,20 @@ describe("commerce provider mocks", () => {
       "mock-flight",
     );
     expect(() => registry.flight("unconfigured")).toThrow("not configured");
+    expect(registry.payment().key).toBe("mock-payment");
+  });
+
+  it("creates deterministic mock payment links", async () => {
+    const result = await new MockPaymentProvider(fixedClock).createLink({
+      referenceId: "payment-1",
+      amount: 25000,
+      currency: "INR",
+      description: "Advance",
+      customer: { name: "TLC Traveller" },
+      callbackUrl: "https://example.com/booking",
+    });
+    expect(result.source).toBe("mock-payment");
+    expect(result.data.providerRef).toBe("mock_payment-1");
+    expect(result.data.url).toContain("mockPayment=payment-1");
   });
 });

@@ -21,6 +21,8 @@ import {
   Search,
   Settings,
   UsersRound,
+  CalendarCheck2,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -78,6 +80,18 @@ const navGroups = [
         icon: FileText,
         permission: "quotes:write" as const,
         disabled: false,
+      },
+      {
+        label: "Bookings",
+        href: "/admin/bookings",
+        icon: CalendarCheck2,
+        permission: "crm:read" as const,
+      },
+      {
+        label: "Payments",
+        href: "/admin/payments",
+        icon: CreditCard,
+        permission: "finance:read" as const,
       },
     ],
   },

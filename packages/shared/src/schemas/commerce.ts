@@ -172,18 +172,64 @@ export const travellerSchema = z.object({
   passportRef: z.string().trim().optional(),
 });
 
+export const bookingItemStatuses = [
+  "pending",
+  "confirmed",
+  "failed",
+  "cancelled",
+] as const;
+
+export const bookingDocumentKinds = [
+  "passport",
+  "visa",
+  "ticket",
+  "hotelVoucher",
+  "insurance",
+  "invoice",
+  "other",
+] as const;
+
+export const bookingTimelineEventSchema = z.object({
+  id: documentIdSchema,
+  type: z.enum([
+    "created",
+    "approved",
+    "supplierUpdate",
+    "documentUpdate",
+    "payment",
+    "reminder",
+  ]),
+  message: z.string().trim().min(1).max(2000),
+  actorUid: documentIdSchema,
+  ts: isoDateTimeSchema,
+});
+
+export const bookingDocumentSchema = z.object({
+  kind: z.enum(bookingDocumentKinds),
+  label: z.string().trim().min(1).max(160),
+  status: z.enum(["required", "received", "verified", "waived"]),
+  storageRef: z.string().trim().max(1000).optional(),
+  note: z.string().trim().max(1000).optional(),
+  updatedAt: isoDateTimeSchema,
+  updatedBy: documentIdSchema,
+});
+
 export const bookingSchema = z
   .object({
     id: documentIdSchema,
     orgId: orgIdSchema,
+    bookingNumber: z.string().trim().min(6).max(80),
     quoteId: documentIdSchema,
+    leadId: documentIdSchema,
     customerId: documentIdSchema,
     items: z
       .array(
         cartItemSchema.extend({
           pnr: z.string().trim().optional(),
           bookingRef: z.string().trim().optional(),
-          itemStatus: z.enum(["pending", "confirmed", "cancelled"]),
+          itemStatus: z.enum(bookingItemStatuses),
+          failureReason: z.string().trim().max(1000).optional(),
+          confirmedAt: isoDateTimeSchema.optional(),
         }),
       )
       .min(1),
@@ -196,6 +242,10 @@ export const bookingSchema = z
       "completed",
     ]),
     travellers: z.array(travellerSchema).min(1),
+    documents: z.array(bookingDocumentSchema).default([]),
+    timeline: z.array(bookingTimelineEventSchema).default([]),
+    approvedBy: documentIdSchema.optional(),
+    approvedAt: isoDateTimeSchema.optional(),
     totals: quoteTotalsSchema,
     paymentStatus: z.enum([
       "unpaid",
@@ -222,8 +272,35 @@ export const bookingSchema = z
   })
   .and(auditFieldsSchema);
 
+export const createBookingInputSchema = z.object({
+  quoteId: documentIdSchema,
+  travellers: z.array(travellerSchema).min(1).max(30),
+});
+
+export const bookingCommandInputSchema = z.object({
+  bookingId: documentIdSchema,
+});
+
+export const bookingItemUpdateInputSchema = bookingCommandInputSchema.extend({
+  itemId: documentIdSchema,
+  status: z.enum(bookingItemStatuses),
+  pnr: z.string().trim().max(120).optional(),
+  bookingRef: z.string().trim().max(200).optional(),
+  failureReason: z.string().trim().max(1000).optional(),
+});
+
+export const bookingDocumentUpdateInputSchema =
+  bookingCommandInputSchema.extend({
+    kind: z.enum(bookingDocumentKinds),
+    label: z.string().trim().min(1).max(160),
+    status: z.enum(["required", "received", "verified", "waived"]),
+    storageRef: z.string().trim().max(1000).optional(),
+    note: z.string().trim().max(1000).optional(),
+  });
+
 export type CartItem = z.infer<typeof cartItemSchema>;
 export type QuoteTotals = z.infer<typeof quoteTotalsSchema>;
 export type Quote = z.infer<typeof quoteSchema>;
 export type QuoteDraftInput = z.infer<typeof quoteDraftInputSchema>;
 export type Booking = z.infer<typeof bookingSchema>;
+export type Traveller = z.infer<typeof travellerSchema>;

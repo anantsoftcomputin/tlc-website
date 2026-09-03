@@ -43,6 +43,18 @@ export {
   getSharedQuote,
   respondToQuote,
 } from "./quote-sharing.js";
+export {
+  approveBooking,
+  createBooking,
+  updateBookingDocument,
+  updateBookingItem,
+} from "./booking-workflow.js";
+export {
+  createPaymentLink,
+  reconcilePayment,
+  recordPayment,
+} from "./payment-workflow.js";
+export { razorpayWebhook, sendPaymentReminders } from "./payment-automation.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 20 });
 
