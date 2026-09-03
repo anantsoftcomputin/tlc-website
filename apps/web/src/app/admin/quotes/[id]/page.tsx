@@ -164,6 +164,7 @@ export default async function QuoteDetailPage({
         hasPending={quote.approvals.some((item) => item.status === "pending")}
         canApprove={managerRoles.has(user.role)}
         canWrite={writerRoles.has(user.role)}
+        shareToken={quote.shareToken}
       />
     </>
   );

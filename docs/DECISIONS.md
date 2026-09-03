@@ -39,3 +39,7 @@ Flight and hotel results are normalized at the adapter boundary and always retur
 ## ADR-010 — Immutable quote revisions and server-owned writes
 
 Each quote revision is a new Firestore document with an increasing lead-scoped version. Only the latest revision can be revised or sent. Browser quote writes are denied; callable commands recompute financial totals, derive approval exceptions, enforce assignment and organization scope, and append audit evidence. This preserves a reliable commercial history for the future CRM, booking, payment, and reporting layers.
+
+## ADR-011 — Bearer-token itinerary projection
+
+Customer itinerary links use 192-bit random tokens as bearer credentials and are excluded from search indexing. Public clients never read quote documents from Firestore. A callable resolves the token and returns a customer-safe projection that omits every internal commercial and supplier field. Only the latest sent revision can be answered, terminal responses are immutable, and access-time plus scheduled expiry close stale links.

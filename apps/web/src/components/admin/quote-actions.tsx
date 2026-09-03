@@ -1,7 +1,7 @@
 "use client";
 
 import { httpsCallable } from "firebase/functions";
-import { CheckCircle2, CopyPlus, Send } from "lucide-react";
+import { CheckCircle2, Copy, CopyPlus, ExternalLink, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -20,6 +20,7 @@ export function QuoteActions({
   hasPending,
   canApprove,
   canWrite,
+  shareToken,
 }: {
   quoteId: string;
   leadId: string;
@@ -27,10 +28,26 @@ export function QuoteActions({
   hasPending: boolean;
   canApprove: boolean;
   canWrite: boolean;
+  shareToken: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"approve" | "send">();
   const [error, setError] = useState<string>();
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/i/${shareToken}`,
+      );
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError(
+        "The link could not be copied. Open the itinerary and copy its address.",
+      );
+    }
+  }
 
   async function command(
     name: "approveQuote" | "sendQuote",
@@ -62,6 +79,22 @@ export function QuoteActions({
         {error && <small>{error}</small>}
       </div>
       <div>
+        {status !== "draft" && (
+          <>
+            <button className="button secondary" onClick={copyLink}>
+              <Copy />
+              {copied ? "Copied" : "Copy customer link"}
+            </button>
+            <Link
+              className="button secondary"
+              href={`/i/${shareToken}`}
+              target="_blank"
+            >
+              <ExternalLink />
+              Preview
+            </Link>
+          </>
+        )}
         {canWrite && (
           <Link
             className="button secondary"

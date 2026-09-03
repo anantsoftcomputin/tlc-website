@@ -324,6 +324,9 @@ Versioned itinerary cart with server-recomputed totals and approvals.
 | `status` | draft \| sent \| viewed \| accepted \| rejected \| expired | Yes |
 | `shareToken` | string | Yes |
 | `approvals` | object[] | Yes |
+| `sentAt` | string | No |
+| `viewedAt` | string | No |
+| `respondedAt` | string | No |
 | `createdAt` | string | Yes |
 | `updatedAt` | string | Yes |
 | `createdBy` | string | Yes |

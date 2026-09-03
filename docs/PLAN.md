@@ -78,9 +78,9 @@ Updated: 2026-09-02
 
 - [x] Build the quote/cart command service with server-recomputed totals and approval guardrails.
 - [x] Add immutable quote creation, revision, approval, and send workflows.
-- [ ] Add customer view, accept, reject, and scheduled expiry workflows.
+- [x] Add customer view, accept, reject, and scheduled expiry workflows.
 - [x] Build the staff quote builder with flight/hotel inventory selection.
-- [ ] Build secure shareable itinerary pages and printable PDF output.
+- [x] Build secure shareable itinerary pages and printable PDF output.
 
 ## Step 9 — Booking workflow
 

@@ -209,6 +209,11 @@ describe("CRM and audit rules", () => {
     );
   });
 
+  it("does not expose quote documents directly to public itinerary visitors", async () => {
+    const database = environment.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(database, "quotes", "assigned-quote")));
+  });
+
   it("lets managers review imports but keeps import writes server-owned", async () => {
     const database = environment
       .authenticatedContext("admin", { role: "owner", orgId: "tlc-vacations" })

@@ -19,6 +19,9 @@ The following callable Firebase Functions run in `asia-south1`:
 | `reviseQuote`           | Create a new immutable version from the latest accessible quote.                                                                    |
 | `approveQuote`          | Allow an authorized manager to approve discount and low-margin exceptions.                                                          |
 | `sendQuote`             | Mark the latest, unexpired, fully approved revision ready to share and move its lead to quoted.                                     |
+| `getSharedQuote`        | Resolve a private bearer-token itinerary, record its first view, and return a customer-safe projection.                             |
+| `respondToQuote`        | Accept or reject the latest active quote through its private link and append customer and lead events.                              |
+| `expireQuotes`          | Hourly expiry of sent or viewed quotes whose validity window has elapsed.                                                           |
 
 Only authenticated commerce roles can call these commands. The organization is read from verified Firebase custom claims and never accepted from request data.
 
@@ -33,6 +36,12 @@ Staff can move normalized flight and hotel offers into the quote cart, add manua
 Every save creates a new quote document and version. Existing revisions are never overwritten. The server rejects revisions of anything except the latest version, derives discount and low-margin approvals from organization settings, and prevents sending until all exceptions are approved. Each command verifies organization and lead assignment, appends an audit record, and writes lead timeline activity where applicable.
 
 Browser clients may read only quotes linked to leads they can access. Firestore rules deny all direct quote mutations, so clients cannot bypass versioning, calculations, or approval policy.
+
+## Private itinerary links
+
+Sending a quote activates its cryptographically random bearer-token route at `/i/{token}`. The public callable returns a deliberately reduced projection: descriptions, dates, traveller counts, customer prices, taxes, fees, discounts, validity, branding, and lifecycle status. Supplier identifiers, supplier costs, commissions, gross profit, margins, raw provider payloads, and internal approvals never leave the command boundary.
+
+Only the latest quote version can be opened or answered. A first open transitions `sent` to `viewed`; the customer can then accept or request changes exactly once while the quote remains valid. Each transition is audited and appended to the appropriate CRM timelines. Active links expire during access and through the hourly `expireQuotes` job. The itinerary has a dedicated responsive layout and an A4 print stylesheet so the browser can print it or save it as a PDF without internal controls.
 
 ## Human controls
 

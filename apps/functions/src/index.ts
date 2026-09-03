@@ -38,6 +38,11 @@ export {
   reviseQuote,
   sendQuote,
 } from "./quote-workflow.js";
+export {
+  expireQuotes,
+  getSharedQuote,
+  respondToQuote,
+} from "./quote-sharing.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 20 });
 

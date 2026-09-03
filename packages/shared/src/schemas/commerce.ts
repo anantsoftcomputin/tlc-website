@@ -98,6 +98,9 @@ export const quoteSchema = z
     ]),
     shareToken: z.string().trim().min(24).max(128),
     approvals: z.array(approvalSchema).default([]),
+    sentAt: isoDateTimeSchema.optional(),
+    viewedAt: isoDateTimeSchema.optional(),
+    respondedAt: isoDateTimeSchema.optional(),
   })
   .and(auditFieldsSchema)
   .superRefine((quote, context) => {
@@ -150,6 +153,14 @@ export const quoteRevisionInputSchema = quoteDraftInputSchema.extend({
 });
 
 export const quoteCommandInputSchema = z.object({ quoteId: documentIdSchema });
+
+export const quoteShareTokenInputSchema = z.object({
+  token: z.string().trim().min(24).max(128),
+});
+
+export const quoteResponseInputSchema = quoteShareTokenInputSchema.extend({
+  decision: z.enum(["accepted", "rejected"]),
+});
 
 export const travellerSchema = z.object({
   id: documentIdSchema,
