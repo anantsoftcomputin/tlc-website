@@ -76,9 +76,10 @@ Updated: 2026-09-02
 
 ## Step 8 — Quotes and itineraries
 
-- [ ] Build the quote/cart command service with server-recomputed totals and approval guardrails.
-- [ ] Add versioned quote creation, revision, send, view, accept, reject, and expiry workflows.
-- [ ] Build the staff quote builder with flight/hotel inventory selection.
+- [x] Build the quote/cart command service with server-recomputed totals and approval guardrails.
+- [x] Add immutable quote creation, revision, approval, and send workflows.
+- [ ] Add customer view, accept, reject, and scheduled expiry workflows.
+- [x] Build the staff quote builder with flight/hotel inventory selection.
 - [ ] Build secure shareable itinerary pages and printable PDF output.
 
 ## Step 9 — Booking workflow

@@ -316,6 +316,7 @@ Versioned itinerary cart with server-recomputed totals and approvals.
 | `orgId` | string | Yes |
 | `leadId` | string | Yes |
 | `customerId` | string | Yes |
+| `quoteNumber` | string | No |
 | `version` | integer | Yes |
 | `items` | object[] | Yes |
 | `totals` | object | Yes |

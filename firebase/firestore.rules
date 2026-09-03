@@ -12,12 +12,14 @@ service cloud.firestore {
     function isContentStaff() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'marketing', 'content_editor']); }
     function isCRMReader() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'sales', 'travel_consultant', 'accounts', 'marketing', 'readonly']); }
     function isCRMWriter() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'sales', 'travel_consultant']); }
+    function isQuoteReader() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'sales', 'travel_consultant', 'accounts', 'readonly']); }
     function isFinanceStaff() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'accounts']); }
     function sameOrg(data) { return isPlatformAdmin() || (orgId() != null && data.orgId == orgId()); }
     function writesOwnOrg() { return isPlatformAdmin() || (orgId() != null && request.resource.data.orgId == orgId()); }
     function keepsOrg() { return isPlatformAdmin() || request.resource.data.orgId == resource.data.orgId; }
     function assignedToUser(data) { return data.assignedUid == request.auth.uid || data.assignedTo == request.auth.uid; }
     function canAccessAssigned(data) { return isManager() || hasRole(['accounts', 'readonly']) || assignedToUser(data); }
+    function canAccessQuote(data) { return canAccessAssigned(get(/databases/$(database)/documents/leads/$(data.leadId)).data); }
     function isPublished() { return resource.data.status == 'published'; }
 
     match /orgs/{id} {
@@ -66,7 +68,10 @@ service cloud.firestore {
     match /deals/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
     match /activities/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
     match /tasks/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
-    match /quotes/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isCRMWriter() && writesOwnOrg(); allow update, delete: if isCRMWriter() && sameOrg(resource.data) && keepsOrg(); }
+    match /quotes/{id} {
+      allow read: if isQuoteReader() && sameOrg(resource.data) && canAccessQuote(resource.data);
+      allow create, update, delete: if false;
+    }
     match /bookings/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update: if isManager() && sameOrg(resource.data) && keepsOrg(); allow delete: if false; }
     match /payments/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /ledger/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }

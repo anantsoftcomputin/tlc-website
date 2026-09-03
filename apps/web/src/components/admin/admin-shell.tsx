@@ -77,7 +77,7 @@ const navGroups = [
         href: "/admin/quotes",
         icon: FileText,
         permission: "quotes:write" as const,
-        disabled: true,
+        disabled: false,
       },
     ],
   },

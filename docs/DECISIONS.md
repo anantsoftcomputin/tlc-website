@@ -35,3 +35,7 @@ The brief's conceptual `analytics/daily/{id}` and `analytics/staff/{id}` paths d
 ## ADR-009 — Inventory provenance and human booking approval
 
 Flight and hotel results are normalized at the adapter boundary and always returned with a provider `source` and ISO `fetchedAt` value. Provider offer identifiers must be price-checked before booking. Booking, cancellation, and reissue contracts require an authenticated human approver and an idempotency key where the command can create supplier inventory.
+
+## ADR-010 — Immutable quote revisions and server-owned writes
+
+Each quote revision is a new Firestore document with an increasing lead-scoped version. Only the latest revision can be revised or sent. Browser quote writes are denied; callable commands recompute financial totals, derive approval exceptions, enforce assignment and organization scope, and append audit evidence. This preserves a reliable commercial history for the future CRM, booking, payment, and reporting layers.

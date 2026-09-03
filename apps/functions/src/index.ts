@@ -32,6 +32,12 @@ export {
   searchFlightInventory,
   searchHotelInventory,
 } from "./inventory.js";
+export {
+  approveQuote,
+  createQuote,
+  reviseQuote,
+  sendQuote,
+} from "./quote-workflow.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 20 });
 

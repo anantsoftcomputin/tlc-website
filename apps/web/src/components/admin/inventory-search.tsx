@@ -6,8 +6,10 @@ import {
   Plane,
   RefreshCw,
   Search,
+  ShoppingCart,
 } from "lucide-react";
 import { httpsCallable } from "firebase/functions";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getFirebaseFunctions } from "@/lib/firebase/client";
 
@@ -28,7 +30,7 @@ type FlightOffer = {
       arrivalAt: string;
     }[];
   }[];
-  price: { currency: string; total: number };
+  price: { currency: string; base: number; taxes: number; total: number };
 };
 
 type HotelOffer = {
@@ -41,7 +43,7 @@ type HotelOffer = {
   checkIn: string;
   checkOut: string;
   refundable: boolean;
-  price: { currency: string; total: number };
+  price: { currency: string; base: number; taxes: number; total: number };
 };
 
 type InventoryResult<T> = { data: T[]; source: string; fetchedAt: string };
@@ -69,6 +71,7 @@ function message(error: unknown) {
 }
 
 export function InventorySearch() {
+  const router = useRouter();
   const [mode, setMode] = useState<"flight" | "hotel">("flight");
   const [flights, setFlights] = useState<InventoryResult<FlightOffer> | null>(
     null,
@@ -80,6 +83,16 @@ export function InventorySearch() {
   const [checking, setChecking] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [error, setError] = useState<string>();
+  const [flightPax, setFlightPax] = useState({
+    adults: 2,
+    children: 0,
+    infants: 0,
+  });
+  const [hotelPax, setHotelPax] = useState({
+    adults: 2,
+    children: 0,
+    infants: 0,
+  });
 
   async function searchFlights(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,6 +100,12 @@ export function InventorySearch() {
     setError(undefined);
     setNotice(undefined);
     const form = new FormData(event.currentTarget);
+    const pax = {
+      adults: Number(form.get("adults")),
+      children: Number(form.get("children")),
+      infants: 0,
+    };
+    setFlightPax(pax);
     try {
       const search = httpsCallable<
         Record<string, unknown>,
@@ -97,8 +116,8 @@ export function InventorySearch() {
         destination: String(form.get("destination")),
         departureDate: String(form.get("departureDate")),
         returnDate: String(form.get("returnDate")) || undefined,
-        adults: Number(form.get("adults")),
-        children: Number(form.get("children")),
+        adults: pax.adults,
+        children: pax.children,
         cabinClass: String(form.get("cabinClass")),
         currency: "INR",
       });
@@ -116,6 +135,8 @@ export function InventorySearch() {
     setError(undefined);
     setNotice(undefined);
     const form = new FormData(event.currentTarget);
+    const pax = { adults: Number(form.get("adults")), children: 0, infants: 0 };
+    setHotelPax(pax);
     try {
       const search = httpsCallable<
         Record<string, unknown>,
@@ -125,7 +146,7 @@ export function InventorySearch() {
         destination: String(form.get("destination")),
         checkIn: String(form.get("checkIn")),
         checkOut: String(form.get("checkOut")),
-        rooms: [{ adults: Number(form.get("adults")) }],
+        rooms: [{ adults: pax.adults }],
         currency: "INR",
       });
       setHotels(result.data);
@@ -151,6 +172,98 @@ export function InventorySearch() {
       setError(message(caught));
     } finally {
       setChecking(undefined);
+    }
+  }
+
+  function addFlightToQuote(
+    offer: FlightOffer,
+    source: string,
+    fetchedAt: string,
+  ) {
+    const segments = offer.itineraries.flatMap(
+      (itinerary) => itinerary.segments,
+    );
+    const first = segments[0];
+    const last = segments.at(-1);
+    addToQuote({
+      id: crypto.randomUUID(),
+      kind: "flight",
+      supplierId: source,
+      supplierRef: offer.offerId,
+      description:
+        `${first?.origin || "Flight"} to ${last?.destination || "destination"} · ${first?.carrierCode || ""} ${first?.flightNumber || ""} · ${offer.cabinClass}`.trim(),
+      dates: {
+        start:
+          first?.departureAt.slice(0, 10) ||
+          new Date().toISOString().slice(0, 10),
+        end:
+          last?.arrivalAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
+      },
+      pax: flightPax,
+      costPrice: offer.price.base,
+      sellPrice: offer.price.base,
+      taxes: offer.price.taxes
+        ? [
+            {
+              name: "Provider taxes",
+              amount: offer.price.taxes,
+              included: false,
+            },
+          ]
+        : [],
+      serviceFee: 0,
+      discount: 0,
+      commission: 0,
+      currency: offer.price.currency as "INR",
+      source,
+      fetchedAt,
+    });
+  }
+
+  function addHotelToQuote(
+    offer: HotelOffer,
+    source: string,
+    fetchedAt: string,
+  ) {
+    addToQuote({
+      id: crypto.randomUUID(),
+      kind: "hotel",
+      supplierId: source,
+      supplierRef: offer.offerId,
+      description: `${offer.hotelName} · ${offer.roomName} · ${offer.mealPlan}`,
+      dates: { start: offer.checkIn, end: offer.checkOut },
+      pax: hotelPax,
+      costPrice: offer.price.base,
+      sellPrice: offer.price.base,
+      taxes: offer.price.taxes
+        ? [
+            {
+              name: "Provider taxes",
+              amount: offer.price.taxes,
+              included: false,
+            },
+          ]
+        : [],
+      serviceFee: 0,
+      discount: 0,
+      commission: 0,
+      currency: offer.price.currency as "INR",
+      source,
+      fetchedAt,
+    });
+  }
+
+  function addToQuote(item: Record<string, unknown>) {
+    try {
+      const stored = localStorage.getItem("tlc-quote-cart");
+      const cart = stored ? JSON.parse(stored) : [];
+      localStorage.setItem(
+        "tlc-quote-cart",
+        JSON.stringify([...(Array.isArray(cart) ? cart : []), item]),
+      );
+      router.push("/admin/quotes/new");
+    } catch {
+      setError("This inventory item could not be added to the quote cart.");
     }
   }
 
@@ -320,14 +433,25 @@ export function InventorySearch() {
                   </strong>
                   <span>{offer.seatsRemaining} seats left</span>
                 </div>
-                <button
-                  className="button secondary"
-                  disabled={checking === offer.offerId}
-                  onClick={() => priceCheck("flight", offer.offerId)}
-                >
-                  <RefreshCw />
-                  {checking === offer.offerId ? "Checking…" : "Price check"}
-                </button>
+                <div className="inventory-actions">
+                  <button
+                    className="button secondary"
+                    disabled={checking === offer.offerId}
+                    onClick={() => priceCheck("flight", offer.offerId)}
+                  >
+                    <RefreshCw />
+                    {checking === offer.offerId ? "Checking…" : "Price check"}
+                  </button>
+                  <button
+                    className="button primary"
+                    onClick={() =>
+                      addFlightToQuote(offer, flights.source, flights.fetchedAt)
+                    }
+                  >
+                    <ShoppingCart />
+                    Add to quote
+                  </button>
+                </div>
               </article>
             );
           })}
@@ -362,14 +486,25 @@ export function InventorySearch() {
                   {offer.checkIn} → {offer.checkOut}
                 </span>
               </div>
-              <button
-                className="button secondary"
-                disabled={checking === offer.offerId}
-                onClick={() => priceCheck("hotel", offer.offerId)}
-              >
-                <RefreshCw />
-                {checking === offer.offerId ? "Checking…" : "Availability"}
-              </button>
+              <div className="inventory-actions">
+                <button
+                  className="button secondary"
+                  disabled={checking === offer.offerId}
+                  onClick={() => priceCheck("hotel", offer.offerId)}
+                >
+                  <RefreshCw />
+                  {checking === offer.offerId ? "Checking…" : "Availability"}
+                </button>
+                <button
+                  className="button primary"
+                  onClick={() =>
+                    addHotelToQuote(offer, hotels.source, hotels.fetchedAt)
+                  }
+                >
+                  <ShoppingCart />
+                  Add to quote
+                </button>
+              </div>
             </article>
           ))}
         </section>
