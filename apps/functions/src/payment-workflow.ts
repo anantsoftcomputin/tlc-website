@@ -14,6 +14,7 @@ import {
   commerceAudit,
   type CommerceIdentity,
 } from "./commerce-command.js";
+import { recordPaymentCaptureFinance } from "./finance-journal.js";
 
 const registry = new CommerceProviderRegistry();
 
@@ -220,16 +221,12 @@ export async function capturePayment(
     if (actorIdentity && payment.orgId !== actorIdentity.orgId)
       throw new HttpsError("not-found", "Payment was not found.");
     if (payment.status === "captured") return;
+    const eventRef = eventId
+      ? database.collection("paymentEvents").doc(eventId)
+      : undefined;
     if (eventId) {
-      const eventRef = database.collection("paymentEvents").doc(eventId);
-      const event = await transaction.get(eventRef);
+      const event = await transaction.get(eventRef!);
       if (event.exists) return;
-      transaction.create(eventRef, {
-        id: eventId,
-        orgId: payment.orgId,
-        paymentId,
-        createdAt: now,
-      });
     }
     const bookingRef = database.collection("bookings").doc(payment.bookingId);
     const bookingSnapshot = await transaction.get(bookingRef);
@@ -256,6 +253,13 @@ export async function capturePayment(
     const paymentStatus =
       totalPaid + 0.01 >= booking.totals.sell ? "paid" : "partial";
     const uid = actorIdentity?.uid || "razorpay-webhook";
+    if (eventRef)
+      transaction.create(eventRef, {
+        id: eventId,
+        orgId: payment.orgId,
+        paymentId,
+        createdAt: now,
+      });
     transaction.update(paymentRef, {
       status: "captured",
       gatewayRef,
@@ -279,21 +283,17 @@ export async function capturePayment(
       updatedAt: now,
       updatedBy: uid,
     });
-    const receivableRef = database
-      .collection("ledger")
-      .doc(`${bookingRef.id}-receivable`);
-    transaction.set(
-      receivableRef,
-      {
-        settledAmount: totalPaid,
-        status: paymentStatus === "paid" ? "settled" : "partial",
-        ...(paymentStatus === "paid" ? { settledAt: now } : {}),
-        paymentId,
-        updatedAt: now,
-        updatedBy: uid,
-      },
-      { merge: true },
-    );
+    recordPaymentCaptureFinance(transaction, database, {
+      identity: { uid, orgId: payment.orgId },
+      bookingId: bookingRef.id,
+      customerId: booking.customerId,
+      paymentId,
+      amount: payment.amount,
+      totalPaid,
+      paymentStatus,
+      currency: payment.currency,
+      now,
+    });
     const auditRef = database.collection("auditLogs").doc();
     const identity = actorIdentity || {
       uid,

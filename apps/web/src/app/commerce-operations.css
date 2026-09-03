@@ -198,12 +198,97 @@
   color: #247047;
 }
 .status-failed,
-.status-cancelled {
+.status-cancelled,
+.status-rejected {
   background: #ffe8e5;
   color: #9b3030;
 }
+.status-approved,
+.status-posted {
+  background: #e5f7ed;
+  color: #247047;
+}
+.finance-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.finance-kpi-grid article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.15rem;
+  border: 1px solid #eadeda;
+  border-radius: 1rem;
+  background: #fff;
+}
+.finance-kpi-grid svg {
+  width: 1.3rem;
+  color: var(--tlc-red);
+}
+.finance-kpi-grid span,
+.finance-profitability td span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.finance-kpi-grid b {
+  font-size: 1.15rem;
+}
+.finance-controls {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.finance-action-list,
+.finance-payable-grid,
+.finance-settlement-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+.finance-payable-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.finance-payable-grid form,
+.finance-settlement-list article {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #eadeda;
+  border-radius: 0.9rem;
+  background: #fffdfa;
+}
+.finance-payable-grid form > div,
+.finance-settlement-list article > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+.finance-payable-grid label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.finance-inline-actions,
+.finance-payment-form {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.finance-payment-form input {
+  flex: 1;
+}
+.finance-negative {
+  color: #9b3030 !important;
+}
+.finance-positive {
+  color: #247047 !important;
+}
 
 @media (max-width: 1100px) {
+  .finance-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .booking-create-panel fieldset {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -221,6 +306,15 @@
   }
 }
 @media (max-width: 680px) {
+  .finance-kpi-grid,
+  .finance-payable-grid {
+    grid-template-columns: 1fr;
+  }
+  .finance-inline-actions,
+  .finance-payment-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
   .booking-create-panel > header,
   .booking-create-panel > footer,
   .booking-command-card {

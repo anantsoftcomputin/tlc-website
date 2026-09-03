@@ -75,6 +75,8 @@ service cloud.firestore {
     match /bookings/{id} { allow read: if isCRMReader() && sameOrg(resource.data) && canAccessAssigned(get(/databases/$(database)/documents/leads/$(resource.data.leadId)).data); allow write: if false; }
     match /payments/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /ledger/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /financeJournals/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /supplierSettlements/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /suppliers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update, delete: if isManager() && sameOrg(resource.data) && keepsOrg(); }
     match /offers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && writesOwnOrg(); allow update, delete: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && sameOrg(resource.data) && keepsOrg(); }
     match /campaigns/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && writesOwnOrg(); allow update, delete: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && sameOrg(resource.data) && keepsOrg(); }

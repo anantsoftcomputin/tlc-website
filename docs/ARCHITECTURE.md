@@ -56,6 +56,10 @@ Phase 2 commerce routes are `/admin/inventory`, `/admin/quotes`, `/i/{token}`, `
 
 AI outputs are advisory and include `reasoning` plus feature attributions where applicable. Prices and availability originate only from adapter results with `source` and `fetchedAt`. Price changes, discounts, bookings, refunds and broadcasts require explicit human approval unless an organization automation setting deliberately enables that workflow.
 
+## Phase 3 finance boundary
+
+Phase 2 payment and ledger records remain the operational source for booking balances. Phase 3 adds an append-only journal and explicit allocation records as the finance system of record: posted entries are reversed, never edited; supplier settlements and customer refunds require authorized server commands; accounting providers receive idempotent document keys; and finance reports are derived from posted records rather than mutable booking totals. This preserves a stable audit chain from accepted quote to booking, collection, supplier payment, refund, and external-accounting sync.
+
 ## Security baseline
 
 - Firebase Auth sessions are stored in secure, HTTP-only cookies.

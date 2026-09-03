@@ -8,6 +8,7 @@ import {
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { createBookingFinance } from "./booking-finance.js";
 import {
   bookingStatus,
   bookingTimeline,
@@ -179,50 +180,7 @@ export const approveBooking = onCall(
         updatedAt: now,
         updatedBy: identity.uid,
       });
-      const receivable = database
-        .collection("ledger")
-        .doc(`${ref.id}-receivable`);
-      transaction.set(receivable, {
-        id: receivable.id,
-        orgId: identity.orgId,
-        bookingId: ref.id,
-        type: "receivable",
-        party: {
-          id: booking.customerId,
-          type: "customer",
-          name: "Booking customer",
-        },
-        amount: booking.totals.sell,
-        currency: booking.totals.currency,
-        gst: { ratePct: 0, amount: 0 },
-        dueDate: now.slice(0, 10),
-        status: "open",
-        createdAt: now,
-        updatedAt: now,
-        createdBy: identity.uid,
-        updatedBy: identity.uid,
-      });
-      for (const item of booking.items) {
-        const payable = database
-          .collection("ledger")
-          .doc(`${ref.id}-payable-${item.id}`);
-        transaction.set(payable, {
-          id: payable.id,
-          orgId: identity.orgId,
-          bookingId: ref.id,
-          type: "payable",
-          party: { id: item.supplierId, type: "supplier", name: item.source },
-          amount: item.costPrice,
-          currency: item.currency,
-          gst: { ratePct: 0, amount: 0 },
-          dueDate: item.dates.start,
-          status: "open",
-          createdAt: now,
-          updatedAt: now,
-          createdBy: identity.uid,
-          updatedBy: identity.uid,
-        });
-      }
+      createBookingFinance(transaction, database, booking, identity, now);
       transaction.update(database.collection("leads").doc(booking.leadId), {
         status: "won",
         updatedAt: now,

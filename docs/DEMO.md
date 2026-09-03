@@ -34,3 +34,16 @@ For a large local demonstration, start the emulators, run `pnpm ai:seed`, and th
 8. Open **Payments** and **Audit trail** to confirm organization-scoped financial and mutation history.
 
 Running `pnpm seed` against the emulators also creates a realistic partially confirmed booking, traveller documents, an advance receipt, and open ledger entries so every Phase 2 screen has data without external credentials.
+
+## Phase 3 finance foundation
+
+1. Open **Finance** and review customer outstanding, supplier outstanding, collections, and posted-journal totals.
+2. Compare planned and actual cost, gross profit, margin, and cost variance for the seeded booking.
+3. For an older approved booking marked **migration needed**, post its deterministic opening journal and refresh to confirm the command is idempotent.
+4. Under **Open supplier payables**, request either a full or partial supplier settlement.
+5. Sign in as a manager and approve the request. Use rejection on a separate request to demonstrate that its reserved payable balance is released.
+6. Mark the approved settlement paid with its bank or UPI reference.
+7. Confirm that the payable balance, supplier-paid KPI, and balanced append-only journal all update together.
+8. Open **Audit trail** and verify the settlement request, approval/rejection, and payment actions.
+
+The emulator seed includes a partially settled airline payable and three balanced journals: booking approval, customer collection, and supplier payment.

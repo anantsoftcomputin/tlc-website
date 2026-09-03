@@ -23,6 +23,7 @@ import {
   UsersRound,
   CalendarCheck2,
   CreditCard,
+  Landmark,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -91,6 +92,12 @@ const navGroups = [
         label: "Payments",
         href: "/admin/payments",
         icon: CreditCard,
+        permission: "finance:read" as const,
+      },
+      {
+        label: "Finance",
+        href: "/admin/finance",
+        icon: Landmark,
         permission: "finance:read" as const,
       },
     ],

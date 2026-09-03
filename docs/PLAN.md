@@ -102,3 +102,48 @@ Updated: 2026-09-02
 - [x] Every quote, booking, and payment mutation is organization-scoped and audited.
 - [x] Mocks make the full commerce flow demonstrable without provider credentials.
 - [x] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete flow.
+
+# Phase 3 Plan — Finance
+
+## Step 11 — Finance foundation and supplier settlements
+
+- [x] Promote operational ledger records into immutable journal-grade finance entries.
+- [x] Add supplier settlement creation, approval, payment, and allocation workflows.
+- [x] Add booking-wise actual-versus-planned profitability and outstanding balances.
+- [x] Build a responsive finance workspace for receivables, payables, and settlements.
+- [x] Keep every finance mutation server-owned, organization-scoped, and audited.
+
+## Step 12 — Cancellations and refunds
+
+- [ ] Add booking cancellation requests with item-level supplier penalties.
+- [ ] Add customer refund calculation with retained fees and profitability impact.
+- [ ] Require manager approval before cancellation or refund execution.
+- [ ] Add payment-provider refund commands, webhook handling, and refund reconciliation.
+
+## Step 13 — Accounting integrations
+
+- [ ] Define accounting provider contracts with a deterministic mock.
+- [ ] Add credential-gated Zoho Books and Tally adapters.
+- [ ] Push invoices, bills, payments, credit notes, and supplier settlements idempotently.
+- [ ] Add sync status, retry controls, error visibility, and usage logging.
+
+## Step 14 — GST invoices and receipts
+
+- [ ] Add organization tax profile, place-of-supply, SAC, GST split, and rounding rules.
+- [ ] Generate immutable numbered invoices, credit notes, and payment receipts.
+- [ ] Add printable customer-safe finance documents and document audit history.
+
+## Step 15 — Finance reporting and close
+
+- [ ] Build ageing, collections, supplier dues, GST, profitability, and cash-position reports.
+- [ ] Add finance-period reconciliation and controlled close/reopen workflows.
+- [ ] Export finance reports in CSV and accounting-friendly formats.
+
+## Checkpoint 3 exit criteria
+
+- [ ] Finance can trace every booking from quote economics through collection and supplier settlement.
+- [ ] Refunds and cancellations require explicit approval and preserve a complete audit trail.
+- [ ] GST invoices, receipts, and credit notes are reproducible and immutable after issue.
+- [ ] Zoho Books, Tally, and mock accounting providers share one tested contract.
+- [ ] Finance reports reconcile to underlying journal entries and payment records.
+- [ ] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete finance flow.

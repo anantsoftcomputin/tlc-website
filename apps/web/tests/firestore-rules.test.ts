@@ -96,6 +96,19 @@ beforeAll(async () => {
       bookingId: "booking-one",
       type: "receivable",
     });
+    await setDoc(doc(context.firestore(), "financeJournals", "journal-one"), {
+      orgId: "tlc-vacations",
+      sourceType: "booking",
+      status: "posted",
+    });
+    await setDoc(
+      doc(context.firestore(), "supplierSettlements", "settlement-one"),
+      {
+        orgId: "tlc-vacations",
+        bookingId: "booking-one",
+        status: "pendingApproval",
+      },
+    );
   });
 });
 
@@ -245,6 +258,12 @@ describe("CRM and audit rules", () => {
     await assertSucceeds(getDoc(doc(manager, "bookings", "booking-one")));
     await assertSucceeds(getDoc(doc(accounts, "payments", "payment-one")));
     await assertSucceeds(getDoc(doc(accounts, "ledger", "ledger-one")));
+    await assertSucceeds(
+      getDoc(doc(accounts, "financeJournals", "journal-one")),
+    );
+    await assertSucceeds(
+      getDoc(doc(manager, "supplierSettlements", "settlement-one")),
+    );
     await assertFails(
       updateDoc(doc(manager, "bookings", "booking-one"), {
         status: "confirmed",
@@ -253,6 +272,16 @@ describe("CRM and audit rules", () => {
     await assertFails(
       updateDoc(doc(accounts, "payments", "payment-one"), {
         status: "refunded",
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(accounts, "financeJournals", "journal-one"), {
+        status: "reversed",
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(manager, "supplierSettlements", "settlement-one"), {
+        status: "approved",
       }),
     );
   });

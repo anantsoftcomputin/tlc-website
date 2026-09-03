@@ -30,6 +30,8 @@
 | `bookings/{bookingId}` | Yes | No | Approved booking, travellers, supplier references and profitability. |
 | `payments/{paymentId}` | Yes | Yes | Payment and refund lifecycle. |
 | `ledger/{entryId}` | Yes | Yes | Receivable, payable, commission and incentive ledger. |
+| `financeJournals/{journalId}` | Yes | Yes | Append-only balanced finance journal. |
+| `supplierSettlements/{settlementId}` | Yes | Yes | Approved supplier payment and payable allocations. |
 | `suppliers/{supplierId}` | Yes | No | Supplier directory and adapter selection. |
 | `offers/{offerId}` | Yes | No | Grounded inventory offer and targeting content. |
 | `campaigns/{campaignId}` | Yes | No | Approved audience, channel, schedule and outcome metrics. |
@@ -414,9 +416,75 @@ Receivable, payable, commission and incentive ledger.
 | `dueDate` | string | Yes |
 | `settledAt` | string | No |
 | `settledAmount` | number | Yes |
+| `pendingSettlementAmount` | number | Yes |
 | `paymentId` | string | No |
 | `status` | open \| partial \| settled \| cancelled | Yes |
 | `accountingSyncRef` | string | No |
+| `createdAt` | string | Yes |
+| `updatedAt` | string | Yes |
+| `createdBy` | string | Yes |
+| `updatedBy` | string | Yes |
+
+## `financeJournals/{journalId}`
+
+Append-only balanced finance journal.
+
+- Organization scoped: Yes
+- Server writes only: Yes
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | string | Yes |
+| `orgId` | string | Yes |
+| `entryNumber` | string | Yes |
+| `bookingId` | string | No |
+| `sourceType` | booking \| payment \| supplierSettlement \| refund \| adjustment \| reversal | Yes |
+| `sourceId` | string | Yes |
+| `date` | string | Yes |
+| `currency` | INR \| USD \| EUR \| GBP \| AED \| SGD \| THB | Yes |
+| `narration` | string | Yes |
+| `lines` | object[] | Yes |
+| `totalDebit` | number | Yes |
+| `totalCredit` | number | Yes |
+| `status` | posted \| reversed | Yes |
+| `postedAt` | string | Yes |
+| `reversedAt` | string | No |
+| `reversalOf` | string | No |
+| `createdAt` | string | Yes |
+| `updatedAt` | string | Yes |
+| `createdBy` | string | Yes |
+| `updatedBy` | string | Yes |
+
+## `supplierSettlements/{settlementId}`
+
+Approved supplier payment and payable allocations.
+
+- Organization scoped: Yes
+- Server writes only: Yes
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | string | Yes |
+| `orgId` | string | Yes |
+| `settlementNumber` | string | Yes |
+| `bookingId` | string | Yes |
+| `supplierId` | string | Yes |
+| `supplierName` | string | Yes |
+| `currency` | INR \| USD \| EUR \| GBP \| AED \| SGD \| THB | Yes |
+| `amount` | number | Yes |
+| `allocations` | object[] | Yes |
+| `status` | pendingApproval \| approved \| paid \| rejected \| cancelled | Yes |
+| `method` | bankTransfer \| cash \| cheque \| upi \| other | No |
+| `paymentReference` | string | No |
+| `requestedBy` | string | Yes |
+| `approvedBy` | string | No |
+| `approvedAt` | string | No |
+| `paidBy` | string | No |
+| `paidAt` | string | No |
+| `rejectedBy` | string | No |
+| `rejectedAt` | string | No |
+| `rejectionReason` | string | No |
+| `journalId` | string | No |
 | `createdAt` | string | Yes |
 | `updatedAt` | string | Yes |
 | `createdBy` | string | Yes |

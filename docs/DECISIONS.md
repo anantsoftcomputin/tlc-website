@@ -51,3 +51,7 @@ Accepted quotes convert once into server-owned bookings. A separate manager appr
 ## ADR-013 — Credential-gated commerce providers
 
 Deterministic flight, hotel, and payment providers remain the safe default. Amadeus, Hotelbeds, and Razorpay implementations register only when server credentials exist and the organization explicitly enables the provider. Inventory calls are rate-limited, retried, and usage/cost logged. Supplier ticketing stays human-confirmed until production fulfilment scopes and commercial contracts are approved.
+
+## ADR-014 — Append-only finance journals and reserved allocations
+
+Operational booking ledgers remain the balance source while every accounting event posts a balanced, immutable journal linked to its source. Supplier settlement requests reserve payable allocations atomically before approval so concurrent requests cannot over-allocate a liability. Rejections release the reservation; payment converts it into a settled allocation and posts the cash journal. Corrections use linked reversal entries instead of rewriting posted history.

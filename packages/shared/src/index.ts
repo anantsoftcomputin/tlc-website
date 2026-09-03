@@ -2,6 +2,7 @@ export * from "./auth/permissions.js";
 export * from "./finance/quote-totals.js";
 export * from "./finance/quote-guardrails.js";
 export * from "./finance/quote-lifecycle.js";
+export * from "./finance/journal.js";
 export * from "./import/customer-import.js";
 export * from "./schemas/base.js";
 export * from "./schemas/commerce.js";
