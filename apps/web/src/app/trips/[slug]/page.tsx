@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { BedDouble, CalendarDays, Check, CheckCircle2, ChevronRight, Heart, MapPin, MessageCircle, Share2, ShieldCheck, Sparkles, Star, Users } from "lucide-react";
+import { BadgeCheck, BedDouble, CalendarDays, Check, CheckCircle2, ChevronRight, Heart, MapPin, MessageCircle, Share2, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { trips } from "@/lib/data";
 import { whatsappHref } from "@/lib/utils";
 import { TripCustomiser } from "@/components/trip-customiser";
@@ -25,7 +25,7 @@ export default async function TripPage({ params }: { params: Promise<{ slug: str
   return <div className="market-tour-detail">
     <div className="market-breadcrumb"><Link href="/">Home</Link><span>/</span><Link href="/trips">Tours</Link><span>/</span><b>{trip.title}</b></div>
     <section className="market-tour-title">
-      <div><div className="market-rating"><Star fill="currentColor" /><b>4.8</b><span>Traveller favourite · TLC curated</span></div><h1>{trip.title}</h1><p><MapPin /> {trip.route.join(" · ")}</p></div>
+      <div><div className="market-rating"><BadgeCheck /><b>TLC curated</b><span>Flexible itinerary</span></div><h1>{trip.title}</h1><p><MapPin /> {trip.route.join(" · ")}</p></div>
       <div><button><Share2 /> Share</button><button><Heart /> Save</button></div>
     </section>
     <section className="market-tour-gallery">
@@ -53,7 +53,7 @@ export default async function TripPage({ params }: { params: Promise<{ slug: str
 
         <section id="included" className="market-tour-included"><h2>What’s included</h2><div>{trip.inclusions.map((item) => <p key={item}><Check /> {item}</p>)}</div><small>Your final proposal will clearly show every inclusion and exclusion before you book.</small></section>
         <section id="good-to-know" className="market-tour-note"><ShieldCheck /><div><h2>Good to know before you book</h2><p>Availability and pricing are confirmed for your actual travel dates. TLC will never treat this planning concept as a live, instantly confirmed package.</p></div></section>
-        <section id="reviews" className="market-tour-review"><div><b>4.8</b><span className="proof-stars"><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /></span><small>TLC traveller feedback</small></div><blockquote>“The entire trip went well. The team was prompt, responsive and stayed in touch throughout.”</blockquote></section>
+        <section id="reviews" className="market-tour-review"><div><BadgeCheck /><b>Real feedback</b><small>From past TLC travellers</small></div><blockquote>“The entire trip went well. The team was prompt, responsive and stayed in touch throughout.”</blockquote></section>
       </main>
 
       <aside className="market-booking-card">

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Heart, MapPin, Star } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Heart, MapPin } from "lucide-react";
 import type { Trip } from "@/types";
 import { useEffect, useState } from "react";
 import { savedEvent } from "./mobile-bottom-nav";
@@ -27,7 +27,7 @@ export function TripCard({ trip, revealDelay, horizontal = false }: { trip: Trip
     </Link>
     <button className="market-save" onClick={toggle} aria-label={saved ? "Remove saved trip" : "Save trip"}><Heart fill={saved ? "currentColor" : "none"} /></button>
     <div className="trip-card-copy">
-      <div className="market-rating"><Star fill="currentColor" /><b>4.8</b><span>Traveller favourite</span></div>
+      <div className="market-rating"><BadgeCheck /><b>TLC curated</b><span>Flexible starting point</span></div>
       <Link href={`/trips/${trip.slug}`}><h3>{trip.title}</h3></Link>
       <p className="market-route"><MapPin /> {trip.route.join(" · ")}</p>
       <div className="market-trip-meta"><span>{trip.days} days</span><span>{trip.nights} nights</span><span>{trip.idealFor[0]}</span></div>

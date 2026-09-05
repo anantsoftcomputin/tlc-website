@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BadgeIndianRupee, Headphones, MessageCircle, ShieldCheck, Sparkles, Star, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, BadgeIndianRupee, Headphones, MessageCircle, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { SearchConsole } from "@/components/search-console";
 import { TripCard } from "@/components/trip-card";
 import { destinations, moods, testimonials, tripRepository } from "@/lib/data";
@@ -35,8 +35,8 @@ export default async function Home() {
     </section>
 
     <section className="market-proof">
-      <div><b>25+ years</b><span>of travel expertise</span></div>
-      <div><span className="proof-stars"><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /></span><span>trusted traveller feedback</span></div>
+      <div><b>Local team</b><span>with destination expertise</span></div>
+      <div><BadgeCheck /><span><b>Real feedback</b> from TLC travellers</span></div>
       <div><Headphones /><span><b>Human support</b> before & during travel</span></div>
       <div><Users /><span><b>Private planning</b> for couples, families & groups</span></div>
     </section>
@@ -79,6 +79,6 @@ export default async function Home() {
       <div><span><Sparkles /> Not sure where to begin?</span><h2>Let a TLC expert turn your ideas into one brilliant trip.</h2><p>Tell us the dates, people and feeling you have in mind. We’ll research the details and come back with a clear, personalised proposal.</p><div><Link className="button button-gold" href="/plan-my-trip">Create my trip <ArrowRight /></Link><a href={whatsappHref("Hi TLC Holidays, I’d like help planning a holiday.")}>Chat on WhatsApp</a></div></div>
     </section>
 
-    <section className="market-testimonial market-section"><span className="proof-stars"><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /></span><blockquote>“{testimonials[0].quote}”</blockquote><p><b>{testimonials[0].name}</b> · {testimonials[0].detail}</p></section>
+    <section className="market-testimonial market-section"><BadgeCheck className="testimonial-check" /><blockquote>“{testimonials[0].quote}”</blockquote><p><b>{testimonials[0].name}</b> · {testimonials[0].detail}</p></section>
   </div>;
 }
