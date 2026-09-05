@@ -9,6 +9,7 @@ import {
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { createBookingFinance } from "./booking-finance.js";
+import { assertFinanceDateOpen } from "./finance-period-guard.js";
 import {
   bookingStatus,
   bookingTimeline,
@@ -149,6 +150,7 @@ export const approveBooking = onCall(
         "permission-denied",
         "Manager approval is required.",
       );
+    await assertFinanceDateOpen(identity.orgId);
     const parsed = bookingCommandInputSchema.safeParse(request.data);
     if (!parsed.success)
       throw new HttpsError("invalid-argument", "Booking ID is invalid.");

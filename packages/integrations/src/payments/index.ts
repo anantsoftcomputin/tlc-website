@@ -22,6 +22,15 @@ export type PaymentLink = {
 };
 export interface PaymentProvider extends HealthCheckableProvider {
   createLink(request: PaymentLinkRequest): Promise<SourcedResult<PaymentLink>>;
+  refund(request: {
+    paymentRef: string;
+    amount: number;
+    currency: string;
+    referenceId: string;
+    approvedBy: string;
+  }): Promise<
+    SourcedResult<{ providerRef: string; status: "processed" | "pending" }>
+  >;
 }
 
 export class MockPaymentProvider implements PaymentProvider {
@@ -39,6 +48,18 @@ export class MockPaymentProvider implements PaymentProvider {
         providerRef: `mock_${request.referenceId}`,
         url: `${request.callbackUrl || "https://tlcholidays.in"}?mockPayment=${encodeURIComponent(request.referenceId)}`,
         status: "created" as const,
+      },
+      this.key,
+      this.clock,
+    );
+  }
+  async refund(request: Parameters<PaymentProvider["refund"]>[0]) {
+    if (!request.approvedBy)
+      throw new Error("Human approval is required to refund.");
+    return sourced(
+      {
+        providerRef: `mock_refund_${request.referenceId}`,
+        status: "processed" as const,
       },
       this.key,
       this.clock,
@@ -99,6 +120,39 @@ export class RazorpayPaymentProvider implements PaymentProvider {
       body.status === "paid" ? "captured" : "created";
     return sourced(
       { providerRef: body.id, url: body.short_url, status },
+      this.key,
+      this.clock,
+    );
+  }
+  async refund(request: Parameters<PaymentProvider["refund"]>[0]) {
+    if (!request.approvedBy)
+      throw new Error("Human approval is required to refund.");
+    const response = await fetch(
+      `https://api.razorpay.com/v1/payments/${encodeURIComponent(request.paymentRef)}/refund`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${this.keyId}:${this.keySecret}`).toString("base64")}`,
+          "Content-Type": "application/json",
+          "X-Payout-Idempotency": request.referenceId,
+        },
+        body: JSON.stringify({
+          amount: Math.round(request.amount * 100),
+          notes: { tlc_reference: request.referenceId },
+        }),
+      },
+    );
+    if (!response.ok)
+      throw new Error(`Razorpay refund request failed (${response.status}).`);
+    const body = (await response.json()) as { id: string; status: string };
+    return sourced(
+      {
+        providerRef: body.id,
+        status:
+          body.status === "processed"
+            ? ("processed" as const)
+            : ("pending" as const),
+      },
       this.key,
       this.clock,
     );

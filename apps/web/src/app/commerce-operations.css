@@ -239,6 +239,197 @@
   gap: 1rem;
   margin: 1rem 0;
 }
+
+.finance-subnav {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding: 0.25rem 0 0.75rem;
+  scrollbar-width: none;
+}
+.finance-subnav a {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.65rem 0.9rem;
+}
+.finance-section {
+  scroll-margin-top: 6rem;
+}
+.finance-request-grid,
+.finance-document-grid {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.finance-request-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.finance-request-card,
+.finance-document-grid article {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  padding: 1rem;
+}
+.finance-request-card summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.finance-request-card form,
+.finance-cancel-item {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.finance-cancel-item {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+  grid-template-columns: 1.3fr 1fr 1fr;
+}
+.finance-cancel-item > input {
+  grid-column: 1 / -1;
+}
+.finance-check {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+}
+.finance-document-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.finance-tax-profile {
+  margin: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+}
+.finance-tax-profile summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.finance-tax-profile form {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.finance-document-grid article,
+.finance-document-grid article > div:first-child {
+  display: grid;
+  gap: 0.4rem;
+}
+.finance-sync-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.finance-report-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.finance-report-grid article {
+  background: var(--surface-soft);
+  border-radius: 16px;
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+.finance-report-grid b {
+  font-size: 1.15rem;
+}
+.finance-period-form {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+.finance-print-document {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 4vw, 3rem);
+}
+.finance-print-document header,
+.finance-print-document section {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.finance-print-brand,
+.finance-print-document section > div {
+  display: grid;
+  gap: 0.35rem;
+}
+.finance-tax-totals {
+  display: grid;
+  justify-content: end;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  text-align: right;
+}
+.finance-print-document footer {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding-top: 1rem;
+}
+@media (max-width: 900px) {
+  .finance-report-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .finance-period-form,
+  .finance-tax-profile form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .finance-report-grid,
+  .finance-period-form {
+    grid-template-columns: 1fr;
+  }
+  .finance-cancel-item {
+    grid-template-columns: 1fr;
+  }
+  .finance-cancel-item > input {
+    grid-column: auto;
+  }
+  .finance-print-document header,
+  .finance-print-document section {
+    flex-direction: column;
+  }
+}
+@media print {
+  .admin-sidebar,
+  .admin-mobile-bar,
+  .admin-topbar {
+    display: none !important;
+  }
+  .admin-main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .finance-print-document {
+    border: 0;
+    border-radius: 0;
+    max-width: none;
+  }
+}
 .finance-action-list,
 .finance-payable-grid,
 .finance-settlement-list {

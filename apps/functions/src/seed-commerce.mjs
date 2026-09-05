@@ -1,3 +1,5 @@
+import { seedPhase3Finance } from "./seed-finance.mjs";
+
 export function seedCommerce({ database, batch, orgId, ownerUid, now }) {
   const commerceItems = [
     {
@@ -359,4 +361,5 @@ export function seedCommerce({ database, batch, orgId, ownerUid, now }) {
       updatedBy: ownerUid,
     });
   }
+  seedPhase3Finance({ database, batch, orgId, ownerUid, now });
 }

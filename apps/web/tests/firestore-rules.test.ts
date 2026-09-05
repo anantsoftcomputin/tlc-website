@@ -109,6 +109,16 @@ beforeAll(async () => {
         status: "pendingApproval",
       },
     );
+    for (const collection of [
+      "cancellationRequests",
+      "financeDocuments",
+      "accountingSyncs",
+      "financePeriods",
+    ])
+      await setDoc(doc(context.firestore(), collection, "finance-one"), {
+        orgId: "tlc-vacations",
+        status: "pendingApproval",
+      });
   });
 });
 
@@ -264,6 +274,19 @@ describe("CRM and audit rules", () => {
     await assertSucceeds(
       getDoc(doc(manager, "supplierSettlements", "settlement-one")),
     );
+    for (const collection of [
+      "cancellationRequests",
+      "financeDocuments",
+      "accountingSyncs",
+      "financePeriods",
+    ]) {
+      await assertSucceeds(getDoc(doc(accounts, collection, "finance-one")));
+      await assertFails(
+        updateDoc(doc(accounts, collection, "finance-one"), {
+          status: "forged",
+        }),
+      );
+    }
     await assertFails(
       updateDoc(doc(manager, "bookings", "booking-one"), {
         status: "confirmed",

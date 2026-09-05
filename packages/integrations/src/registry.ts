@@ -13,6 +13,12 @@ import {
   RazorpayPaymentProvider,
   type PaymentProvider,
 } from "./payments/index.js";
+import {
+  MockAccountingProvider,
+  TallyAccountingProvider,
+  ZohoBooksProvider,
+  type AccountingProvider,
+} from "./accounting/index.js";
 
 export type CommerceProviderSelection = {
   flights?: string;
@@ -23,6 +29,7 @@ export class CommerceProviderRegistry {
   private readonly flights = new Map<string, FlightProvider>();
   private readonly hotels = new Map<string, HotelProvider>();
   private readonly payments = new Map<string, PaymentProvider>();
+  private readonly accounting = new Map<string, AccountingProvider>();
 
   constructor() {
     const mockFlight = new MockFlightProvider();
@@ -55,6 +62,24 @@ export class CommerceProviderRegistry {
         new RazorpayPaymentProvider(
           process.env.RAZORPAY_KEY_ID,
           process.env.RAZORPAY_KEY_SECRET,
+        ),
+      );
+    this.registerAccounting(new MockAccountingProvider());
+    if (
+      process.env.ZOHO_BOOKS_ACCESS_TOKEN &&
+      process.env.ZOHO_BOOKS_ORGANIZATION_ID
+    )
+      this.registerAccounting(
+        new ZohoBooksProvider(
+          process.env.ZOHO_BOOKS_ACCESS_TOKEN,
+          process.env.ZOHO_BOOKS_ORGANIZATION_ID,
+        ),
+      );
+    if (process.env.TALLY_ENDPOINT && process.env.TALLY_COMPANY)
+      this.registerAccounting(
+        new TallyAccountingProvider(
+          process.env.TALLY_ENDPOINT,
+          process.env.TALLY_COMPANY,
         ),
       );
   }
@@ -92,6 +117,18 @@ export class CommerceProviderRegistry {
     const provider = this.payments.get(key);
     if (!provider)
       throw new Error(`Payment provider '${key}' is not configured.`);
+    return provider;
+  }
+
+  registerAccounting(provider: AccountingProvider) {
+    this.accounting.set(provider.key, provider);
+    return this;
+  }
+
+  accountingProvider(key = "mock") {
+    const provider = this.accounting.get(key);
+    if (!provider)
+      throw new Error(`Accounting provider '${key}' is not configured.`);
     return provider;
   }
 

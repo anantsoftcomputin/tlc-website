@@ -10,7 +10,11 @@ import {
   travelHistorySchema,
 } from "./customer.js";
 import {
+  accountingSyncSchema,
+  cancellationRequestSchema,
+  financeDocumentSchema,
   financeJournalSchema,
+  financePeriodSchema,
   ledgerEntrySchema,
   paymentSchema,
   supplierSchema,
@@ -146,6 +150,35 @@ export const schemaCatalog: readonly SchemaCatalogEntry[] = [
     orgScoped: true,
     serverWritesOnly: true,
     schema: supplierSettlementSchema,
+  },
+  {
+    collection: "cancellationRequests/{cancellationId}",
+    description:
+      "Approved item-level cancellation and customer refund lifecycle.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: cancellationRequestSchema,
+  },
+  {
+    collection: "financeDocuments/{documentId}",
+    description: "Immutable GST invoice, receipt, or credit note.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: financeDocumentSchema,
+  },
+  {
+    collection: "accountingSyncs/{syncId}",
+    description: "Idempotent external accounting synchronization attempt.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: accountingSyncSchema,
+  },
+  {
+    collection: "financePeriods/{periodId}",
+    description: "Reconciled finance reporting period and close status.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: financePeriodSchema,
   },
   {
     collection: "suppliers/{supplierId}",

@@ -47,3 +47,14 @@ Running `pnpm seed` against the emulators also creates a realistic partially con
 8. Open **Audit trail** and verify the settlement request, approval/rejection, and payment actions.
 
 The emulator seed includes a partially settled airline payable and three balanced journals: booking approval, customer collection, and supplier payment.
+
+## Phase 3 complete finance flow
+
+1. In **Finance → Cancellations & refunds**, open an active booking, select items, enter supplier penalties and retained fees, and request approval. Confirm the refund is calculated from captured funds.
+2. Approve the request as a manager, execute it with the mock provider, then reconcile the resulting refund. Confirm booking profitability and supplier liabilities change without rewriting earlier journals.
+3. Save the GST organization profile. Issue a booking invoice and payment receipt, open each permanent document, and use browser print preview. Complete a cancellation to issue its credit note.
+4. Synchronize an invoice with **Mock** and confirm the stable external reference. Zoho and Tally intentionally show a configuration error until credentials are supplied; the failed attempt remains visible and retryable.
+5. Download the ledger, profitability, and GST CSV reports. Review receivable/supplier ageing and net cash position.
+6. Reconcile all captured payments and resolve pending settlements/refunds. Close a finance period, verify covered dates reject new postings, then reopen it with a reason.
+
+The emulator seed includes a tax profile, numbered invoice and receipt, successful mock accounting sync, pending cancellation approval, and a previously closed period.

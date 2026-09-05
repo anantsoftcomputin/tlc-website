@@ -1,4 +1,5 @@
 export * from "./common.js";
+export * from "./accounting/index.js";
 export * from "./flights/index.js";
 export * from "./hotels/index.js";
 export * from "./payments/index.js";

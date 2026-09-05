@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { capturePayment } from "./payment-workflow.js";
+import { completeProviderRefund } from "./refund-provider-settlement.js";
 
 export function verifyRazorpaySignature(
   rawBody: Buffer,
@@ -38,6 +39,7 @@ export const razorpayWebhook = onRequest(
           entity?: { id?: string; reference_id?: string };
         };
         payment?: { entity?: { id?: string } };
+        refund?: { entity?: { id?: string; status?: string } };
       };
     };
     if (payload.event === "payment_link.paid") {
@@ -48,6 +50,14 @@ export const razorpayWebhook = onRequest(
           String(payload.payload?.payment?.entity?.id || entity.id),
           "link",
           `${payload.event}-${entity.id}-${payload.created_at}`,
+        );
+    }
+    if (payload.event === "refund.processed") {
+      const refund = payload.payload?.refund?.entity;
+      if (refund?.id)
+        await completeProviderRefund(
+          refund.id,
+          `${payload.event}-${refund.id}-${payload.created_at}`,
         );
     }
     response.status(200).json({ received: true });

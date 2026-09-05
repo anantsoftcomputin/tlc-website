@@ -5,7 +5,10 @@ import {
   Landmark,
 } from "lucide-react";
 import Link from "next/link";
+import { CancellationControls } from "@/components/admin/cancellation-controls";
+import { FinanceDocumentControls } from "@/components/admin/finance-document-controls";
 import { FinanceControls } from "@/components/admin/finance-controls";
+import { FinancePeriodControls } from "@/components/admin/finance-period-controls";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreFinanceRepository } from "@/repositories/firebase/firestore-finance-repository";
 
@@ -53,6 +56,13 @@ export default async function FinancePage() {
           Customer payments
         </Link>
       </header>
+      <nav className="finance-subnav" aria-label="Finance sections">
+        <a href="#profitability">Profitability</a>
+        <a href="#cancellations">Refunds</a>
+        <a href="#documents">GST & accounting</a>
+        <a href="#reports">Reports</a>
+        <a href="#period-close">Period close</a>
+      </nav>
       <section className="finance-kpi-grid">
         <article>
           <CircleDollarSign />
@@ -75,7 +85,7 @@ export default async function FinancePage() {
           <b>{workspace.journals.length}</b>
         </article>
       </section>
-      <section className="admin-panel finance-profitability">
+      <section className="admin-panel finance-profitability" id="profitability">
         <header>
           <div>
             <b>Booking-wise profitability</b>
@@ -157,6 +167,95 @@ export default async function FinancePage() {
           .filter((item) => !item.journalPosted)
           .map((item) => item.bookingId)}
         canWrite={financeWriters.has(user.role)}
+        canApprove={managers.has(user.role)}
+      />
+      <CancellationControls
+        bookings={workspace.bookings}
+        cancellations={workspace.cancellations}
+        canWrite={financeWriters.has(user.role)}
+        canApprove={managers.has(user.role)}
+      />
+      <FinanceDocumentControls
+        bookings={workspace.bookings}
+        payments={workspace.payments}
+        cancellations={workspace.cancellations}
+        documents={workspace.documents}
+        syncs={workspace.accountingSyncs}
+        ledger={workspace.ledger}
+        settlements={workspace.settlements}
+        taxProfile={workspace.taxProfile}
+        canWrite={financeWriters.has(user.role)}
+        canManage={managers.has(user.role)}
+      />
+      <section className="admin-panel finance-section" id="reports">
+        <header>
+          <div>
+            <b>Finance reports</b>
+            <span>
+              Ageing, tax, cash position, supplier dues, collections, and
+              profitability as of {workspace.reports.asOf}.
+            </span>
+          </div>
+          <div className="finance-inline-actions">
+            <a
+              className="button secondary"
+              href="/admin/finance/export?report=ledger"
+            >
+              Ledger CSV
+            </a>
+            <a
+              className="button secondary"
+              href="/admin/finance/export?report=profitability"
+            >
+              Profitability CSV
+            </a>
+            <a
+              className="button secondary"
+              href="/admin/finance/export?report=gst"
+            >
+              GST CSV
+            </a>
+          </div>
+        </header>
+        <div className="finance-report-grid">
+          <article>
+            <span>Net cash position</span>
+            <b>{money(currency, workspace.reports.netCash)}</b>
+            <small>Collections less supplier payments and refunds</small>
+          </article>
+          <article>
+            <span>GST taxable value</span>
+            <b>{money(currency, workspace.reports.gst.taxableValue)}</b>
+            <small>
+              CGST {workspace.reports.gst.cgst.toLocaleString("en-IN")} · SGST{" "}
+              {workspace.reports.gst.sgst.toLocaleString("en-IN")} · IGST{" "}
+              {workspace.reports.gst.igst.toLocaleString("en-IN")}
+            </small>
+          </article>
+          <article>
+            <span>Receivable ageing</span>
+            {Object.entries(workspace.reports.receivableAgeing).map(
+              ([bucket, value]) => (
+                <small key={bucket}>
+                  {bucket}: {money(currency, value)}
+                </small>
+              ),
+            )}
+          </article>
+          <article>
+            <span>Supplier dues ageing</span>
+            {Object.entries(workspace.reports.payableAgeing).map(
+              ([bucket, value]) => (
+                <small key={bucket}>
+                  {bucket}: {money(currency, value)}
+                </small>
+              ),
+            )}
+          </article>
+        </div>
+      </section>
+      <FinancePeriodControls
+        periods={workspace.periods}
         canApprove={managers.has(user.role)}
       />
       <section className="admin-panel finance-journals">

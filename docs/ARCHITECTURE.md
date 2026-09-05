@@ -60,6 +60,8 @@ AI outputs are advisory and include `reasoning` plus feature attributions where 
 
 Phase 2 payment and ledger records remain the operational source for booking balances. Phase 3 adds an append-only journal and explicit allocation records as the finance system of record: posted entries are reversed, never edited; supplier settlements and customer refunds require authorized server commands; accounting providers receive idempotent document keys; and finance reports are derived from posted records rather than mutable booking totals. This preserves a stable audit chain from accepted quote to booking, collection, supplier payment, refund, and external-accounting sync.
 
+Phase 3 completion adds four bounded aggregates around that journal: cancellation requests calculate but cannot approve themselves; numbered finance documents snapshot the applicable tax identity; accounting sync records isolate external-provider failure from internal posting; and finance periods prevent new postings after reconciliation close. Provider callbacks are idempotent through immutable payment-event identifiers.
+
 ## Security baseline
 
 - Firebase Auth sessions are stored in secure, HTTP-only cookies.

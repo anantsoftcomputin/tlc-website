@@ -13,6 +13,7 @@ import {
   type CommerceIdentity,
 } from "./commerce-command.js";
 import { postedJournal } from "./finance-journal.js";
+import { assertFinanceDateOpen } from "./finance-period-guard.js";
 
 async function loadSettlement(
   transaction: FirebaseFirestore.Transaction,
@@ -163,6 +164,7 @@ export const paySupplierSettlement = onCall(
   { region: "asia-south1" },
   async (request) => {
     const identity = commerceActor(request, "Finance");
+    await assertFinanceDateOpen(identity.orgId);
     const parsed = paySupplierSettlementInputSchema.safeParse(request.data);
     if (!parsed.success)
       throw new HttpsError("invalid-argument", "Payment details are invalid.");

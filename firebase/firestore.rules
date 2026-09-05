@@ -77,6 +77,11 @@ service cloud.firestore {
     match /ledger/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /financeJournals/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
     match /supplierSettlements/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /cancellationRequests/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /financeDocuments/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /accountingSyncs/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /financePeriods/{id} { allow read: if isFinanceStaff() && sameOrg(resource.data); allow write: if false; }
+    match /financeCounters/{id} { allow read, write: if false; }
     match /suppliers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if isManager() && writesOwnOrg(); allow update, delete: if isManager() && sameOrg(resource.data) && keepsOrg(); }
     match /offers/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && writesOwnOrg(); allow update, delete: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && sameOrg(resource.data) && keepsOrg(); }
     match /campaigns/{id} { allow read: if isCRMReader() && sameOrg(resource.data); allow create: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && writesOwnOrg(); allow update, delete: if hasRole(['super_admin', 'owner', 'manager', 'marketing']) && sameOrg(resource.data) && keepsOrg(); }

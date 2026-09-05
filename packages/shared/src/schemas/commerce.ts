@@ -198,6 +198,7 @@ export const bookingTimelineEventSchema = z.object({
     "documentUpdate",
     "payment",
     "reminder",
+    "cancelled",
   ]),
   message: z.string().trim().min(1).max(2000),
   actorUid: documentIdSchema,

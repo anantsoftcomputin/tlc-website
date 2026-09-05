@@ -15,6 +15,7 @@ import {
   type CommerceIdentity,
 } from "./commerce-command.js";
 import { recordPaymentCaptureFinance } from "./finance-journal.js";
+import { assertFinanceDateOpen } from "./finance-period-guard.js";
 
 const registry = new CommerceProviderRegistry();
 
@@ -212,6 +213,13 @@ export async function capturePayment(
 ) {
   const database = getFirestore();
   const paymentRef = database.collection("payments").doc(paymentId);
+  const paymentBeforeTransaction = await paymentRef.get();
+  if (!paymentBeforeTransaction.exists)
+    throw new HttpsError("not-found", "Payment was not found.");
+  if (paymentBeforeTransaction.data()?.status === "captured") return;
+  await assertFinanceDateOpen(
+    String(paymentBeforeTransaction.data()?.orgId || ""),
+  );
   const now = new Date().toISOString();
   await database.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(paymentRef);

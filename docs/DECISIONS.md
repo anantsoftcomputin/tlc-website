@@ -55,3 +55,19 @@ Deterministic flight, hotel, and payment providers remain the safe default. Amad
 ## ADR-014 — Append-only finance journals and reserved allocations
 
 Operational booking ledgers remain the balance source while every accounting event posts a balanced, immutable journal linked to its source. Supplier settlement requests reserve payable allocations atomically before approval so concurrent requests cannot over-allocate a liability. Rejections release the reservation; payment converts it into a settled allocation and posts the cash journal. Corrections use linked reversal entries instead of rewriting posted history.
+
+## ADR-015 — Refunds are approved calculations, not editable amounts
+
+Cancellation requests contain item-level supplier penalties and retained fees, while the server derives the maximum refund from captured collections and prior refunds. Approval and execution are separate states. Pending provider refunds post to a refund-payable account and move to bank only after a signed provider event, preserving accurate cash timing.
+
+## ADR-016 — Immutable tax snapshots and transactional numbering
+
+Each issued invoice, receipt, or credit note snapshots the organization tax profile and receives a financial-year number from a transactionally incremented server-only counter. Later profile changes never alter issued documents. Place-of-supply state determines CGST/SGST versus IGST.
+
+## ADR-017 — External accounting is an idempotent projection
+
+The internal journal remains authoritative. Zoho Books, Tally, and the deterministic mock implement one provider contract and receive stable source keys. Synchronization failures are retained and retried without duplicating external documents; they never roll back an already posted internal transaction.
+
+## ADR-018 — Period close blocks posting, not visibility
+
+A period may close only when its journals balance and operational queues reconcile. Closing preserves report access but prevents new finance postings in the covered date range. Only a manager can reopen it, with a mandatory audited reason.

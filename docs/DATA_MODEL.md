@@ -32,6 +32,10 @@
 | `ledger/{entryId}` | Yes | Yes | Receivable, payable, commission and incentive ledger. |
 | `financeJournals/{journalId}` | Yes | Yes | Append-only balanced finance journal. |
 | `supplierSettlements/{settlementId}` | Yes | Yes | Approved supplier payment and payable allocations. |
+| `cancellationRequests/{cancellationId}` | Yes | Yes | Approved item-level cancellation and customer refund lifecycle. |
+| `financeDocuments/{documentId}` | Yes | Yes | Immutable GST invoice, receipt, or credit note. |
+| `accountingSyncs/{syncId}` | Yes | Yes | Idempotent external accounting synchronization attempt. |
+| `financePeriods/{periodId}` | Yes | Yes | Reconciled finance reporting period and close status. |
 | `suppliers/{supplierId}` | Yes | No | Supplier directory and adapter selection. |
 | `offers/{offerId}` | Yes | No | Grounded inventory offer and targeting content. |
 | `campaigns/{campaignId}` | Yes | No | Approved audience, channel, schedule and outcome metrics. |
@@ -485,6 +489,131 @@ Approved supplier payment and payable allocations.
 | `rejectedAt` | string | No |
 | `rejectionReason` | string | No |
 | `journalId` | string | No |
+| `createdAt` | string | Yes |
+| `updatedAt` | string | Yes |
+| `createdBy` | string | Yes |
+| `updatedBy` | string | Yes |
+
+## `cancellationRequests/{cancellationId}`
+
+Approved item-level cancellation and customer refund lifecycle.
+
+- Organization scoped: Yes
+- Server writes only: Yes
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | string | Yes |
+| `orgId` | string | Yes |
+| `requestNumber` | string | Yes |
+| `bookingId` | string | Yes |
+| `currency` | INR \| USD \| EUR \| GBP \| AED \| SGD \| THB | Yes |
+| `items` | object[] | Yes |
+| `collectedAmount` | number | Yes |
+| `supplierPenalty` | number | Yes |
+| `retainedFees` | number | Yes |
+| `refundAmount` | number | Yes |
+| `profitImpact` | number | Yes |
+| `status` | pendingApproval \| approved \| processing \| completed \| rejected \| failed | Yes |
+| `reason` | string | Yes |
+| `requestedBy` | string | Yes |
+| `approvedBy` | string | No |
+| `approvedAt` | string | No |
+| `rejectedBy` | string | No |
+| `rejectedAt` | string | No |
+| `rejectionReason` | string | No |
+| `refundPaymentId` | string | No |
+| `providerRefundRef` | string | No |
+| `completedAt` | string | No |
+| `journalId` | string | No |
+| `createdAt` | string | Yes |
+| `updatedAt` | string | Yes |
+| `createdBy` | string | Yes |
+| `updatedBy` | string | Yes |
+
+## `financeDocuments/{documentId}`
+
+Immutable GST invoice, receipt, or credit note.
+
+- Organization scoped: Yes
+- Server writes only: Yes
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | string | Yes |
+| `orgId` | string | Yes |
+| `bookingId` | string | Yes |
+| `paymentId` | string | No |
+| `cancellationId` | string | No |
+| `type` | invoice \| receipt \| creditNote | Yes |
+| `number` | string | Yes |
+| `issueDate` | string | Yes |
+| `currency` | INR \| USD \| EUR \| GBP \| AED \| SGD \| THB | Yes |
+| `customer` | object | Yes |
+| `seller` | object | Yes |
+| `taxableValue` | number | Yes |
+| `gstRatePct` | number | Yes |
+| `cgst` | number | Yes |
+| `sgst` | number | Yes |
+| `igst` | number | Yes |
+| `total` | number | Yes |
+| `sac` | string | Yes |
+| `placeOfSupply` | string | Yes |
+| `status` | string | Yes |
+| `issuedAt` | string | Yes |
+| `issuedBy` | string | Yes |
+| `createdAt` | string | Yes |
+| `updatedAt` | string | Yes |
+| `createdBy` | string | Yes |
+| `updatedBy` | string | Yes |
+
+## `accountingSyncs/{syncId}`
+
+Idempotent external accounting synchronization attempt.
+
+- Organization scoped: Yes
+- Server writes only: Yes
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | string | Yes |
+| `orgId` | string | Yes |
+| `provider` | mock \| zohoBooks \| tally | Yes |
+| `documentType` | invoice \| bill \| payment \| creditNote \| supplierSettlement | Yes |
+| `sourceCollection` | string | Yes |
+| `sourceId` | string | Yes |
+| `idempotencyKey` | string | Yes |
+| `status` | pending \| synced \| failed | Yes |
+| `attempts` | integer | Yes |
+| `externalId` | string | No |
+| `error` | string | No |
+| `syncedAt` | string | No |
+| `createdAt` | string | Yes |
+| `updatedAt` | string | Yes |
+| `createdBy` | string | Yes |
+| `updatedBy` | string | Yes |
+
+## `financePeriods/{periodId}`
+
+Reconciled finance reporting period and close status.
+
+- Organization scoped: Yes
+- Server writes only: Yes
+
+| Field | Type | Required |
+|---|---|---|
+| `id` | string | Yes |
+| `orgId` | string | Yes |
+| `label` | string | Yes |
+| `startDate` | string | Yes |
+| `endDate` | string | Yes |
+| `status` | open \| closed | Yes |
+| `reconciliation` | object | Yes |
+| `closedBy` | string | No |
+| `closedAt` | string | No |
+| `reopenedBy` | string | No |
+| `reopenedAt` | string | No |
+| `reopenReason` | string | No |
 | `createdAt` | string | Yes |
 | `updatedAt` | string | Yes |
 | `createdBy` | string | Yes |

@@ -89,4 +89,21 @@ describe("commerce provider mocks", () => {
     expect(result.data.providerRef).toBe("mock_payment-1");
     expect(result.data.url).toContain("mockPayment=payment-1");
   });
+
+  it("requires human approval and returns deterministic mock refunds", async () => {
+    const provider = new MockPaymentProvider(fixedClock);
+    const input = {
+      paymentRef: "pay-1",
+      amount: 5000,
+      currency: "INR",
+      referenceId: "refund-1",
+      approvedBy: "manager-1",
+    };
+    expect((await provider.refund(input)).data.providerRef).toBe(
+      "mock_refund_refund-1",
+    );
+    await expect(provider.refund({ ...input, approvedBy: "" })).rejects.toThrow(
+      "Human approval",
+    );
+  });
 });

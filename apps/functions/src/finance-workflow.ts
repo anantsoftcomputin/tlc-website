@@ -9,11 +9,13 @@ import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { commerceActor, commerceAudit } from "./commerce-command.js";
 import { bookingApprovalJournal } from "./finance-journal.js";
+import { assertFinanceDateOpen } from "./finance-period-guard.js";
 
 export const initializeBookingFinance = onCall(
   { region: "asia-south1" },
   async (request) => {
     const identity = commerceActor(request, "Finance");
+    await assertFinanceDateOpen(identity.orgId);
     const bookingId = String(request.data?.bookingId || "");
     if (!bookingId)
       throw new HttpsError("invalid-argument", "Booking ID is required.");
@@ -78,6 +80,7 @@ export const createSupplierSettlement = onCall(
   { region: "asia-south1" },
   async (request) => {
     const identity = commerceActor(request, "Finance");
+    await assertFinanceDateOpen(identity.orgId);
     const parsed = createSupplierSettlementInputSchema.safeParse(request.data);
     if (!parsed.success)
       throw new HttpsError(

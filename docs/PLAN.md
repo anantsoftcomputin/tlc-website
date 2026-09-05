@@ -115,35 +115,35 @@ Updated: 2026-09-02
 
 ## Step 12 — Cancellations and refunds
 
-- [ ] Add booking cancellation requests with item-level supplier penalties.
-- [ ] Add customer refund calculation with retained fees and profitability impact.
-- [ ] Require manager approval before cancellation or refund execution.
-- [ ] Add payment-provider refund commands, webhook handling, and refund reconciliation.
+- [x] Add booking cancellation requests with item-level supplier penalties.
+- [x] Add customer refund calculation with retained fees and profitability impact.
+- [x] Require manager approval before cancellation or refund execution.
+- [x] Add payment-provider refund commands, webhook handling, and refund reconciliation.
 
 ## Step 13 — Accounting integrations
 
-- [ ] Define accounting provider contracts with a deterministic mock.
-- [ ] Add credential-gated Zoho Books and Tally adapters.
-- [ ] Push invoices, bills, payments, credit notes, and supplier settlements idempotently.
-- [ ] Add sync status, retry controls, error visibility, and usage logging.
+- [x] Define accounting provider contracts with a deterministic mock.
+- [x] Add credential-gated Zoho Books and Tally adapters.
+- [x] Push invoices, bills, payments, credit notes, and supplier settlements idempotently.
+- [x] Add sync status, retry controls, error visibility, and usage logging.
 
 ## Step 14 — GST invoices and receipts
 
-- [ ] Add organization tax profile, place-of-supply, SAC, GST split, and rounding rules.
-- [ ] Generate immutable numbered invoices, credit notes, and payment receipts.
-- [ ] Add printable customer-safe finance documents and document audit history.
+- [x] Add organization tax profile, place-of-supply, SAC, GST split, and rounding rules.
+- [x] Generate immutable numbered invoices, credit notes, and payment receipts.
+- [x] Add printable customer-safe finance documents and document audit history.
 
 ## Step 15 — Finance reporting and close
 
-- [ ] Build ageing, collections, supplier dues, GST, profitability, and cash-position reports.
-- [ ] Add finance-period reconciliation and controlled close/reopen workflows.
-- [ ] Export finance reports in CSV and accounting-friendly formats.
+- [x] Build ageing, collections, supplier dues, GST, profitability, and cash-position reports.
+- [x] Add finance-period reconciliation and controlled close/reopen workflows.
+- [x] Export finance reports in CSV and accounting-friendly formats.
 
 ## Checkpoint 3 exit criteria
 
-- [ ] Finance can trace every booking from quote economics through collection and supplier settlement.
-- [ ] Refunds and cancellations require explicit approval and preserve a complete audit trail.
-- [ ] GST invoices, receipts, and credit notes are reproducible and immutable after issue.
-- [ ] Zoho Books, Tally, and mock accounting providers share one tested contract.
-- [ ] Finance reports reconcile to underlying journal entries and payment records.
-- [ ] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete finance flow.
+- [x] Finance can trace every booking from quote economics through collection and supplier settlement.
+- [x] Refunds and cancellations require explicit approval and preserve a complete audit trail.
+- [x] GST invoices, receipts, and credit notes are reproducible and immutable after issue.
+- [x] Zoho Books, Tally, and mock accounting providers share one tested contract.
+- [x] Finance reports reconcile to underlying journal entries and payment records.
+- [x] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete finance flow.

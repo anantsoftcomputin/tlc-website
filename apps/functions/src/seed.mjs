@@ -44,6 +44,15 @@ batch.set(database.collection("orgs").doc(orgId), {
       destinationOwners: {},
       firstResponseMinutes: 60,
     },
+    taxProfile: {
+      legalName: "TLC Vacations LLP",
+      gstin: "27AAAAA0000A1Z5",
+      address: "Mumbai, Maharashtra, India",
+      stateCode: "27",
+      placeOfSupply: "Maharashtra",
+      sac: "998551",
+      defaultGstRatePct: 5,
+    },
   },
   createdAt: FieldValue.serverTimestamp(),
   updatedAt: FieldValue.serverTimestamp(),
@@ -243,5 +252,5 @@ seedCommerce({ database, batch, orgId, ownerUid, now });
 
 await batch.commit();
 console.log(
-  `Seeded ${records.length} customers and leads plus the complete Phase 2 commerce demo for ${orgId}.`,
+  `Seeded ${records.length} customers and leads plus the complete Phase 3 finance demo for ${orgId}.`,
 );
