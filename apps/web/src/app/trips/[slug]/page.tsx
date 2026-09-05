@@ -3,20 +3,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BadgeCheck, BedDouble, CalendarDays, Check, CheckCircle2, ChevronRight, Heart, MapPin, MessageCircle, Share2, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { trips } from "@/lib/data";
+import { getPublicTrips } from "@/lib/public-content";
 import { whatsappHref } from "@/lib/utils";
 import { TripCustomiser } from "@/components/trip-customiser";
 
-export function generateStaticParams() { return trips.map(({ slug }) => ({ slug })); }
+export async function generateStaticParams() { return (await getPublicTrips()).map(({ slug }) => ({ slug })); }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const trips = await getPublicTrips();
   const trip = trips.find((item) => item.slug === slug);
-  return trip ? { title: trip.title, description: trip.summary } : {};
+  const seo = trip ? (trip as typeof trip & { seo?:{title?:string;description?:string} }).seo : undefined;
+  return trip ? { title: seo?.title || trip.title, description: seo?.description || trip.summary } : {};
 }
 
 export default async function TripPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const trips = await getPublicTrips();
   const trip = trips.find((item) => item.slug === slug);
   if (!trip) notFound();
   const customiserTrip = { id: trip.id, slug: trip.slug, title: trip.title, destination: trip.destination, nights: trip.nights };
@@ -30,7 +33,7 @@ export default async function TripPage({ params }: { params: Promise<{ slug: str
     </section>
     <section className="market-tour-gallery">
       <div><Image src={trip.image} alt={trip.imageAlt} fill priority sizes="(max-width:700px) 100vw, 68vw" /></div>
-      <div><Image src={`/images/destinations/${trip.destinationSlug}.jpg`} alt="" fill sizes="32vw" /></div>
+      <div><Image src={trip.image} alt="" fill sizes="32vw" /></div>
       <div><Image src={trip.image} alt="" fill sizes="32vw" /></div>
       <span>Flexible, private itinerary</span>
     </section>

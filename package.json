@@ -12,6 +12,7 @@
     "emulators": "firebase emulators:start",
     "seed": "pnpm --filter @tlc/functions seed",
     "ai:seed": "node scripts/seed-synthetic.mjs",
+    "content:seed": "node --experimental-strip-types --env-file=.env scripts/seed-content.mjs --apply",
     "docs:data-model": "pnpm --filter @tlc/shared docs:data-model",
     "test:rules": "firebase emulators:exec --only firestore --project demo-tlc-holidays --non-interactive \"pnpm --filter @tlc/web test:rules\"",
     "admin:set-role": "node --env-file=.env scripts/set-admin-role.mjs",

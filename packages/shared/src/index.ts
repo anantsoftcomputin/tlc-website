@@ -9,6 +9,7 @@ export * from "./finance/tax.js";
 export * from "./import/customer-import.js";
 export * from "./schemas/base.js";
 export * from "./schemas/commerce.js";
+export * from "./schemas/content.js";
 export * from "./schemas/conversation.js";
 export * from "./schemas/customer.js";
 export * from "./schemas/finance.js";

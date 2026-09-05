@@ -4,6 +4,7 @@ import path from "node:path";
 const nextConfig: NextConfig = {
   transpilePackages: ["@tlc/shared"],
   outputFileTracingRoot: path.join(process.cwd(), "../.."),
+  images: { remotePatterns: [{ protocol: "https", hostname: "firebasestorage.googleapis.com" }] },
   async redirects() {
     return [
       { source: "/about_us.php", destination: "/about", permanent: true },

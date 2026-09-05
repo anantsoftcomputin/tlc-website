@@ -3,7 +3,7 @@ service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
     function hasRole(roles) { return signedIn() && request.auth.token.role in roles; }
-    function isContentStaff() { return hasRole(['super_admin', 'admin', 'content_editor']); }
+    function isContentStaff() { return hasRole(['super_admin', 'owner', 'manager', 'admin', 'marketing', 'content_editor']); }
     function validImage() { return request.resource.size < 15 * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|png|webp|avif|gif)'); }
     match /media/public/{allPaths=**} { allow read: if true; allow create, update: if isContentStaff() && validImage(); allow delete: if isContentStaff(); }
     match /media/private/{allPaths=**} { allow read: if isContentStaff(); allow create, update: if isContentStaff() && validImage(); allow delete: if isContentStaff(); }

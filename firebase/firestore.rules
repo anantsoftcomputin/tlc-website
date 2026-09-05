@@ -28,10 +28,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /destinations/{id} { allow read: if isPublished() || isContentStaff(); allow create, update, delete: if isContentStaff(); }
-    match /trips/{id} { allow read: if isPublished() || isContentStaff(); allow create, update, delete: if isContentStaff(); }
-    match /tripCategories/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
-    match /travelStyles/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
+    match /destinations/{id} { allow read: if isPublished() || isContentStaff(); allow write: if false; }
+    match /hotels/{id} { allow read: if isPublished() || isContentStaff(); allow write: if false; }
+    match /trips/{id} { allow read: if isPublished() || isContentStaff(); allow write: if false; }
+    match /tripCategories/{id} { allow read: if isPublished() || isContentStaff(); allow write: if false; }
+    match /travelStyles/{id} { allow read: if isPublished() || isContentStaff(); allow write: if false; }
     match /stories/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
     match /testimonials/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
     match /faqs/{id} { allow read: if isPublished() || isContentStaff(); allow write: if isContentStaff(); }
@@ -39,7 +40,7 @@ service cloud.firestore {
     match /siteSettings/{id} { allow read: if resource.data.public == true || isOwner(); allow write: if isOwner(); }
     match /seoOverrides/{id} { allow read, write: if isContentStaff(); }
     match /redirects/{id} { allow read, write: if isContentStaff(); }
-    match /media/{id} { allow read: if resource.data.visibility == 'public' || isContentStaff(); allow write: if isContentStaff(); }
+    match /media/{id} { allow read: if resource.data.visibility == 'public' || isContentStaff(); allow write: if false; }
 
     match /inquiries/{id} {
       allow read, update: if isCRMReader() && sameOrg(resource.data) && canAccessAssigned(resource.data);

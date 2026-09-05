@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { destinations, moods, trips } from "@/lib/data";
+import { getPublicContent } from "@/lib/public-content";
 import { DestinationCard } from "@/components/destination-card";
 import { TripCard } from "@/components/trip-card";
 import { Magnetic } from "@/components/motion/magnetic";
@@ -14,6 +14,7 @@ const styleAliases: Record<string, string[]> = {
 
 export default async function StylePage({ params }: { params: Promise<{ style: string }> }) {
   const { style } = await params;
+  const { destinations, trips, styles: moods } = await getPublicContent();
   const title = style.replaceAll("-", " ");
   const wanted = styleAliases[style] ?? [style];
   const matches = (styles: string[]) => styles.some((s) => wanted.includes(s.toLowerCase()));

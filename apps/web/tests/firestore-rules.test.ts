@@ -31,6 +31,8 @@ beforeAll(async () => {
       status: "draft",
       name: "Draft",
     });
+    await setDoc(doc(context.firestore(), "hotels", "published"), { status:"published", name:"Published hotel" });
+    await setDoc(doc(context.firestore(), "hotels", "draft"), { status:"draft", name:"Draft hotel" });
     await setDoc(doc(context.firestore(), "inquiries", "one"), {
       orgId: "tlc-vacations",
       status: "new",
@@ -131,17 +133,24 @@ describe("public and content rules", () => {
     await assertFails(getDoc(doc(database, "destinations", "draft")));
   });
 
-  it("allows editors to manage content but not read CRM intake", async () => {
+  it("allows editors to review content while keeping audited writes server-owned", async () => {
     const database = environment
       .authenticatedContext("editor", { role: "content_editor" })
       .firestore();
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(database, "destinations", "new"), {
         status: "draft",
         name: "New",
       }),
     );
+    await assertSucceeds(getDoc(doc(database, "destinations", "draft")));
     await assertFails(getDoc(doc(database, "inquiries", "one")));
+  });
+
+  it("publishes hotels while protecting drafts", async () => {
+    const database = environment.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(database, "hotels", "published")));
+    await assertFails(getDoc(doc(database, "hotels", "draft")));
   });
 });
 

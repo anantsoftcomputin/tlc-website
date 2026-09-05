@@ -9,6 +9,7 @@ import { Logo } from "./logo";
 const links = [
   ["Destinations", "/destinations"],
   ["Tours", "/trips"],
+  ["Hotels", "/hotels"],
   ["Holiday styles", "/holidays"],
   ["Travel services", "/services"],
   ["About TLC", "/about"],

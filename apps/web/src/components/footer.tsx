@@ -3,7 +3,7 @@ import { BadgeCheck, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Logo } from "./logo";
 
 const groups = [
-  { title: "Explore", links: [["Destinations", "/destinations"], ["Tours", "/trips"], ["Holiday styles", "/holidays"], ["Travel stories", "/travel-stories"]] },
+  { title: "Explore", links: [["Destinations", "/destinations"], ["Tours", "/trips"], ["Hotels & resorts", "/hotels"], ["Holiday styles", "/holidays"], ["Travel stories", "/travel-stories"]] },
   { title: "Plan your trip", links: [["Plan my trip", "/plan-my-trip"], ["Saved trips", "/saved"], ["Flights, hotels & visas", "/services"], ["Contact TLC", "/contact"]] },
   { title: "About TLC", links: [["Our story", "/about"], ["Why travel with us", "/about#why-tlc"], ["Visit our office", "/contact"], ["Staff login", "/login"]] },
 ];

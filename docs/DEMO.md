@@ -58,3 +58,16 @@ The emulator seed includes a partially settled airline payable and three balance
 6. Reconcile all captured payments and resolve pending settlements/refunds. Close a finance period, verify covered dates reject new postings, then reopen it with a reason.
 
 The emulator seed includes a tax profile, numbered invoice and receipt, successful mock accounting sync, pending cancellation approval, and a previously closed period.
+
+## Phase 4 travel catalogue
+
+1. Open **Website content → Travel catalogue** and compare published, draft and featured totals.
+2. Open **Destinations**, edit an existing destination experience and save it as a draft. Confirm the public destination remains unchanged.
+3. Publish the destination, use **Preview**, and confirm the public page uses the saved heading, image, experiences and SEO metadata.
+4. Open **Hotels & resorts**, create a hotel with its destination, star rating, price band, room types, meal plans and facilities. Upload a primary image and publish it.
+5. Open `/hotels` and the new hotel detail page. Confirm the page makes no price or availability claim and routes the customer into TLC planning.
+6. Create or edit a **Holiday style** and **Category**, then link their slugs from a tour package.
+7. Open **Tours & packages**, edit the route, linked hotel IDs, day-by-day itinerary and inclusions. Publish and preview the tour.
+8. Archive a test record and confirm it disappears publicly while remaining available under the Archived filter and in the immutable audit trail.
+
+Run `pnpm content:seed` once with production credentials to migrate the checked-in catalogue. The script creates missing records only and never overwrites later editorial work.

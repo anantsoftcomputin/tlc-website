@@ -3,12 +3,13 @@ import Link from "next/link";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { SearchConsole } from "@/components/search-console";
 import { TripCard } from "@/components/trip-card";
-import { trips } from "@/lib/data";
+import { getPublicTrips } from "@/lib/public-content";
 
 export const metadata: Metadata = { title: "Tours & holiday packages", description: "Compare flexible TLC journeys across India and the world, then personalise the route, stays and pace." };
 
 export default async function TripsPage({ searchParams }: { searchParams: Promise<{ q?: string; when?: string; travellers?: string; style?: string }> }) {
   const params = await searchParams;
+  const trips = await getPublicTrips();
   const query = params.q?.trim().toLowerCase();
   const style = params.style?.trim().toLowerCase();
   const list = trips.filter((trip) => {
@@ -21,8 +22,8 @@ export default async function TripsPage({ searchParams }: { searchParams: Promis
     <section className="market-results-layout">
       <aside className="market-filters">
         <h2><SlidersHorizontal /> Filters</h2>
-        <details open><summary>Destination <ChevronDown /></summary>{["Thailand", "Dubai", "Kerala", "Rajasthan", "Switzerland", "Bali", "Ladakh"].map((item) => <label key={item}><input type="checkbox" /> {item}</label>)}</details>
-        <details open><summary>Travel style <ChevronDown /></summary>{["Family", "Honeymoon", "Nature", "Culture", "Adventure"].map((item) => <Link key={item} href={`/trips?style=${item.toLowerCase()}`}>{item}</Link>)}</details>
+        <details open><summary>Destination <ChevronDown /></summary>{[...new Set(trips.map((trip)=>trip.destination))].map((item) => <Link key={item} href={`/trips?q=${encodeURIComponent(item)}`}>{item}</Link>)}</details>
+        <details open><summary>Travel style <ChevronDown /></summary>{[...new Set(trips.flatMap((trip)=>trip.styles))].map((item) => <Link key={item} href={`/trips?style=${item.toLowerCase()}`}>{item}</Link>)}</details>
         <details><summary>Duration <ChevronDown /></summary><label><input type="checkbox" /> Up to 5 days</label><label><input type="checkbox" /> 6–9 days</label><label><input type="checkbox" /> 10+ days</label></details>
         <Link href="/plan-my-trip" className="market-filter-help"><b>Can’t find the right fit?</b><span>Ask TLC to design it for you.</span></Link>
       </aside>

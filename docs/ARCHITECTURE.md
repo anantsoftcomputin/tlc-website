@@ -73,6 +73,14 @@ Phase 2 payment and ledger records remain the operational source for booking bal
 
 Phase 3 completion adds four bounded aggregates around that journal: cancellation requests calculate but cannot approve themselves; numbered finance documents snapshot the applicable tax identity; accounting sync records isolate external-provider failure from internal posting; and finance periods prevent new postings after reconciliation close. Provider callbacks are idempotent through immutable payment-event identifiers.
 
+## Phase 4 content boundary
+
+The public travel catalogue is owned by Firestore collections `destinations`, `hotels`, `trips`, `travelStyles`, and `tripCategories`. Catalogue documents share a validated publishing contract: draft/published/archived status, featured placement, deterministic display order, SEO metadata, organization ownership, and immutable audit attribution. Trips may link to hotels and both styles and categories without duplicating hotel operational inventory.
+
+Content reads and writes follow different paths. Public pages read only published records through a cached server repository, with the checked-in catalogue retained as a migration-safe fallback. Staff read all organization records through authenticated server components. Creates, updates, publishing and archive operations pass through `/api/admin/content`; the command validates the collection-specific Zod schema and commits the content record and audit evidence atomically. Browser Firestore writes remain denied. Public images are validated and uploaded by `/api/admin/media`, then recorded in the media registry.
+
+The editorial hotel catalogue is deliberately separate from temporary provider inventory. CMS hotels describe TLC-curated stays and their destination, facilities, room/meal options and internal supplier reference. Live rates and availability still come only from a configured hotel adapter and are never inferred from CMS content.
+
 ## Security baseline
 
 - Firebase Auth sessions are stored in secure, HTTP-only cookies.

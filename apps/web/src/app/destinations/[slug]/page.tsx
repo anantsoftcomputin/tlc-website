@@ -3,19 +3,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowRight, CalendarRange, CheckCircle2, Clock3, MapPin, MessageCircle, Sparkles } from "lucide-react";
-import { destinations, trips } from "@/lib/data";
+import { getPublicContent } from "@/lib/public-content";
 import { TripCard } from "@/components/trip-card";
 import { whatsappHref } from "@/lib/utils";
 
-export function generateStaticParams() { return destinations.map(({ slug }) => ({ slug })); }
+export async function generateStaticParams() { return (await getPublicContent()).destinations.map(({ slug }) => ({ slug })); }
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const { destinations } = await getPublicContent();
   const destination = destinations.find((item) => item.slug === slug);
-  return destination ? { title: `${destination.name} holidays`, description: destination.description } : {};
+  const seo = destination ? (destination as typeof destination & { seo?:{title?:string;description?:string} }).seo : undefined;
+  return destination ? { title: seo?.title || `${destination.name} holidays`, description: seo?.description || destination.description } : {};
 }
 
 export default async function DestinationDetail({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const { destinations, trips } = await getPublicContent();
   const destination = destinations.find((item) => item.slug === slug);
   if (!destination) notFound();
   const related = trips.filter((trip) => trip.destinationSlug === slug);

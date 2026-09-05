@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, MapPin, Search } from "lucide-react";
-import { destinations } from "@/lib/data";
+import { getPublicDestinations } from "@/lib/public-content";
 
 export const metadata: Metadata = { title: "Holiday destinations", description: "Explore TLC holiday ideas across India and the world, with expert help to personalise every trip." };
 
 export default async function DestinationsPage({ searchParams }: { searchParams: Promise<{ scope?: string; q?: string }> }) {
   const { scope, q } = await searchParams;
+  const destinations = await getPublicDestinations();
   const query = q?.trim().toLowerCase();
   let list = destinations;
   if (scope === "international") list = list.filter((item) => item.region === "international");

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { moods } from "@/lib/data";
+import { getPublicStyles } from "@/lib/public-content";
 
 export const metadata: Metadata = { title: "Holiday styles", description: "Honeymoons, family holidays, luxury escapes, adventures and more — find the mood first, then the map." };
 
-export default function Holidays() {
+export default async function Holidays() {
+  const moods = await getPublicStyles();
   return <div className="page-shell section">
     <p className="eyebrow" data-reveal>Travel by mood</p>
     <h1 data-reveal>How do you want<br/><em>to feel?</em></h1>

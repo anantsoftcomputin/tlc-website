@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, BadgeIndianRupee, Headphones, MessageCircle, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { SearchConsole } from "@/components/search-console";
 import { TripCard } from "@/components/trip-card";
-import { destinations, moods, testimonials, tripRepository } from "@/lib/data";
+import { testimonials } from "@/lib/data";
+import { getPublicContent } from "@/lib/public-content";
 import { whatsappHref } from "@/lib/utils";
 
 const browse = [
@@ -20,7 +21,9 @@ const assurances = [
 ] as const;
 
 export default async function Home() {
-  const featured = await tripRepository.findFeatured(6);
+  const { destinations, trips, styles: moods } = await getPublicContent();
+  const preferred = trips.filter((trip) => Boolean((trip as { featured?: boolean }).featured));
+  const featured = (preferred.length ? preferred : trips).slice(0, 6);
   return <div className="tr-home">
     <section className="market-hero">
       <Image src="/images/hero-braies.jpg" alt="A wooden boat on Lago di Braies beneath the Dolomite mountains" fill priority sizes="100vw" />

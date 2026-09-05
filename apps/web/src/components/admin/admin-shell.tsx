@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  Activity, BellRing, BriefcaseBusiness, CalendarCheck2, ChevronDown,
+  Activity, BellRing, BriefcaseBusiness, Building2, CalendarCheck2, ChevronDown,
   CircleUserRound, Command, ContactRound, CreditCard, ExternalLink, FileClock,
   FileText, Gauge, Globe2, Inbox, Landmark, LayoutDashboard, LogOut, Menu,
-  PanelLeftClose, PanelLeftOpen, PlaneTakeoff, Plus, Search, Settings2, X,
+  LibraryBig, MapPinned, PanelLeftClose, PanelLeftOpen, PlaneTakeoff, Plus, Search, Settings2, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,6 +31,12 @@ const navGroups = [
     { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck2, permission: "crm:read" as const },
     { label: "Live inventory", href: "/admin/inventory", icon: PlaneTakeoff, permission: "quotes:write" as const },
   ]},
+  { label: "Website content", items: [
+    { label: "Travel catalogue", href: "/admin/content", icon: LibraryBig, permission: "content:read" as const },
+    { label: "Destinations", href: "/admin/content/destinations", icon: MapPinned, permission: "content:read" as const },
+    { label: "Hotels & resorts", href: "/admin/content/hotels", icon: Building2, permission: "content:read" as const },
+    { label: "Tours & packages", href: "/admin/content/trips", icon: FileText, permission: "content:read" as const },
+  ]},
   { label: "Finance", items: [
     { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "finance:read" as const },
     { label: "Finance desk", href: "/admin/finance", icon: Landmark, permission: "finance:read" as const },
@@ -46,6 +52,7 @@ const routeNames: Record<string, string> = {
   customers: "Customers", quotes: "Quotes", bookings: "Bookings",
   inventory: "Live inventory", payments: "Payments", finance: "Finance desk",
   management: "Performance", alerts: "Alerts", audit: "Audit trail", settings: "Settings",
+  content: "Travel catalogue",
 };
 
 export function AdminShell({ user, children }: { user: AdminUser; children: React.ReactNode }) {
@@ -92,7 +99,7 @@ export function AdminShell({ user, children }: { user: AdminUser; children: Reac
     <aside className="admin-sidebar">
       <div className="admin-brand"><Logo/><div><b>TLC OS</b><span>Travel operations</span></div><button className="admin-mobile-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X/></button></div>
       <nav aria-label="Admin navigation">{visibleGroups.map((group) => <section key={group.label}><p>{group.label}</p>{group.items.map(({ label, href, icon: Icon }) => {
-        const active = pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
+        const active = pathname === href || (!["/admin", "/admin/content"].includes(href) && pathname.startsWith(`${href}/`));
         return <Link className={active ? "active" : ""} key={href} href={href} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined}><Icon/><span>{label}</span></Link>;
       })}</section>)}</nav>
       <div className="admin-sidebar-foot"><a href="/" target="_blank" rel="noreferrer"><Globe2/><span>View website</span><ExternalLink/></a><button onClick={toggleCollapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>{collapsed ? <PanelLeftOpen/> : <PanelLeftClose/>}<span>Collapse menu</span></button></div>
@@ -105,6 +112,7 @@ export function AdminShell({ user, children }: { user: AdminUser; children: Reac
           {hasPermission(user.role, "crm:write") && <Link href="/admin/crm/new"><BriefcaseBusiness/><span><b>New lead</b><small>Capture an opportunity</small></span></Link>}
           {hasPermission(user.role, "quotes:write") && <Link href="/admin/quotes/new"><FileText/><span><b>Build quote</b><small>Create an itinerary</small></span></Link>}
           {hasPermission(user.role, "quotes:write") && <Link href="/admin/inventory"><PlaneTakeoff/><span><b>Search inventory</b><small>Flights and hotels</small></span></Link>}
+          {hasPermission(user.role, "content:write") && <Link href="/admin/content/trips/new"><LibraryBig/><span><b>New package</b><small>Publish a website tour</small></span></Link>}
         </div>}</div><Link className="admin-alert-shortcut" href="/admin/alerts" aria-label="Open alerts"><BellRing/><i/></Link>
           <div className="admin-profile"><button onClick={() => setProfileOpen(!profileOpen)} aria-expanded={profileOpen}><span>{(user.name || user.email || "T").charAt(0).toUpperCase()}</span><div><b>{user.name || user.email?.split("@")[0] || "TLC team"}</b><small>{user.role.replaceAll("_", " ")}</small></div><ChevronDown/></button>{profileOpen && <div className="admin-profile-menu"><div><CircleUserRound/><span><b>{user.name || "TLC team"}</b><small>{user.email}</small></span></div><button onClick={logout}><LogOut/>Sign out</button></div>}</div>
         </div>

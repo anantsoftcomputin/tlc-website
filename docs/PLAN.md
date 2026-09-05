@@ -147,3 +147,41 @@ Updated: 2026-09-02
 - [x] Zoho Books, Tally, and mock accounting providers share one tested contract.
 - [x] Finance reports reconcile to underlying journal entries and payment records.
 - [x] Tests, emulator rules, seed data, and `docs/DEMO.md` cover the complete finance flow.
+
+# Phase 4 Plan — Content & Product CMS
+
+## Step 16 — Canonical travel content
+
+- [x] Define validated destination, hotel, holiday-style, category and tour-package schemas.
+- [x] Add draft, published and archived lifecycle states, featuring, ordering and SEO metadata.
+- [x] Preserve organization and audit fields on every content record.
+
+## Step 17 — Secure content operations
+
+- [x] Route all content writes through an authenticated, role-controlled server command.
+- [x] Record immutable before/after audit evidence for create, update and archive operations.
+- [x] Add validated public image uploads with media records and audit evidence.
+- [x] Keep browser writes to catalogue documents and media metadata disabled in Firestore rules.
+
+## Step 18 — Staff CMS
+
+- [x] Add the Travel Catalogue dashboard to the TLC Operations navigation.
+- [x] Add searchable status-filtered lists for destinations, hotels, packages, styles and categories.
+- [x] Add responsive editors for destination experiences, hotel facilities and rooms, package itineraries, linked hotels, taxonomy, publishing and SEO.
+- [x] Add public preview links and archive controls.
+
+## Step 19 — Public website integration
+
+- [x] Read published catalogue records through a cached Firestore repository.
+- [x] Keep a safe static fallback while the initial production catalogue is migrated.
+- [x] Connect homepage, destinations, tours, holiday styles, saved trips and sitemap to the CMS.
+- [x] Add public hotel directory and hotel detail pages.
+
+## Checkpoint 4 exit criteria
+
+- [x] Content staff can create, edit, publish and archive all five catalogue record types.
+- [x] A published destination, package, style or hotel becomes available to the public website.
+- [x] Draft and archived content never appears through public Firestore access.
+- [x] Every content mutation is validated, organization-scoped and audited.
+- [x] Existing website content is migrated without replacing later editorial changes.
+- [x] Unit tests, rules tests, production build and demo instructions cover the complete CMS flow.
