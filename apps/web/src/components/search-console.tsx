@@ -1,17 +1,25 @@
 "use client";
 
-import { ArrowRight, CalendarDays, IndianRupee, MapPin, Users } from "lucide-react";
+import { CalendarDays, MapPin, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function SearchConsole() {
+export function SearchConsole({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [where, setWhere] = useState("");
-  return <form className="search-console" onSubmit={(event) => { event.preventDefault(); router.push(`/destinations?q=${encodeURIComponent(where)}`); }}>
-    <label className="search-field"><MapPin/><span><b>Where</b><input value={where} onChange={(event) => setWhere(event.target.value)} placeholder="A place or feeling"/></span></label>
-    <label className="search-field"><CalendarDays/><span><b>When</b><select defaultValue=""><option value="" disabled>Choose a month</option><option>October</option><option>November</option><option>December</option><option>January</option></select></span></label>
-    <label className="search-field"><Users/><span><b>Travellers</b><select defaultValue="2 people"><option>Solo</option><option>2 people</option><option>Family</option><option>Group</option></select></span></label>
-    <label className="search-field"><IndianRupee/><span><b>Budget</b><select defaultValue=""><option value="" disabled>Per traveller</option><option>Under ₹50,000</option><option>₹50,000–₹1 lakh</option><option>₹1–2 lakh</option><option>Flexible</option></select></span></label>
-    <button aria-label="Explore trips"><ArrowRight/></button>
+  const [when, setWhen] = useState("");
+  const [travellers, setTravellers] = useState("2");
+  return <form className={`search-console market-search ${compact ? "is-compact" : ""}`} onSubmit={(event) => {
+    event.preventDefault();
+    const query = new URLSearchParams();
+    if (where.trim()) query.set("q", where.trim());
+    if (when) query.set("when", when);
+    query.set("travellers", travellers);
+    router.push(`/trips?${query.toString()}`);
+  }}>
+    <label className="search-field"><MapPin /><span><b>Where?</b><input value={where} onChange={(event) => setWhere(event.target.value)} placeholder="Search destinations or tours" /></span></label>
+    <label className="search-field"><CalendarDays /><span><b>When?</b><select value={when} onChange={(event) => setWhen(event.target.value)}><option value="">Anytime</option><option>Oct – Dec 2026</option><option>Jan – Mar 2027</option><option>Apr – Jun 2027</option><option>Flexible dates</option></select></span></label>
+    <label className="search-field"><Users /><span><b>Travellers</b><select value={travellers} onChange={(event) => setTravellers(event.target.value)}><option value="1">1 traveller</option><option value="2">2 travellers</option><option value="3">3 travellers</option><option value="4">4+ travellers</option><option value="family">Family</option><option value="group">Group</option></select></span></label>
+    <button type="submit"><Search /><span>Search</span></button>
   </form>;
 }

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       attribution,
     });
 
-    return NextResponse.json({ ok: true, inquiryId: inquiry.id, message: "Your request has been received." }, { status: 201 });
+    return NextResponse.json({ ok: true, inquiryId: inquiry.id, message: "Your request is now with the TLC planning desk." }, { status: 201 });
   } catch (error) {
     console.error("Inquiry submission failed", error instanceof Error ? error.message : "Unknown error");
     return NextResponse.json({ error: "We couldn't save your request. Please try WhatsApp or call TLC." }, { status: 500 });

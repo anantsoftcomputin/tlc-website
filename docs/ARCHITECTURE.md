@@ -4,6 +4,17 @@
 
 TLC Travel OS is an organization-aware travel sales and operations platform. The existing TLC Holidays marketing website remains the public surface while the staff console grows into the CRM, commerce, finance, analytics, and AI platform described in the master brief.
 
+## Website-to-CRM intake
+
+All public planning and enquiry forms post to `apps/web/src/app/api/inquiries/route.ts`. The server validates and rate-limits the request, then performs one atomic Firestore transaction that creates:
+
+- the website enquiry record used by the intake inbox;
+- a CRM customer linked to that enquiry;
+- an assigned CRM lead with its first-response SLA;
+- the lead's initial activity and a platform audit record.
+
+Assignment follows the organization's destination-specialist or round-robin policy, falling back to the configured default or an active CRM team member. A successful website response therefore cannot exist without the corresponding CRM work item. Legacy enquiries can still be converted from the admin inbox.
+
 ## Runtime topology
 
 ```text

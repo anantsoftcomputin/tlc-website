@@ -1,162 +1,84 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, BadgeIndianRupee, Building2, MapPin, MessageCircleHeart, Route, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, BadgeIndianRupee, Headphones, MessageCircle, ShieldCheck, Sparkles, Star, Users } from "lucide-react";
 import { SearchConsole } from "@/components/search-console";
-import { DestinationCard } from "@/components/destination-card";
 import { TripCard } from "@/components/trip-card";
-import { Rail } from "@/components/rail";
-import { Magnetic } from "@/components/motion/magnetic";
-import { Parallax } from "@/components/motion/parallax";
 import { destinations, moods, testimonials, tripRepository } from "@/lib/data";
 import { whatsappHref } from "@/lib/utils";
 
-const services = ["Flights", "Stays", "Visa assistance", "Euro Rail", "Packages", "Cruises", "Custom holidays"];
+const browse = [
+  { title: "International tours", copy: "Big journeys, thoughtfully arranged", image: "/images/destinations/switzerland.jpg", href: "/destinations?scope=international" },
+  { title: "India holidays", copy: "Closer to home, never ordinary", image: "/images/destinations/rajasthan.jpg", href: "/destinations?scope=india" },
+  { title: "Private & tailor-made", copy: "Your dates, people and pace", image: "/images/destinations/bali.jpg", href: "/plan-my-trip" },
+];
 
-const trust = [
-  [MessageCircleHeart, "Real humans, on WhatsApp", "Talk to a travel expert, not a booking engine."],
-  [Route, "One plan, end to end", "Flights, stays, visas, rail and cruises — handled together."],
-  [BadgeIndianRupee, "Honest pricing", "Quoted for your dates. No fake discounts, ever."],
-  [Building2, "A real office in Kanpur", "Suter Ganj — walk in, call, or plan it all online."],
+const assurances = [
+  [BadgeCheck, "TLC-checked planning", "Every itinerary is reviewed by a real travel expert before you commit."],
+  [MessageCircle, "Direct expert support", "One conversation from first idea through to your return home."],
+  [BadgeIndianRupee, "Clear, honest quotes", "A transparent price for your dates—no invented crossed-out discounts."],
+  [ShieldCheck, "Support while travelling", "Reach TLC when plans change or you simply need a little help."],
 ] as const;
 
 export default async function Home() {
-  const featured = await tripRepository.findFeatured(4);
-  const international = destinations.filter((d) => d.region === "international");
-  const india = destinations.filter((d) => d.region === "india");
-
-  return <>
-    <section className="hero">
-      <Parallax speed={0.08}><Image src="/images/hero-braies.jpg" alt="A wooden boat on the still turquoise water of Lago di Braies, ringed by Dolomite peaks" fill priority sizes="100vw"/></Parallax>
-      <div className="hero-veil"/>
-      <div className="hero-content">
-        <p className="eyebrow light">Your personal gateway to the world</p>
-        <h1>The world,<br/>arranged <em>around you.</em></h1>
-        <p>Not packages off a shelf. Real places, planned around your dates, your people and your pace — by humans you can call.</p>
-        <div className="hero-ctas">
-          <Magnetic><Link className="button button-gold" href="/destinations">Explore destinations <ArrowRight/></Link></Magnetic>
-          <Magnetic strength={10}><Link href="/plan-my-trip">Inspire me</Link></Magnetic>
-        </div>
-      </div>
-      <span className="hero-place chip"><MapPin/> Lago di Braies · Italy</span>
-      <span className="scroll-cue">Scroll</span>
-      <div className="hero-search"><SearchConsole/></div>
-    </section>
-
-    <div className="trust-strip">
-      <div className="trust-strip-inner">
-        {trust.map(([Icon, title, note]) => <article key={title}><Icon/><div><b>{title}</b><span>{note}</span></div></article>)}
-      </div>
-    </div>
-
-    <section className="dest-rail-wrap">
-      <div className="section section-head" data-reveal>
-        <div>
-          <p className="eyebrow">Travel, considered</p>
-          <h2>Where will you<br/>go <em>next?</em></h2>
-        </div>
-        <Link className="text-link" href="/destinations">All destinations <ArrowRight/></Link>
-      </div>
-      <Rail label="International destinations">
-        {international.map((destination, i) => <DestinationCard key={destination.id} destination={destination} index={i} revealDelay={Math.min(i, 3) * 90}/>)}
-      </Rail>
-    </section>
-
-    <section className="india-band" data-reveal-scale>
-      <div className="section-head">
-        <div>
-          <p className="eyebrow light">Closer to home</p>
-          <h2>India, <em>properly.</em></h2>
-        </div>
-        <p>Backwaters and blue cities, high passes and slow beaches — journeys through India planned with the same care as any far shore.</p>
-      </div>
-      <div className="india-grid">
-        {india.map((destination) => <Link key={destination.id} href={`/destinations/${destination.slug}`}>
-          <Image src={destination.image} alt={destination.imageAlt} fill sizes="(max-width: 700px) 45vw, 22vw"/>
-          <figcaption><b>{destination.name}</b><span>{destination.tagline}</span></figcaption>
-        </Link>)}
+  const featured = await tripRepository.findFeatured(6);
+  return <div className="tr-home">
+    <section className="market-hero">
+      <Image src="/images/hero-braies.jpg" alt="A wooden boat on Lago di Braies beneath the Dolomite mountains" fill priority sizes="100vw" />
+      <div className="market-hero-shade" />
+      <div className="market-hero-content">
+        <span className="market-kicker"><Sparkles /> Holidays made personal</span>
+        <h1>Find a trip you’ll talk about for years.</h1>
+        <p>Explore handpicked journeys across India and the world, then make every detail your own with a TLC travel expert.</p>
+        <SearchConsole />
+        <div className="market-quick-links"><span>Popular:</span><Link href="/destinations/thailand">Thailand</Link><Link href="/destinations/dubai">Dubai</Link><Link href="/destinations/maldives">Maldives</Link><Link href="/destinations/kerala">Kerala</Link></div>
       </div>
     </section>
 
-    <section className="moods section">
-      <div className="section-head" data-reveal>
-        <div>
-          <p className="eyebrow">Begin with a feeling</p>
-          <h2>What’s your kind<br/>of <em>escape?</em></h2>
-        </div>
-        <p>Don’t have a destination yet? Start with the mood, and we’ll bring the map.</p>
-      </div>
-      <div className="mood-grid">
-        {moods.map((mood, i) => <Link key={mood.slug} href={`/holidays/${mood.slug}`} className="mood-tile" data-reveal style={{ transitionDelay: `${(i % 4) * 70}ms` }}>
-          <Image src={mood.image} alt={mood.imageAlt} fill sizes="(max-width: 700px) 45vw, 24vw"/>
-          <span className="mood-tile-arrow"><ArrowUpRight/></span>
-          <div className="mood-tile-body"><b>{mood.name}</b><span>{mood.note}</span></div>
-        </Link>)}
+    <section className="market-proof">
+      <div><b>25+ years</b><span>of travel expertise</span></div>
+      <div><span className="proof-stars"><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /></span><span>trusted traveller feedback</span></div>
+      <div><Headphones /><span><b>Human support</b> before & during travel</span></div>
+      <div><Users /><span><b>Private planning</b> for couples, families & groups</span></div>
+    </section>
+
+    <section className="market-section">
+      <header className="market-section-head"><div><span>Find your way to travel</span><h2>What kind of trip are you looking for?</h2></div><Link href="/destinations">Explore all <ArrowRight /></Link></header>
+      <div className="market-browse-grid">{browse.map((item) => <Link key={item.title} href={item.href}>
+        <Image src={item.image} alt="" fill sizes="(max-width: 700px) 100vw, 33vw" />
+        <span><b>{item.title}</b><small>{item.copy}</small></span><ArrowRight />
+      </Link>)}</div>
+    </section>
+
+    <section className="market-section market-featured">
+      <header className="market-section-head"><div><span>Traveller favourites</span><h2>Trips worth putting on your list</h2><p>Flexible starting points that TLC can personalise around you.</p></div><Link href="/trips">See all tours <ArrowRight /></Link></header>
+      <div className="market-card-rail">{featured.map((trip, index) => <TripCard key={trip.id} trip={trip} revealDelay={(index % 3) * 60} />)}</div>
+    </section>
+
+    <section className="market-section">
+      <header className="market-section-head"><div><span>Explore the map</span><h2>Popular destinations</h2></div><Link href="/destinations">View all destinations <ArrowRight /></Link></header>
+      <div className="market-destination-grid">{destinations.slice(0, 8).map((destination) => <Link key={destination.id} href={`/destinations/${destination.slug}`}>
+        <Image src={destination.image} alt={destination.imageAlt} fill sizes="(max-width: 700px) 50vw, 25vw" />
+        <span><b>{destination.name}</b><small>{destination.idealDuration}</small></span>
+      </Link>)}</div>
+    </section>
+
+    <section className="market-assurance">
+      <div className="market-section">
+        <header className="market-section-head light"><div><span>Book with confidence</span><h2>Travel planning without the guesswork</h2></div></header>
+        <div>{assurances.map(([Icon, title, copy]) => <article key={title}><Icon /><h3>{title}</h3><p>{copy}</p></article>)}</div>
       </div>
     </section>
 
-    <section className="journeys section">
-      <div className="section-head" data-reveal>
-        <div>
-          <p className="eyebrow">Flexible starting points</p>
-          <h2>Journeys to make<br/><em>your own</em></h2>
-        </div>
-        <p>Every itinerary here is a starting point, not a mould. Shape the route, stays and pace around your people — no pretend live pricing, just a clear conversation.</p>
-      </div>
-      <div className="trip-grid">
-        {featured.map((trip, i) => <TripCard key={trip.id} trip={trip} revealDelay={(i % 2) * 100}/>)}
-      </div>
+    <section className="market-section">
+      <header className="market-section-head"><div><span>Travel your way</span><h2>Browse by holiday style</h2></div><Link href="/holidays">All holiday styles <ArrowRight /></Link></header>
+      <div className="market-style-rail">{moods.map((mood) => <Link key={mood.slug} href={`/holidays/${mood.slug}`}><Image src={mood.image} alt={mood.imageAlt} fill sizes="220px" /><b>{mood.name}</b></Link>)}</div>
     </section>
 
-    <section className="process section">
-      <p className="eyebrow" data-reveal>Designed around you</p>
-      <div className="process-grid">
-        {[["01", "Tell us the dream", "A place, a mood or simply the need for a break."],
-          ["02", "We curate the journey", "The right route, stays and experiences — not a pile of options."],
-          ["03", "You shape the details", "Change the pace, add a night, make it more yours."],
-          ["04", "Travel with TLC close by", "Human support before you leave and while you travel."]]
-          .map(([n, t, d], i) => <div key={n} data-reveal style={{ transitionDelay: `${i * 90}ms` }}><span>{n}</span><h3>{t}</h3><p>{d}</p></div>)}
-      </div>
+    <section className="market-expert-cta">
+      <Image src="/images/destinations/thailand-aerial.jpg" alt="A tropical bay in Thailand" fill sizes="100vw" />
+      <div><span><Sparkles /> Not sure where to begin?</span><h2>Let a TLC expert turn your ideas into one brilliant trip.</h2><p>Tell us the dates, people and feeling you have in mind. We’ll research the details and come back with a clear, personalised proposal.</p><div><Link className="button button-gold" href="/plan-my-trip">Create my trip <ArrowRight /></Link><a href={whatsappHref("Hi TLC Holidays, I’d like help planning a holiday.")}>Chat on WhatsApp</a></div></div>
     </section>
 
-    <section className="concierge">
-      <Image src="/images/destinations/switzerland.jpg" alt="" fill sizes="100vw"/>
-      <div className="concierge-inner">
-        <div data-reveal>
-          <p className="eyebrow light">TLC concierge</p>
-          <h2>Your holiday doesn’t have to come from a template.</h2>
-          <p>Tell our travel experts what you’re imagining. We’ll create an itinerary around your dates, interests and budget — then stay reachable while you travel.</p>
-        </div>
-        <div data-reveal style={{ transitionDelay: "120ms" }}>
-          <Magnetic strength={12}><Link className="button button-light" href="/plan-my-trip">Create my trip <ArrowRight/></Link></Magnetic>
-          <a href={whatsappHref("Hi TLC Holidays, I'd like help planning a personalised holiday.")}>Chat on WhatsApp</a>
-        </div>
-      </div>
-    </section>
-
-    <section className="stories section" data-reveal>
-      <p className="eyebrow bare">Traveller notes</p>
-      <figure className="story-quote">
-        <blockquote>{testimonials[0].quote}</blockquote>
-        <figcaption><b>{testimonials[0].name}</b><span>{testimonials[0].detail}</span></figcaption>
-      </figure>
-      <p className="source-note">Adapted for length from a testimonial published on TLC’s previous website.</p>
-    </section>
-
-    <div className="marquee" aria-hidden="true" style={{ marginTop: "var(--section-gap)" }}>
-      <div className="marquee-track">
-        {[...services, ...services].map((s, i) => <span key={i}>{s}</span>)}
-      </div>
-    </div>
-
-    <section className="final-cta">
-      <Parallax speed={0.06}><Image src="/images/cta-maldives.jpg" alt="Overwater villas curving across a turquoise Maldivian lagoon" fill sizes="100vw"/></Parallax>
-      <div/>
-      <section data-reveal>
-        <p className="eyebrow light">Begin when you’re ready</p>
-        <h2>The next story<br/>could be <em>yours.</em></h2>
-        <Magnetic strength={12}><Link className="button button-light" href="/plan-my-trip">Start planning <Sparkles/></Link></Magnetic>
-        <span className="photo-note hero-place-note">Photographed in the Maldives</span>
-      </section>
-    </section>
-  </>;
+    <section className="market-testimonial market-section"><span className="proof-stars"><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /><Star fill="currentColor" /></span><blockquote>“{testimonials[0].quote}”</blockquote><p><b>{testimonials[0].name}</b> · {testimonials[0].detail}</p></section>
+  </div>;
 }
