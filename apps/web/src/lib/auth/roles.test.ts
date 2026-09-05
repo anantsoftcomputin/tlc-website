@@ -16,4 +16,11 @@ describe("admin role permissions", () => {
     expect(isUserRole("super_admin")).toBe(true);
     expect(isUserRole("platform_admin")).toBe(false);
   });
+
+  it("limits marketing operations to governed growth roles", () => {
+    expect(hasPermission("marketing", "marketing:write")).toBe(true);
+    expect(hasPermission("manager", "marketing:write")).toBe(true);
+    expect(hasPermission("sales", "marketing:write")).toBe(false);
+    expect(hasPermission("readonly", "marketing:read")).toBe(false);
+  });
 });

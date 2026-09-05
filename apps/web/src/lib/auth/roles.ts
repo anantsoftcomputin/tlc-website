@@ -7,6 +7,8 @@ export type Permission =
   | "crm:read"
   | "crm:write"
   | "quotes:write"
+  | "marketing:read"
+  | "marketing:write"
   | "finance:read"
   | "finance:write"
   | "users:manage"
@@ -21,6 +23,8 @@ const permissions: Record<UserRole, Permission[]> = {
     "crm:read",
     "crm:write",
     "quotes:write",
+    "marketing:read",
+    "marketing:write",
     "finance:read",
     "finance:write",
     "users:manage",
@@ -34,6 +38,8 @@ const permissions: Record<UserRole, Permission[]> = {
     "crm:read",
     "crm:write",
     "quotes:write",
+    "marketing:read",
+    "marketing:write",
     "finance:read",
     "finance:write",
     "users:manage",
@@ -47,6 +53,8 @@ const permissions: Record<UserRole, Permission[]> = {
     "crm:read",
     "crm:write",
     "quotes:write",
+    "marketing:read",
+    "marketing:write",
     "finance:read",
     "finance:write",
     "users:manage",
@@ -61,7 +69,7 @@ const permissions: Record<UserRole, Permission[]> = {
     "finance:write",
     "audit:read",
   ],
-  marketing: ["admin:access", "content:read", "content:write", "crm:read"],
+  marketing: ["admin:access", "content:read", "content:write", "crm:read", "marketing:read", "marketing:write"],
   readonly: ["admin:access", "content:read", "crm:read", "finance:read"],
   admin: [
     "admin:access",
@@ -70,6 +78,8 @@ const permissions: Record<UserRole, Permission[]> = {
     "crm:read",
     "crm:write",
     "quotes:write",
+    "marketing:read",
+    "marketing:write",
     "finance:read",
     "finance:write",
     "audit:read",

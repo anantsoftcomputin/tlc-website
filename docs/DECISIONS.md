@@ -71,3 +71,7 @@ The internal journal remains authoritative. Zoho Books, Tally, and the determini
 ## ADR-018 — Period close blocks posting, not visibility
 
 A period may close only when its journals balance and operational queues reconcile. Closing preserves report access but prevents new finance postings in the covered date range. Only a manager can reopen it, with a mandatory audited reason.
+
+## ADR-019 — Revised phase numbering after the CMS insertion
+
+The product and content CMS was delivered as Phase 4 to close the operational catalogue gap identified during client review. The master brief's AI marketing scope therefore becomes Phase 5, and persona-driven chatbot autonomy becomes Phase 6. Dependencies remain unchanged: campaigns consume governed catalogue offers and the later chatbot consumes the scoring, consent and handover foundations.

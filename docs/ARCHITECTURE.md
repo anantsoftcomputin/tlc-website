@@ -81,6 +81,12 @@ Content reads and writes follow different paths. Public pages read only publishe
 
 The editorial hotel catalogue is deliberately separate from temporary provider inventory. CMS hotels describe TLC-curated stays and their destination, facilities, room/meal options and internal supplier reference. Live rates and availability still come only from a configured hotel adapter and are never inferred from CMS content.
 
+## Phase 5 marketing boundary
+
+Marketing intelligence reads organization-scoped offers, campaigns, propensity scores, model evidence and customer consent through server repositories. Until TLC's neural model has enough positive events and passes its validation threshold, the explainable rules recommender remains active and is labelled as such. A score is advisory evidence, never authorization to contact a customer.
+
+Audience generation and delivery are separate operations. The audience layer filters on recorded channel consent and opt-outs; the command layer requires an authorized human approval; the delivery adapter rechecks consent immediately before sending. Campaign reporting is derived only from immutable delivery, engagement and booking events, so empty production data remains zero rather than being replaced with demo metrics.
+
 ## Security baseline
 
 - Firebase Auth sessions are stored in secure, HTTP-only cookies.

@@ -3,7 +3,7 @@
 import {
   Activity, BellRing, BriefcaseBusiness, Building2, CalendarCheck2, ChevronDown,
   CircleUserRound, Command, ContactRound, CreditCard, ExternalLink, FileClock,
-  FileText, Gauge, Globe2, Inbox, Landmark, LayoutDashboard, LogOut, Menu,
+  FileText, Gauge, Globe2, Inbox, Landmark, LayoutDashboard, LogOut, Megaphone, Menu,
   LibraryBig, MapPinned, PanelLeftClose, PanelLeftOpen, PlaneTakeoff, Plus, Search, Settings2, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -37,6 +37,9 @@ const navGroups = [
     { label: "Hotels & resorts", href: "/admin/content/hotels", icon: Building2, permission: "content:read" as const },
     { label: "Tours & packages", href: "/admin/content/trips", icon: FileText, permission: "content:read" as const },
   ]},
+  { label: "Growth intelligence", items: [
+    { label: "Marketing cockpit", href: "/admin/marketing", icon: Megaphone, permission: "marketing:read" as const },
+  ]},
   { label: "Finance", items: [
     { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "finance:read" as const },
     { label: "Finance desk", href: "/admin/finance", icon: Landmark, permission: "finance:read" as const },
@@ -53,6 +56,7 @@ const routeNames: Record<string, string> = {
   inventory: "Live inventory", payments: "Payments", finance: "Finance desk",
   management: "Performance", alerts: "Alerts", audit: "Audit trail", settings: "Settings",
   content: "Travel catalogue",
+  marketing: "Marketing cockpit",
 };
 
 export function AdminShell({ user, children }: { user: AdminUser; children: React.ReactNode }) {

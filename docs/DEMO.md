@@ -71,3 +71,13 @@ The emulator seed includes a tax profile, numbered invoice and receipt, successf
 8. Archive a test record and confirm it disappears publicly while remaining available under the Archived filter and in the immutable audit trail.
 
 Run `pnpm content:seed` once with production credentials to migrate the checked-in catalogue. The script creates missing records only and never overwrites later editorial work.
+
+## Phase 5 marketing foundation
+
+1. Open **Growth intelligence → Marketing cockpit**.
+2. Confirm offer, campaign, score and attributed-revenue totals come from Firestore and remain zero when no real records exist.
+3. Review WhatsApp, email and SMS reachable-audience counts. Compare them with consent on Customer 360.
+4. Review **Scoring readiness**. With no validated neural model, confirm the screen explicitly reports that the explainable rules recommender is active.
+5. Confirm owner, manager, admin and marketing roles can access the cockpit, while sales and read-only roles cannot operate marketing workflows.
+
+This is the first Phase 5 milestone. Offer commands, model training, propensity audiences and governed campaign delivery remain disabled until their respective checked roadmap items are implemented and tested.
