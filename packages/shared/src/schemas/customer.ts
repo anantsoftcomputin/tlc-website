@@ -7,6 +7,7 @@ import {
   orgIdSchema,
   probabilitySchema,
 } from "./base.js";
+import { sharedTravelPreferenceSchema } from "./travel-intelligence.js";
 
 export const customerLifecycleStages = [
   "new",
@@ -101,6 +102,9 @@ export const customerSchema = z
     }),
     source: z.string().trim().min(1),
     ownerUid: documentIdSchema,
+    householdId: documentIdSchema.optional(),
+    declaredPreferences: sharedTravelPreferenceSchema.optional(),
+    preferenceCompleteness: z.number().min(0).max(100).optional(),
     profile: customerProfileSchema.optional(),
     segments: z.array(customerSegmentSchema).default([]),
     vector: z.array(z.number().finite()).length(64).optional(),
@@ -152,6 +156,9 @@ export const customerEventSchema = z
       "offerSent",
       "offerClicked",
       "chatMessage",
+      "preferenceDeclared",
+      "preferenceUpdated",
+      "voiceSession",
       "campaignSent",
       "campaignOpen",
       "campaignDelivered",

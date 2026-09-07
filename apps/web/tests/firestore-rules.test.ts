@@ -82,11 +82,28 @@ beforeAll(async () => {
     });
     await setDoc(
       doc(context.firestore(), "campaignDeliveries", "delivery-one"),
-      { orgId: "tlc-vacations", campaignId: "campaign-one", status: "sent" },
+      {
+        orgId: "tlc-vacations",
+        campaignId: "campaign-one",
+        status: "sent",
+      },
     );
     await setDoc(doc(context.firestore(), "models", "model-one"), {
       orgId: "tlc-vacations",
       status: "rejected",
+    });
+    await setDoc(doc(context.firestore(), "households", "household-one"), {
+      orgId: "tlc-vacations",
+      primaryCustomerId: "customer-one",
+    });
+    await setDoc(doc(context.firestore(), "customers", "customer-one"), {
+      orgId: "tlc-vacations",
+      ownerUid: "sales-profile",
+    });
+    await setDoc(doc(context.firestore(), "preferenceSignals", "signal-one"), {
+      orgId: "tlc-vacations",
+      customerId: "customer-one",
+      modelTrainingAllowed: true,
     });
     await setDoc(doc(context.firestore(), "imports", "one"), {
       orgId: "tlc-vacations",
@@ -243,6 +260,39 @@ describe("CRM and audit rules", () => {
       setDoc(doc(database, "propensity", "forged"), {
         orgId: "tlc-vacations",
         score: 100,
+      }),
+    );
+  });
+
+  it("protects family profiles and preference evidence from public and marketing access", async () => {
+    const publicDatabase = environment.unauthenticatedContext().firestore();
+    const marketingDatabase = environment
+      .authenticatedContext("marketer-profile", {
+        role: "marketing",
+        orgId: "tlc-vacations",
+      })
+      .firestore();
+    const salesDatabase = environment
+      .authenticatedContext("sales-profile", {
+        role: "sales",
+        orgId: "tlc-vacations",
+      })
+      .firestore();
+    await assertFails(
+      getDoc(doc(publicDatabase, "households", "household-one")),
+    );
+    await assertFails(
+      getDoc(doc(marketingDatabase, "households", "household-one")),
+    );
+    await assertSucceeds(
+      getDoc(doc(salesDatabase, "households", "household-one")),
+    );
+    await assertSucceeds(
+      getDoc(doc(salesDatabase, "preferenceSignals", "signal-one")),
+    );
+    await assertFails(
+      setDoc(doc(salesDatabase, "preferenceSignals", "forged"), {
+        orgId: "tlc-vacations",
       }),
     );
   });

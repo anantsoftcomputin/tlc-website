@@ -4,11 +4,25 @@ import type {
   CustomerImportCommitInput,
   CustomerImportPreviewInput,
   DuplicateCandidate,
+  HouseholdTravelProfile,
   NormalizedCustomerImportRow,
   TravelHistory,
 } from "@tlc/shared";
 
-export type CustomerSummary = Pick<Customer, "id" | "name" | "phones" | "emails" | "city" | "tags" | "lifecycleStage" | "lastActivityAt" | "ownerUid" | "segments" | "clv"> & {
+export type CustomerSummary = Pick<
+  Customer,
+  | "id"
+  | "name"
+  | "phones"
+  | "emails"
+  | "city"
+  | "tags"
+  | "lifecycleStage"
+  | "lastActivityAt"
+  | "ownerUid"
+  | "segments"
+  | "clv"
+> & {
   createdAt: string;
   updatedAt: string;
 };
@@ -22,7 +36,10 @@ export type CustomerImportReview = {
   importId: string;
   stats: { total: number; valid: number; invalid: number; duplicates: number };
   rows: CustomerImportReviewRow[];
-  candidateCustomers: Record<string, { name: string; phone?: string; city?: string }>;
+  candidateCustomers: Record<
+    string,
+    { name: string; phone?: string; city?: string }
+  >;
 };
 
 export type CustomerImportResult = {
@@ -35,8 +52,17 @@ export type CustomerImportResult = {
 export interface CustomerRepository {
   listCustomers(limit?: number): Promise<CustomerSummary[]>;
   getCustomer(customerId: string): Promise<Customer | null>;
+  getHouseholdProfile(
+    customerId: string,
+  ): Promise<HouseholdTravelProfile | null>;
   listTravelHistory(customerId: string): Promise<TravelHistory[]>;
   listEvents(customerId: string): Promise<CustomerEvent[]>;
-  previewImport(input: CustomerImportPreviewInput, actorUid: string): Promise<CustomerImportReview>;
-  commitImport(input: CustomerImportCommitInput, actorUid: string): Promise<CustomerImportResult>;
+  previewImport(
+    input: CustomerImportPreviewInput,
+    actorUid: string,
+  ): Promise<CustomerImportReview>;
+  commitImport(
+    input: CustomerImportCommitInput,
+    actorUid: string,
+  ): Promise<CustomerImportResult>;
 }

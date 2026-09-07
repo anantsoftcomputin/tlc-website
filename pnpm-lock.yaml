@@ -137,6 +137,10 @@ importers:
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)
 
   packages/ai-chat:
+    dependencies:
+      "@tlc/shared":
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.9.2
@@ -150,6 +154,9 @@ importers:
       "@tensorflow/tfjs":
         specifier: ^4.22.0
         version: 4.22.0(seedrandom@3.0.5)
+      "@tlc/shared":
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.9.2

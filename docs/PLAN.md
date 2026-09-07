@@ -236,3 +236,44 @@ Phase numbering note: the original master brief's AI marketing phase moves here 
 - [x] No customer-facing campaign can send without an authorized human approval.
 - [x] Campaign results reconcile to immutable customer events and actual bookings.
 - [x] Unit tests, rules tests, synthetic demo data and operating documentation cover the full marketing flow.
+
+# Phase 6 Plan — Conversational & Visual Travel Experience
+
+## Step 24 — Travel intelligence intake
+
+- [x] Define structured current-trip, individual-traveller and household preference contracts.
+- [x] Add progressive preference capture to every public enquiry entry point.
+- [x] Persist trip briefs, household profiles and immutable preference evidence with provenance.
+- [x] Separate service, profile, model-training, sensitive-data, marketing and voice permissions.
+- [x] Protect household and preference data with server-owned writes and travel-staff-only reads.
+
+## Step 25 — Grounded multimodal foundation
+
+- [x] Define chatbot-safe customer context without unnecessary raw PII.
+- [x] Define grounded destination, hotel, flight, activity and package visual cards.
+- [x] Define day-by-day visual itinerary and voice-session contracts.
+- [x] Add a post-generation validator for invented entities, images and prices.
+- [x] Document feature lineage, training eligibility and sensory-experience architecture.
+
+## Step 26 — Persona and orchestration
+
+- [ ] Build persona administration, versioning and channel previews.
+- [ ] Implement the tool-calling orchestrator and current-turn grounding ledger.
+- [ ] Implement preference extraction, confirmation, conflict resolution and profile updates.
+- [ ] Add evaluation cases for family trade-offs, ambiguity, safety and hallucination resistance.
+
+## Step 27 — Customer experiences
+
+- [ ] Build the persistent embeddable web chat widget.
+- [ ] Build the visual itinerary renderer backed by CMS and live inventory results.
+- [ ] Add streaming voice conversation sessions with explicit recording consent.
+- [ ] Connect the WhatsApp conversation adapter and enforce its session/template rules.
+- [ ] Implement human handover with transcript, summary and assigned consultant notification.
+
+## Step 28 — Staff assist and production hardening
+
+- [ ] Add lead-side destination, package, upsell, reply and follow-up suggestions.
+- [ ] Add conversation inbox, staff reply and bot pause/resume controls.
+- [ ] Add latency, grounding, resolution, handover, satisfaction and cost monitoring.
+- [ ] Run privacy, accessibility, load, failure-mode and restore drills.
+- [ ] Complete production runbooks and client operating training.

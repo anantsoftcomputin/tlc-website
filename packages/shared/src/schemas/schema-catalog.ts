@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { voiceSessionSchema } from "./assistant-experience.js";
 import { bookingSchema, quoteSchema } from "./commerce.js";
 import {
   conversationMessageSchema,
@@ -34,6 +35,10 @@ import {
   usageRecordSchema,
 } from "./operations.js";
 import { organizationSchema } from "./organization.js";
+import {
+  householdTravelProfileSchema,
+  preferenceSignalSchema,
+} from "./travel-intelligence.js";
 import { userSchema } from "./user.js";
 
 export type SchemaCatalogEntry = {
@@ -78,6 +83,21 @@ export const schemaCatalog: readonly SchemaCatalogEntry[] = [
     schema: customerEventSchema,
   },
   {
+    collection: "households/{householdId}",
+    description: "Permissioned shared and per-traveller household preferences.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: householdTravelProfileSchema,
+  },
+  {
+    collection: "preferenceSignals/{signalId}",
+    description:
+      "Immutable preference evidence with provenance and model-training permission.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: preferenceSignalSchema,
+  },
+  {
     collection: "leads/{leadId}",
     description:
       "Assigned sales opportunity, requirement, SLA and AI suggestions.",
@@ -108,6 +128,14 @@ export const schemaCatalog: readonly SchemaCatalogEntry[] = [
     orgScoped: true,
     serverWritesOnly: true,
     schema: conversationMessageSchema,
+  },
+  {
+    collection: "voiceSessions/{voiceSessionId}",
+    description:
+      "Consent-aware voice session state, transcript links and latency evidence.",
+    orgScoped: true,
+    serverWritesOnly: true,
+    schema: voiceSessionSchema,
   },
   {
     collection: "quotes/{quoteId}",
