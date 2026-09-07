@@ -125,7 +125,7 @@ function fallbackReply(
   return {
     message: names.length
       ? `Based on what you’ve shared, I’d start with ${names.join("; ")}. I’ve only shown options from TLC’s published collection; dates, rates and availability will be checked before anything is proposed.`
-      : "I can help shape this around your dates, travellers and budget. I’ll only recommend stays and journeys that TLC can verify.",
+      : "I don’t have an exact published match for every criterion yet, so I won’t show you unrelated options. A TLC expert can still shape a custom holiday around this brief.",
     followUpQuestions: [question],
     handover,
     handoverReason: handover ? "The traveller asked for a TLC expert." : "",
@@ -244,14 +244,21 @@ async function generateReply(
 }
 
 export async function answerConcierge(input: ConciergeChatRequest) {
-  const [{ cards, evidence }, persona] = await Promise.all([
-    searchConciergeCatalog(
-      [...input.history.map((item) => item.content), input.message].join(" "),
-      input.sessionId,
-    ),
-    activePersona(),
-  ]);
-  const generated = await generateReply(input, cards, persona);
+  const [{ cards, evidence, blockedDestinationNames }, persona] =
+    await Promise.all([
+      searchConciergeCatalog(
+        [...input.history.map((item) => item.content), input.message].join(" "),
+        input.sessionId,
+      ),
+      activePersona(),
+    ]);
+  let generated = await generateReply(input, cards, persona);
+  if (
+    blockedDestinationNames.some((name) =>
+      generated.message.toLowerCase().includes(name.toLowerCase()),
+    )
+  )
+    generated = fallbackReply(input, cards);
   const envelope: AssistantResponseEnvelope = {
     message: generated.message,
     language: "en-IN",

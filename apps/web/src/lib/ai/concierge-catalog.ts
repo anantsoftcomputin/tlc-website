@@ -1,6 +1,10 @@
 import type { ExperienceCard } from "@tlc/shared";
 import type { ToolEvidence } from "@tlc/ai-chat";
 import { getPublicContent } from "@/lib/public-content";
+import {
+  extractConciergeConstraints,
+  matchesRequestedStyles,
+} from "@/lib/ai/concierge-constraints";
 
 export type ConciergeCard = ExperienceCard & { href: string };
 
@@ -50,9 +54,40 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
   const now = new Date().toISOString();
   const resultId = `catalog-${sessionId.slice(0, 18)}`;
   const normalizedQuery = query.toLowerCase();
+  const destinationIndex = new Map(
+    content.destinations.map((destination) => [destination.slug, destination]),
+  );
+  const constraints = extractConciergeConstraints(
+    query,
+    content.destinations.map(({ slug, name, region }) => ({
+      slug,
+      name,
+      region,
+    })),
+  );
+  const blockedDestinationNames = content.destinations
+    .filter(
+      (destination) =>
+        (constraints.region && destination.region !== constraints.region) ||
+        (constraints.destinationSlugs.length > 0 &&
+          !constraints.destinationSlugs.includes(destination.slug)),
+    )
+    .map((destination) => destination.name);
   const candidates: Array<{ score: number; card: ConciergeCard }> = [];
 
   for (const destination of content.destinations) {
+    if (constraints.region && destination.region !== constraints.region)
+      continue;
+    if (
+      constraints.destinationSlugs.length &&
+      !constraints.destinationSlugs.includes(destination.slug)
+    )
+      continue;
+    if (
+      !constraints.destinationSlugs.length &&
+      !matchesRequestedStyles(constraints, destination.styles)
+    )
+      continue;
     const haystack = [
       destination.name,
       destination.country,
@@ -89,6 +124,21 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
   }
 
   for (const trip of content.trips) {
+    const tripDestination = destinationIndex.get(trip.destinationSlug);
+    if (
+      constraints.region &&
+      (!tripDestination || tripDestination.region !== constraints.region)
+    )
+      continue;
+    if (
+      constraints.destinationSlugs.length &&
+      !constraints.destinationSlugs.includes(trip.destinationSlug)
+    )
+      continue;
+    if (
+      !matchesRequestedStyles(constraints, [...trip.styles, ...trip.idealFor])
+    )
+      continue;
     const haystack = [
       trip.title,
       trip.destination,
@@ -128,6 +178,25 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
   }
 
   for (const hotel of content.hotels) {
+    const hotelDestination = destinationIndex.get(hotel.destinationSlug);
+    if (
+      constraints.region &&
+      (!hotelDestination || hotelDestination.region !== constraints.region)
+    )
+      continue;
+    if (
+      constraints.destinationSlugs.length &&
+      !constraints.destinationSlugs.includes(hotel.destinationSlug)
+    )
+      continue;
+    if (
+      !constraints.destinationSlugs.length &&
+      !matchesRequestedStyles(constraints, [
+        ...hotel.styleSlugs,
+        ...hotel.amenities,
+      ])
+    )
+      continue;
     const haystack = [
       hotel.name,
       hotel.location,
@@ -185,5 +254,5 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
     entityIds: selected.map((card) => card.entityId),
     prices: [],
   };
-  return { cards: selected, evidence };
+  return { cards: selected, evidence, blockedDestinationNames };
 }

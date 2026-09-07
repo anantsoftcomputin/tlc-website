@@ -76,7 +76,7 @@
 }
 .concierge-launcher svg { width: 19px; }
 .concierge-launcher b { align-self: end; text-align: left; font-size: 14px; }
-.concierge-launcher small { align-self: start; color: #f5dcdc; font-size: 9px; text-align: left; }
+.concierge-launcher small { align-self: start; color: #f5dcdc; font-size: 11px; text-align: left; }
 .concierge-panel {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
@@ -114,7 +114,7 @@
 .concierge-avatar img { object-fit: contain; padding: 5px; }
 .concierge-panel-head > div { display: grid; gap: 2px; }
 .concierge-panel-head b { font-family: var(--font-display), serif; font-size: 20px; }
-.concierge-panel-head div span { display: flex; align-items: center; gap: 6px; color: #f5dcdc; font-size: 10px; }
+.concierge-panel-head div span { display: flex; align-items: center; gap: 6px; color: #f5dcdc; font-size: 12px; }
 .concierge-panel-head i { width: 7px; height: 7px; border-radius: 50%; background: #78d49c; box-shadow: 0 0 0 3px rgba(120, 212, 156, 0.16); }
 .concierge-panel-head button {
   display: grid;
@@ -136,7 +136,7 @@
   border-bottom: 1px solid #eee5df;
   background: #fff8ed;
   color: #775c4b;
-  font-size: 9px;
+  font-size: 11px;
 }
 .concierge-disclosure svg { width: 12px; color: var(--tlc-red); }
 .concierge-thread {
@@ -163,7 +163,7 @@
   border-radius: 4px 16px 16px;
   background: #fff;
   color: #382d2a;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.65;
   white-space: pre-wrap;
 }
@@ -196,11 +196,11 @@
 .concierge-card-image { position: relative; min-height: 116px; }
 .concierge-card-image img { object-fit: cover; }
 .concierge-card-copy { display: flex; flex-direction: column; padding: 10px; }
-.concierge-card-copy small { display: flex; align-items: center; gap: 3px; color: var(--tlc-red); font-size: 8px; text-transform: uppercase; }
+.concierge-card-copy small { display: flex; align-items: center; gap: 3px; color: var(--tlc-red); font-size: 10px; text-transform: uppercase; }
 .concierge-card-copy small svg { width: 9px; }
-.concierge-card-copy b { margin-top: 4px; font-family: var(--font-display), serif; font-size: 14px; line-height: 1.2; }
-.concierge-card-copy em { margin-top: 4px; color: #7a6a64; font-size: 8px; font-style: normal; }
-.concierge-card-copy > span { display: flex; align-items: center; gap: 3px; margin-top: auto; color: var(--tlc-red); font-size: 9px; font-weight: 700; }
+.concierge-card-copy b { margin-top: 4px; font-family: var(--font-display), serif; font-size: 16px; line-height: 1.2; }
+.concierge-card-copy em { margin-top: 5px; color: #6f605b; font-size: 11px; font-style: normal; line-height: 1.35; }
+.concierge-card-copy > span { display: flex; align-items: center; gap: 3px; margin-top: auto; color: var(--tlc-red); font-size: 11px; font-weight: 700; }
 .concierge-card-copy > span svg { width: 10px; }
 .concierge-cards > p {
   grid-column: 1 / -1;
@@ -209,11 +209,11 @@
   gap: 5px;
   margin: 0;
   color: #887a73;
-  font-size: 8px;
+  font-size: 10px;
 }
 .concierge-cards > p svg { width: 10px; }
 .concierge-thinking,
-.concierge-error { margin: 8px 0 14px 36px; font-size: 10px; }
+.concierge-error { margin: 8px 0 14px 36px; font-size: 12px; }
 .concierge-thinking { display: flex; align-items: center; gap: 6px; color: #776a65; }
 .concierge-thinking svg { width: 13px; }
 .concierge-error { padding: 9px; border-radius: 9px; background: #fff0ee; color: #922326; }
@@ -224,7 +224,7 @@
   border-radius: 999px;
   background: #fff;
   color: #6e2827;
-  font-size: 9px;
+  font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
@@ -232,10 +232,10 @@
 .concierge-handover header { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
 .concierge-handover header > svg { width: 22px; color: var(--tlc-red); }
 .concierge-handover header div { display: grid; }
-.concierge-handover header b { font-size: 11px; }
-.concierge-handover header span { color: #776a65; font-size: 8px; }
+.concierge-handover header b { font-size: 13px; }
+.concierge-handover header span { color: #776a65; font-size: 11px; }
 .concierge-handover input,
-.concierge-handover select { min-width: 0; padding: 9px; border: 1px solid #dbcac0; border-radius: 8px; background: #fff; font: inherit; font-size: 9px; }
+.concierge-handover select { min-width: 0; padding: 10px; border: 1px solid #dbcac0; border-radius: 8px; background: #fff; font: inherit; font-size: 13px; }
 .concierge-handover input[name="fullName"],
 .concierge-handover input[name="phone"],
 .concierge-handover select,
@@ -252,27 +252,27 @@
   border-radius: 9px;
   background: var(--tlc-red);
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 .concierge-handover button svg { width: 13px; }
-.concierge-handover > p { margin: 0; color: #a22225; font-size: 9px; }
-.concierge-handover > small { color: #887a73; font-size: 8px; text-align: center; }
+.concierge-handover > p { margin: 0; color: #a22225; font-size: 11px; }
+.concierge-handover > small { color: #887a73; font-size: 10px; text-align: center; }
 .concierge-handover-done { display: flex; gap: 9px; margin: 12px 0 10px 36px; padding: 13px; border-radius: 13px; background: #edf8f1; color: #27603b; }
 .concierge-handover-done > svg { width: 20px; }
 .concierge-handover-done div { display: grid; gap: 2px; }
-.concierge-handover-done b { font-size: 10px; }
-.concierge-handover-done span { font-size: 8px; }
+.concierge-handover-done b { font-size: 12px; }
+.concierge-handover-done span { font-size: 10px; }
 .concierge-composer { display: grid; grid-template-columns: 1fr 38px; align-items: end; gap: 8px; padding: 10px 12px; border-top: 1px solid #e9dfd9; background: #fff; }
-.concierge-composer textarea { max-height: 88px; resize: none; padding: 9px 4px; border: 0; outline: 0; background: transparent; color: #382d2a; font: inherit; font-size: 11px; line-height: 1.45; }
+.concierge-composer textarea { max-height: 88px; resize: none; padding: 9px 4px; border: 0; outline: 0; background: transparent; color: #382d2a; font: inherit; font-size: 14px; line-height: 1.45; }
 .concierge-composer button { display: grid; width: 38px; height: 38px; place-items: center; border: 0; border-radius: 50%; background: var(--tlc-red); color: #fff; cursor: pointer; }
 .concierge-composer button:disabled { opacity: 0.38; cursor: default; }
 .concierge-composer button svg { width: 17px; }
 .concierge-panel > footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 12px 9px; background: #fff; }
-.concierge-panel > footer button { display: flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: var(--tlc-red); font-size: 8px; font-weight: 700; cursor: pointer; }
+.concierge-panel > footer button { display: flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: var(--tlc-red); font-size: 11px; font-weight: 700; cursor: pointer; }
 .concierge-panel > footer button svg { width: 11px; }
-.concierge-panel > footer span { color: #9a8c85; font-size: 7px; text-align: right; }
+.concierge-panel > footer span { color: #8b7d77; font-size: 9px; text-align: right; }
 
 @media (max-width: 700px) {
   .concierge-widget { right: 12px; bottom: 92px; }
@@ -292,7 +292,7 @@
   @keyframes concierge-mobile-rise { from { transform: translateY(100%); } }
   .concierge-panel-head { padding-top: max(14px, env(safe-area-inset-top)); }
   .concierge-thread { padding-bottom: 26px; }
-  .concierge-message > div > p { font-size: 13px; }
+  .concierge-message > div > p { font-size: 14px; }
   .concierge-cards { grid-auto-columns: 86%; }
   .concierge-composer textarea { font-size: 16px; }
   .concierge-panel > footer { padding-bottom: max(9px, env(safe-area-inset-bottom)); }
