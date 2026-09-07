@@ -31,8 +31,14 @@ beforeAll(async () => {
       status: "draft",
       name: "Draft",
     });
-    await setDoc(doc(context.firestore(), "hotels", "published"), { status:"published", name:"Published hotel" });
-    await setDoc(doc(context.firestore(), "hotels", "draft"), { status:"draft", name:"Draft hotel" });
+    await setDoc(doc(context.firestore(), "hotels", "published"), {
+      status: "published",
+      name: "Published hotel",
+    });
+    await setDoc(doc(context.firestore(), "hotels", "draft"), {
+      status: "draft",
+      name: "Draft hotel",
+    });
     await setDoc(doc(context.firestore(), "inquiries", "one"), {
       orgId: "tlc-vacations",
       status: "new",
@@ -63,6 +69,24 @@ beforeAll(async () => {
       orgId: "tlc-vacations",
       customerId: "customer-1",
       score: 80,
+    });
+    await setDoc(doc(context.firestore(), "offers", "offer-one"), {
+      orgId: "tlc-vacations",
+      title: "Offer",
+      status: "active",
+    });
+    await setDoc(doc(context.firestore(), "campaigns", "campaign-one"), {
+      orgId: "tlc-vacations",
+      name: "Campaign",
+      approvalStatus: "approved",
+    });
+    await setDoc(
+      doc(context.firestore(), "campaignDeliveries", "delivery-one"),
+      { orgId: "tlc-vacations", campaignId: "campaign-one", status: "sent" },
+    );
+    await setDoc(doc(context.firestore(), "models", "model-one"), {
+      orgId: "tlc-vacations",
+      status: "rejected",
     });
     await setDoc(doc(context.firestore(), "imports", "one"), {
       orgId: "tlc-vacations",
@@ -221,6 +245,26 @@ describe("CRM and audit rules", () => {
         score: 100,
       }),
     );
+  });
+
+  it("lets marketing inspect its own intelligence but never forge workflow state", async () => {
+    const database = environment
+      .authenticatedContext("marketer", {
+        role: "marketing",
+        orgId: "tlc-vacations",
+      })
+      .firestore();
+    for (const [collection, id] of [
+      ["offers", "offer-one"],
+      ["campaigns", "campaign-one"],
+      ["campaignDeliveries", "delivery-one"],
+      ["models", "model-one"],
+    ]) {
+      await assertSucceeds(getDoc(doc(database, collection, id)));
+      await assertFails(
+        updateDoc(doc(database, collection, id), { status: "forged" }),
+      );
+    }
   });
 
   it("keeps temporary supplier inventory server-only", async () => {

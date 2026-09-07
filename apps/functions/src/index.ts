@@ -24,6 +24,26 @@ export {
   updateAlertStatus,
 } from "./ai-jobs.js";
 export {
+  activateMarketingOffer,
+  approveMarketingCampaign,
+  approveMarketingOffer,
+  deliverScheduledCampaigns,
+  expireMarketingOffers,
+  pauseMarketingOffer,
+  recordMarketingEvent,
+  requestCampaignApproval,
+  saveMarketingCampaign,
+  saveMarketingOffer,
+  scoreActiveOffersNightly,
+  scoreMarketingOffer,
+  sendMarketingCampaign,
+} from "./marketing-workflow.js";
+export {
+  activateMarketingModel,
+  trainMarketingModel,
+  trainMarketingModelsWeekly,
+} from "./marketing-model-lifecycle.js";
+export {
   aggregateManagementAnalytics,
   refreshManagementAnalytics,
 } from "./management-analytics.js";

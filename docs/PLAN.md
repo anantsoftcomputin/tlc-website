@@ -203,36 +203,36 @@ Phase numbering note: the original master brief's AI marketing phase moves here 
 - [x] Reuse the canonical offer, campaign, propensity and model schemas from the shared data model.
 - [x] Add explicit marketing read/write permissions for owners, managers, administrators and marketing staff.
 - [x] Add a real-data Marketing Cockpit for offer, campaign, audience, consent and model readiness.
-- [ ] Route offer and campaign mutations through audited, organization-scoped server commands.
+- [x] Route offer and campaign mutations through audited, organization-scoped server commands.
 
 ## Step 21 — TLC-owned scoring pipeline
 
-- [ ] Build the TensorFlow.js two-tower network and multi-task prediction heads.
-- [ ] Build time-based training datasets from customer events and bookings.
-- [ ] Add evaluation, calibration, model registry and safe activation thresholds.
-- [ ] Keep the explainable rules recommender active until positive-event and validation thresholds are met.
-- [ ] Store model weights in Firebase Storage and all model evidence in Firestore.
+- [x] Build the TensorFlow.js two-tower network and multi-task prediction heads.
+- [x] Build time-based training datasets from customer events and bookings.
+- [x] Add evaluation, calibration, model registry and safe activation thresholds.
+- [x] Keep the explainable rules recommender active until positive-event and validation thresholds are met.
+- [x] Store model weights in Firebase Storage and all model evidence in Firestore.
 
 ## Step 22 — Offers and propensity
 
-- [ ] Build governed offer creation, approval, activation, pause and expiry workflows.
-- [ ] Generate offer vectors and explainable customer-to-offer propensity scores.
-- [ ] Add propensity explorer, audience previews and consent-aware customer exclusions.
-- [ ] Add predictive travel, dormant and upgrade lists using recorded data only.
+- [x] Build governed offer creation, approval, activation, pause and expiry workflows.
+- [x] Generate offer vectors and explainable customer-to-offer propensity scores.
+- [x] Add propensity explorer, audience previews and consent-aware customer exclusions.
+- [x] Add predictive travel, dormant and upgrade lists using recorded data only.
 
 ## Step 23 — Campaign operations
 
-- [ ] Build the segment-to-offer-to-channel campaign builder.
-- [ ] Require explicit approval before every campaign send or schedule action.
-- [ ] Add WhatsApp template, email and mock messaging adapters with opt-out enforcement.
-- [ ] Track sent, delivered, read, reply, conversion and attributable revenue events.
-- [ ] Add campaign ROI and source reporting without invented metrics.
+- [x] Build the segment-to-offer-to-channel campaign builder.
+- [x] Require explicit approval before every campaign send or schedule action.
+- [x] Add WhatsApp template, email and mock messaging adapters with opt-out enforcement.
+- [x] Track sent, delivered, read, reply, conversion and attributable revenue events.
+- [x] Add campaign ROI and source reporting without invented metrics.
 
 ## Checkpoint 5 exit criteria
 
-- [ ] Model activation is evidence-based, reversible and monitored.
-- [ ] Every score includes reasoning and feature attributions.
-- [ ] Every campaign audience enforces recorded channel consent and opt-outs.
-- [ ] No customer-facing campaign can send without an authorized human approval.
-- [ ] Campaign results reconcile to immutable customer events and actual bookings.
-- [ ] Unit tests, rules tests, synthetic demo data and operating documentation cover the full marketing flow.
+- [x] Model activation is evidence-based, reversible and monitored.
+- [x] Every score includes reasoning and feature attributions.
+- [x] Every campaign audience enforces recorded channel consent and opt-outs.
+- [x] No customer-facing campaign can send without an authorized human approval.
+- [x] Campaign results reconcile to immutable customer events and actual bookings.
+- [x] Unit tests, rules tests, synthetic demo data and operating documentation cover the full marketing flow.

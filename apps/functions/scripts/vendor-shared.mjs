@@ -64,6 +64,7 @@ await writeFile(
       exports: {
         ".": { types: "./dist/index.d.ts", default: "./dist/index.js" },
       },
+      dependencies: { "@tensorflow/tfjs": "^4.22.0" },
     },
     null,
     2,
