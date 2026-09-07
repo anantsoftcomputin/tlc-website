@@ -258,17 +258,17 @@ Phase numbering note: the original master brief's AI marketing phase moves here 
 ## Step 26 — Persona and orchestration
 
 - [ ] Build persona administration, versioning and channel previews.
-- [ ] Implement the tool-calling orchestrator and current-turn grounding ledger.
+- [x] Implement the text-concierge orchestrator and current-turn grounding ledger.
 - [ ] Implement preference extraction, confirmation, conflict resolution and profile updates.
 - [ ] Add evaluation cases for family trade-offs, ambiguity, safety and hallucination resistance.
 
 ## Step 27 — Customer experiences
 
-- [ ] Build the persistent embeddable web chat widget.
-- [ ] Build the visual itinerary renderer backed by CMS and live inventory results.
-- [ ] Add streaming voice conversation sessions with explicit recording consent.
+- [x] Build the persistent responsive web chat widget.
+- [x] Build grounded visual destination, trip and hotel cards backed by the published CMS.
+- [ ] Add streaming voice conversation sessions with explicit recording consent. Deferred by client after text-chat launch.
 - [ ] Connect the WhatsApp conversation adapter and enforce its session/template rules.
-- [ ] Implement human handover with transcript, summary and assigned consultant notification.
+- [x] Implement human handover with transcript, summary and automatic CRM lead assignment.
 
 ## Step 28 — Staff assist and production hardening
 

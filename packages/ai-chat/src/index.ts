@@ -4,5 +4,5 @@ export type GroundedToolResult<T> = {
   fetchedAt: string;
   reasoning: string;
 };
-export * from "./context.js";
-export * from "./grounding.js";
+export * from "./context";
+export * from "./grounding";

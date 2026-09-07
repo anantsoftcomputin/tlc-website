@@ -11,7 +11,7 @@ export const conversationSchema = z
   .object({
     id: documentIdSchema,
     orgId: orgIdSchema,
-    customerId: documentIdSchema,
+    customerId: documentIdSchema.optional(),
     leadId: documentIdSchema.optional(),
     channel: z.enum(["whatsapp", "web", "email", "voice"]),
     mode: z.enum(["text", "voice", "multimodal"]).default("text"),

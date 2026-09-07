@@ -173,7 +173,11 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         name: input.fullName,
         phones: [input.phone],
         emails: input.email ? [input.email.toLowerCase()] : [],
-        tags: ["website-inquiry"],
+        tags: [
+          input.source === "ai_concierge"
+            ? "chatbot-inquiry"
+            : "website-inquiry",
+        ],
         consent: {
           whatsapp: intelligence?.permissions.marketingWhatsapp || false,
           email: intelligence?.permissions.marketingEmail || false,
@@ -181,7 +185,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
           timestamp: now,
           source: "website-inquiry",
         },
-        source: "website",
+        source: input.source === "ai_concierge" ? "chatbot" : "website",
         ownerUid: assignedUid,
         segments: [],
         lifecycleStage: "new",
@@ -204,7 +208,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         orgId: ORG_ID,
         customerId: customerRef.id,
         title: `${destinationIds[0] || "Custom holiday"} — ${input.fullName}`,
-        source: "website",
+        source: input.source === "ai_concierge" ? "chatbot" : "website",
         status: "new",
         priority: "normal",
         assignedUid,
@@ -268,7 +272,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         orgId: ORG_ID,
         leadId: leadRef.id,
         type: "note",
-        body: `Lead automatically captured from the ${input.source} website form.`,
+        body: `Lead automatically captured from the ${input.source === "ai_concierge" ? "TLC AI concierge" : `${input.source} website form`}.`,
         by: actor,
         ts: now,
         attachments: [],

@@ -4,17 +4,44 @@ import "./globals.css";
 import { FirebaseAnalytics } from "@/components/firebase-analytics";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { SiteChrome } from "@/components/site-chrome";
+import { ConciergeChat } from "@/components/concierge/concierge-chat";
 
-const display = Fraunces({ subsets: ["latin"], variable: "--font-display", axes: ["opsz", "SOFT", "WONK"], style: ["normal", "italic"] });
+const display = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  axes: ["opsz", "SOFT", "WONK"],
+  style: ["normal", "italic"],
+});
 const body = Manrope({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://tlcholidays.in"),
-  title: { default: "TLC Holidays — Personal holidays, beautifully planned", template: "%s | TLC Holidays" },
-  description: "Discover international and Indian holidays shaped around your dates, interests and budget with TLC Holidays, Kanpur.",
-  openGraph: { title: "TLC Holidays", description: "Your personal gateway to the world.", images: ["/images/hero-braies.jpg"] }
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://tlcholidays.in",
+  ),
+  title: {
+    default: "TLC Holidays — Personal holidays, beautifully planned",
+    template: "%s | TLC Holidays",
+  },
+  description:
+    "Discover international and Indian holidays shaped around your dates, interests and budget with TLC Holidays, Kanpur.",
+  openGraph: {
+    title: "TLC Holidays",
+    description: "Your personal gateway to the world.",
+    images: ["/images/hero-braies.jpg"],
+  },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={`${display.variable} ${body.variable}`}><body><FirebaseAnalytics/><SiteChrome>{children}</SiteChrome><MobileBottomNav/></body></html>;
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <body>
+        <FirebaseAnalytics />
+        <SiteChrome>{children}</SiteChrome>
+        <ConciergeChat />
+        <MobileBottomNav />
+      </body>
+    </html>
+  );
 }

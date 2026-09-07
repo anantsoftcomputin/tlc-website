@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "node:path";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@tlc/shared"],
+  transpilePackages: ["@tlc/shared", "@tlc/ai-chat"],
   outputFileTracingRoot: path.join(process.cwd(), "../.."),
   images: { remotePatterns: [{ protocol: "https", hostname: "firebasestorage.googleapis.com" }] },
   async redirects() {
