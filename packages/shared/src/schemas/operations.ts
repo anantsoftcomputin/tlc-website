@@ -75,6 +75,7 @@ export const personaSchema = z.object({
   afterHoursMessage: z.string().trim().min(1),
   escalation: z.object({ keywords: z.array(z.string()), sentimentBelow: z.number().min(-1).max(1), highValueAbove: z.number().nonnegative(), repeatedQuestionCount: z.number().int().positive(), requestHuman: z.boolean() }),
   disclosures: z.string().trim().min(1),
+  version: z.number().int().positive().default(1),
   active: z.boolean().default(true),
 }).and(auditFieldsSchema);
 

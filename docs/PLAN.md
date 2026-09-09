@@ -257,23 +257,33 @@ Phase numbering note: the original master brief's AI marketing phase moves here 
 
 ## Step 26 — Persona and orchestration
 
-- [ ] Build persona administration, versioning and channel previews.
+- [x] Build persona administration, versioning and channel previews.
 - [x] Implement the text-concierge orchestrator and current-turn grounding ledger.
-- [ ] Implement preference extraction, confirmation, conflict resolution and profile updates.
-- [ ] Add evaluation cases for family trade-offs, ambiguity, safety and hallucination resistance.
+- [x] Implement preference extraction, confirmation, conflict resolution and profile updates.
+- [x] Add evaluation cases for family trade-offs, ambiguity, safety and hallucination resistance.
 
 ## Step 27 — Customer experiences
 
 - [x] Build the persistent responsive web chat widget.
 - [x] Build grounded visual destination, trip and hotel cards backed by the published CMS.
 - [ ] Add streaming voice conversation sessions with explicit recording consent. Deferred by client after text-chat launch.
-- [ ] Connect the WhatsApp conversation adapter and enforce its session/template rules.
+- [x] Connect the WhatsApp conversation adapter and enforce its session/template rules.
 - [x] Implement human handover with transcript, summary and automatic CRM lead assignment.
 
 ## Step 28 — Staff assist and production hardening
 
-- [ ] Add lead-side destination, package, upsell, reply and follow-up suggestions.
-- [ ] Add conversation inbox, staff reply and bot pause/resume controls.
-- [ ] Add latency, grounding, resolution, handover, satisfaction and cost monitoring.
-- [ ] Run privacy, accessibility, load, failure-mode and restore drills.
-- [ ] Complete production runbooks and client operating training.
+- [x] Add lead-side destination, package, upsell, reply and follow-up suggestions.
+- [x] Add conversation inbox, staff reply and bot pause/resume controls.
+- [x] Add latency, grounding, resolution, handover, satisfaction and cost monitoring.
+- [x] Automate privacy/access-control, failure-mode and production-build checks; publish accessibility, load and restore drill procedures.
+- [x] Complete production runbooks and the client operating-training guide.
+
+## Checkpoint 6 exit criteria
+
+- [x] Text conversations are grounded in current-turn TLC catalogue evidence.
+- [x] Explicit preferences require customer confirmation before persistence.
+- [x] Persona changes are versioned and audited, with web and WhatsApp previews.
+- [x] Human takeover, staff replies, bot resume and CRM linkage operate from one inbox.
+- [x] WhatsApp inbound signatures and 24-hour free-form reply windows are enforced.
+- [x] Quality and cost telemetry is visible to operations staff.
+- [x] Streaming voice remains isolated behind explicit recording consent and is deferred by client direction.

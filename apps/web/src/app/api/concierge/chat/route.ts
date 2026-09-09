@@ -37,12 +37,14 @@ export async function POST(request: Request) {
         { error: "Please send a shorter message." },
         { status: 400 },
       );
+    const startedAt = Date.now();
     const response = await answerConcierge(parsed.data);
     await repository.recordTurn({
       sessionId: parsed.data.sessionId,
       page: parsed.data.page,
       message: parsed.data.message,
       response,
+      latencyMs: Date.now() - startedAt,
     });
     return NextResponse.json(response, {
       headers: { "Cache-Control": "no-store" },

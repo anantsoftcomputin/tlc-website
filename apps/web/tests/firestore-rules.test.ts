@@ -105,6 +105,24 @@ beforeAll(async () => {
       customerId: "customer-one",
       modelTrainingAllowed: true,
     });
+    await setDoc(doc(context.firestore(), "conversations", "assigned-thread"), {
+      orgId: "tlc-vacations",
+      assignedUid: "sales",
+      status: "human",
+    });
+    await setDoc(doc(context.firestore(), "conversations", "other-thread"), {
+      orgId: "tlc-vacations",
+      assignedUid: "other",
+      status: "human",
+    });
+    await setDoc(doc(context.firestore(), "personas", "tara"), {
+      orgId: "tlc-vacations",
+      active: true,
+    });
+    await setDoc(
+      doc(context.firestore(), "personas", "tara", "versions", "1"),
+      { orgId: "tlc-vacations", version: 1 },
+    );
     await setDoc(doc(context.firestore(), "imports", "one"), {
       orgId: "tlc-vacations",
       status: "review",
@@ -295,6 +313,22 @@ describe("CRM and audit rules", () => {
         orgId: "tlc-vacations",
       }),
     );
+  });
+
+  it("scopes conversation reads and keeps messages and persona versions server-owned", async () => {
+    const sales = environment
+      .authenticatedContext("sales", { role: "sales", orgId: "tlc-vacations" })
+      .firestore();
+    const owner = environment
+      .authenticatedContext("owner-conversation", { role: "owner", orgId: "tlc-vacations" })
+      .firestore();
+    await assertSucceeds(getDoc(doc(sales, "conversations", "assigned-thread")));
+    await assertFails(getDoc(doc(sales, "conversations", "other-thread")));
+    await assertFails(updateDoc(doc(sales, "conversations", "assigned-thread"), { status: "closed" }));
+    await assertSucceeds(getDoc(doc(sales, "personas", "tara")));
+    await assertFails(getDoc(doc(sales, "personas", "tara", "versions", "1")));
+    await assertSucceeds(getDoc(doc(owner, "personas", "tara", "versions", "1")));
+    await assertFails(updateDoc(doc(owner, "personas", "tara"), { active: false }));
   });
 
   it("lets marketing inspect its own intelligence but never forge workflow state", async () => {

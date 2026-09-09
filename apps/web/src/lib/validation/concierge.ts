@@ -25,5 +25,25 @@ export const conciergeHandoverSchema = z.object({
   destinationIds: z.array(z.string().trim().max(120)).max(10).default([]),
 });
 
+export const conciergePreferenceConfirmationSchema = z.object({
+  sessionId: z.string().uuid(),
+  updates: z
+    .array(
+      z.object({
+        path: z.string().trim().min(1).max(200),
+        value: z.json(),
+        confidence: z.number().min(0).max(1),
+        evidenceMessageId: z.string().trim().min(1).max(128),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+export const conciergeFeedbackSchema = z.object({
+  sessionId: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+});
+
 export type ConciergeChatRequest = z.infer<typeof conciergeChatRequestSchema>;
 export type ConciergeHandover = z.infer<typeof conciergeHandoverSchema>;

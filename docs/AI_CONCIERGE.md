@@ -28,4 +28,8 @@ The implementation uses the OpenAI Responses API with strict structured output a
 
 ## Remaining conversational work
 
-The launched text experience intentionally does not include voice. Preference extraction and confirmation, persona administration UI, staff conversation inbox, WhatsApp continuity, live supplier search and full day-by-day generative itinerary composition remain later milestones.
+The launched text experience intentionally does not include voice. Phase 6 now includes confirmed preference extraction, ambiguity handling, persona versioning and previews, a staff conversation inbox, human takeover and bot resume, grounded lead-side suggestions, WhatsApp webhook continuity, 24-hour session enforcement, satisfaction capture and operational quality telemetry.
+
+Live supplier search and full day-by-day generative itinerary composition remain behind the existing adapter and visual-itinerary contracts. Streaming voice is the only Phase 6 customer surface explicitly deferred by the client.
+
+See the AI concierge operating runbook for deployment secrets, WhatsApp setup, monitoring and recovery procedures.

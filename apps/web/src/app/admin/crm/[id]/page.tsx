@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LeadWorkspace } from "@/components/admin/lead-workspace";
+import { LeadAssistPanel } from "@/components/admin/lead-assist-panel";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreLeadRepository } from "@/repositories/firebase/firestore-lead-repository";
 
@@ -157,6 +158,7 @@ export default async function LeadDetailPage({
           </section>
         </main>
         <aside>
+          <LeadAssistPanel leadId={lead.id} suggestions={lead.aiSuggestions} />
           <section className="lead-sla-card">
             <h2>
               <CalendarClock />

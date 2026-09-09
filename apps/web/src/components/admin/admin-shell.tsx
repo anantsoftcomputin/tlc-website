@@ -21,6 +21,7 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  MessagesSquare,
   Menu,
   LibraryBig,
   MapPinned,
@@ -71,6 +72,12 @@ const navGroups = [
         label: "Inquiry inbox",
         href: "/admin/inquiries",
         icon: Inbox,
+        permission: "crm:read" as const,
+      },
+      {
+        label: "Conversations",
+        href: "/admin/conversations",
+        icon: MessagesSquare,
         permission: "crm:read" as const,
       },
       {
@@ -206,6 +213,12 @@ const navGroups = [
         icon: Settings2,
         permission: "users:manage" as const,
       },
+      {
+        label: "Tara persona",
+        href: "/admin/settings/persona",
+        icon: Sparkles,
+        permission: "settings:manage" as const,
+      },
     ],
   },
 ];
@@ -213,6 +226,7 @@ const navGroups = [
 const routeNames: Record<string, string> = {
   admin: "Command centre",
   inquiries: "Inquiry inbox",
+  conversations: "Conversation inbox",
   crm: "Lead pipeline",
   customers: "Customers",
   quotes: "Quotes",

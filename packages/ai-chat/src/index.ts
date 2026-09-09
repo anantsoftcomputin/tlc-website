@@ -6,3 +6,4 @@ export type GroundedToolResult<T> = {
 };
 export * from "./context";
 export * from "./grounding";
+export * from "./preferences";

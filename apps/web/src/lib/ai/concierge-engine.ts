@@ -2,6 +2,8 @@ import "server-only";
 import { z } from "zod";
 import {
   buildTravelAssistantSystemPrompt,
+  extractPreferenceCandidates,
+  preferenceConflictQuestions,
   validateGroundedAssistantResponse,
 } from "@tlc/ai-chat";
 import type { AssistantResponseEnvelope, Persona } from "@tlc/shared";
@@ -253,6 +255,7 @@ export async function answerConcierge(input: ConciergeChatRequest) {
       activePersona(),
     ]);
   let generated = await generateReply(input, cards, persona);
+  const conflicts = preferenceConflictQuestions(input.message);
   if (
     blockedDestinationNames.some((name) =>
       generated.message.toLowerCase().includes(name.toLowerCase()),
@@ -263,8 +266,11 @@ export async function answerConcierge(input: ConciergeChatRequest) {
     message: generated.message,
     language: "en-IN",
     cards,
-    followUpQuestions: generated.followUpQuestions.slice(0, 3),
-    preferenceUpdates: [],
+    followUpQuestions: (conflicts.length ? conflicts : generated.followUpQuestions).slice(0, 3),
+    preferenceUpdates: extractPreferenceCandidates(
+      input.message,
+      `turn-${input.history.length + 1}`,
+    ),
     handover: {
       required: generated.handover,
       reason: generated.handoverReason,

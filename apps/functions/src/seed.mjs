@@ -248,9 +248,104 @@ for (const record of records) {
   });
 }
 
+batch.set(database.collection("personas").doc("tara-web-v1"), {
+  id: "tara-web-v1",
+  orgId,
+  name: "Tara",
+  tagline: "Your TLC holiday concierge",
+  tone: { warmth: 0.9, formality: 0.35, verbosity: 0.45, humour: 0.15 },
+  languages: ["en", "hi", "gu"],
+  autoDetectLanguage: true,
+  brandVoice: ["warm, perceptive and practical", "vivid but concise", "Indian English"],
+  forbiddenPhrases: ["guaranteed availability", "best price guaranteed", "booked successfully"],
+  signOff: "A TLC expert will verify every booking detail.",
+  channelOverrides: {
+    web: { maxChars: 2000, emojiLevel: "low" },
+    whatsapp: { maxChars: 600, emojiLevel: "low" },
+    email: { maxChars: 4000, emojiLevel: "none" },
+  },
+  workingHours: { timezone: "Asia/Kolkata", days: [1, 2, 3, 4, 5, 6], start: "10:00", end: "19:00" },
+  afterHoursMessage: "Our planning team is away right now. I can collect your brief for the next working day.",
+  escalation: { keywords: ["human", "complaint", "refund", "emergency"], sentimentBelow: -0.4, highValueAbove: 150000, repeatedQuestionCount: 2, requestHuman: true },
+  disclosures: "You are chatting with Tara, TLC Holidays’ AI travel assistant.",
+  active: true,
+  version: 1,
+  createdAt: now,
+  updatedAt: now,
+  createdBy: ownerUid,
+  updatedBy: ownerUid,
+});
+
+const conversationRef = database.collection("conversations").doc("demo-conversation");
+batch.set(conversationRef, {
+  id: conversationRef.id,
+  orgId,
+  customerId: "customer-shah",
+  leadId: "lead-customer-shah",
+  channel: "web",
+  mode: "text",
+  participants: [
+    { id: "customer-shah", type: "customer", displayName: "Krupa Shah" },
+    { id: "tara", type: "bot", displayName: "Tara" },
+  ],
+  status: "human",
+  assignedUid: ownerUid,
+  personaSnapshot: { name: "Tara", version: 1 },
+  summary: "Luxury family holiday with a slower pace and child-friendly stays.",
+  lastMessageAt: now,
+  turnCount: 2,
+  assistantTurns: 1,
+  latencyMsTotal: 820,
+  groundingFailures: 0,
+  handoverCount: 1,
+  handoverAt: now,
+  satisfaction: 5,
+  createdAt: now,
+  updatedAt: now,
+  createdBy: "demo-seed",
+  updatedBy: "demo-seed",
+});
+batch.set(conversationRef.collection("messages").doc("visitor-1"), {
+  id: "visitor-1",
+  orgId,
+  conversationId: conversationRef.id,
+  direction: "inbound",
+  from: { id: "customer-shah", type: "customer" },
+  body: "We need a relaxed luxury family holiday with activities for our children.",
+  inputMode: "text",
+  media: [],
+  deliveryStatus: "read",
+  aiGenerated: false,
+  toolCalls: [],
+  sentAt: now,
+  createdAt: now,
+  updatedAt: now,
+  createdBy: "demo-seed",
+  updatedBy: "demo-seed",
+});
+batch.set(conversationRef.collection("messages").doc("tara-1"), {
+  id: "tara-1",
+  orgId,
+  conversationId: conversationRef.id,
+  direction: "outbound",
+  from: { id: "tara", type: "bot" },
+  body: "I’ll keep the pace relaxed and only show family options from TLC’s published collection. A TLC expert can now verify dates and availability.",
+  inputMode: "text",
+  media: [],
+  deliveryStatus: "sent",
+  aiGenerated: true,
+  reasoning: "Grounded demo response with no price or availability claim.",
+  toolCalls: [],
+  sentAt: now,
+  createdAt: now,
+  updatedAt: now,
+  createdBy: "demo-seed",
+  updatedBy: "demo-seed",
+});
+
 seedCommerce({ database, batch, orgId, ownerUid, now });
 
 await batch.commit();
 console.log(
-  `Seeded ${records.length} customers and leads plus the complete Phase 3 finance demo for ${orgId}.`,
+  `Seeded ${records.length} customers and leads plus finance, persona and conversation demos for ${orgId}.`,
 );

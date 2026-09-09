@@ -103,6 +103,10 @@ export {
   closeFinancePeriod,
   reopenFinancePeriod,
 } from "./finance-period-workflow.js";
+export {
+  deliverWhatsAppConversationMessage,
+  whatsappConversationWebhook,
+} from "./conversation-workflow.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 20 });
 

@@ -4,9 +4,12 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   ArrowUp,
+  CheckCircle2,
   LoaderCircle,
   MessageCircle,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   UserRound,
   X,
 } from "lucide-react";
@@ -51,6 +54,8 @@ export function ConciergeChat() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
+  const [confirmedMessages, setConfirmedMessages] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setSessionId(getSessionId()), []);
@@ -106,13 +111,15 @@ export function ConciergeChat() {
       };
       if (!response.ok)
         throw new Error(payload.error || "Tara could not reply.");
+      const responseId = crypto.randomUUID();
       setMessages((current) => [
         ...current,
         {
-          id: crypto.randomUUID(),
+          id: responseId,
           role: "assistant",
           content: payload.message,
           cards: payload.cards,
+          preferenceUpdates: payload.preferenceUpdates,
         },
       ]);
       setSuggestions(payload.followUpQuestions);
@@ -122,6 +129,46 @@ export function ConciergeChat() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function confirmPreferences(message: DisplayMessage) {
+    if (!message.preferenceUpdates?.length || !sessionId) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/concierge/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          updates: message.preferenceUpdates.map(
+            ({ path, value, confidence, evidenceMessageId }) => ({
+              path,
+              value,
+              confidence,
+              evidenceMessageId,
+            }),
+          ),
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Preferences could not be saved.");
+      setConfirmedMessages((current) => [...current, message.id]);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rate(rating: number) {
+    if (!sessionId || feedback) return;
+    setFeedback(rating);
+    await fetch("/api/concierge/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, rating }),
+    }).catch(() => undefined);
   }
 
   function submit(event: FormEvent) {
@@ -199,6 +246,25 @@ export function ConciergeChat() {
                 <div>
                   <p>{message.content}</p>
                   {message.cards && <ConciergeCards cards={message.cards} />}
+                  {message.preferenceUpdates?.length ? (
+                    <div className="concierge-preferences">
+                      <b>
+                        <CheckCircle2 /> Did I understand this correctly?
+                      </b>
+                      <p>
+                        {message.preferenceUpdates
+                          .map((item) => `${item.path.split(".").at(-1)?.replaceAll("_", " ")}: ${Array.isArray(item.value) ? item.value.join(", ") : String(item.value)}`)
+                          .join(" · ")}
+                      </p>
+                      {confirmedMessages.includes(message.id) ? (
+                        <span>Confirmed for this conversation</span>
+                      ) : (
+                        <button onClick={() => void confirmPreferences(message)}>
+                          Yes, remember this
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </article>
             ))}
@@ -258,6 +324,12 @@ export function ConciergeChat() {
             <button onClick={() => setHandover(true)}>
               <MessageCircle /> Talk to a TLC expert
             </button>
+            {messages.length > 1 && (
+              <div className="concierge-feedback">
+                <small>{feedback ? "Thank you" : "Helpful?"}</small>
+                {!feedback && <><button aria-label="Helpful" onClick={() => void rate(5)}><ThumbsUp /></button><button aria-label="Not helpful" onClick={() => void rate(2)}><ThumbsDown /></button></>}
+              </div>
+            )}
             <span>
               AI can make mistakes. TLC verifies every booking detail.
             </span>

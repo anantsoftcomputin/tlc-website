@@ -107,6 +107,7 @@ function mapLead(
       data.valueEstimate ?? data.estimatedValue?.amount ?? 0,
     ),
     expectedMargin: Number(data.expectedMargin || 0),
+    ...(data.aiSuggestions ? { aiSuggestions: data.aiSuggestions } : {}),
     ...(data.lostReason ? { lostReason: String(data.lostReason) } : {}),
     sla: {
       firstResponseDueAt: toIso(data.sla?.firstResponseDueAt),
