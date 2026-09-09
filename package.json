@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "turbo run dev --filter=@tlc/web",
     "build": "turbo run build",
+    "prepare:ci": "pnpm --filter @tlc/shared build && pnpm --filter @tlc/ai-core build && pnpm --filter @tlc/integrations build && node apps/functions/scripts/vendor-shared.mjs && pnpm install --offline --filter @tlc/functions... --frozen-lockfile",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
