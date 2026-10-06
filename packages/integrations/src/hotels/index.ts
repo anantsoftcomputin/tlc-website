@@ -12,6 +12,9 @@ export type HotelSearchRequest = {
   checkOut: string;
   rooms: { adults: number; childrenAges?: number[] }[];
   currency?: "INR" | "USD" | "EUR" | "GBP" | "AED" | "SGD";
+  /** Supplier property codes resolved from the stored catalogue (required by TBO). */
+  hotelCodes?: string[];
+  guestNationality?: string;
 };
 
 export type HotelOffer = {
@@ -28,6 +31,15 @@ export type HotelOffer = {
   cancellationDeadline: string;
   price: { currency: string; base: number; taxes: number; total: number };
   expiresAt: string;
+  /** Supplier-specific details shown to staff (inclusions, policies, room count). */
+  details?: {
+    inclusions?: string[];
+    rateConditions?: string[];
+    rooms?: number;
+    netAmount?: number;
+    minimumSellingRate?: number;
+    supplements?: { type: string; description: string; price: number; currency: string }[];
+  };
 };
 
 export type HotelBooking = {
@@ -137,3 +149,4 @@ export class MockHotelProvider implements HotelProvider {
 }
 
 export { HotelbedsHotelProvider } from "./hotelbeds.js";
+export { TboHotelProvider } from "../tbo/hotels.js";

@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import { CommerceProviderRegistry } from "@tlc/integrations";
 import {
   createPaymentInputSchema,
@@ -7,7 +8,8 @@ import {
   type Payment,
 } from "@tlc/shared";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import {
   bookingTimeline,
   commerceActor,
@@ -216,12 +218,13 @@ export async function capturePayment(
   const paymentBeforeTransaction = await paymentRef.get();
   if (!paymentBeforeTransaction.exists)
     throw new HttpsError("not-found", "Payment was not found.");
+  if (actorIdentity && paymentBeforeTransaction.data()?.orgId !== actorIdentity.orgId) throw new HttpsError("permission-denied", "Payment access denied.");
   if (paymentBeforeTransaction.data()?.status === "captured") return;
   await assertFinanceDateOpen(
     String(paymentBeforeTransaction.data()?.orgId || ""),
   );
   const now = new Date().toISOString();
-  await database.runTransaction(async (transaction) => {
+  await runFinanceTransaction(database, String(paymentBeforeTransaction.data()?.orgId), async (transaction) => {
     const snapshot = await transaction.get(paymentRef);
     if (!snapshot.exists)
       throw new HttpsError("not-found", "Payment was not found.");
@@ -258,6 +261,7 @@ export async function capturePayment(
         (sum, item) => sum + Number(item.data().amount || 0),
         0,
       ) + payment.amount;
+    if (totalPaid > booking.totals.sell + 0.01) throw new HttpsError("failed-precondition", "Payment exceeds the outstanding balance. Reconcile the provider collection before retrying.");
     const paymentStatus =
       totalPaid + 0.01 >= booking.totals.sell ? "paid" : "partial";
     const uid = actorIdentity?.uid || "razorpay-webhook";

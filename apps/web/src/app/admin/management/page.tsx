@@ -17,7 +17,7 @@ const money = new Intl.NumberFormat("en-IN", {
 const number = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 });
 
 export default async function ManagementPage() {
-  const user = await requireAdminUser("crm:read");
+  const user = await requireAdminUser("business:read");
   const snapshot = await new FirestoreManagementRepository(
     user.orgId,
   ).getManagementSnapshot();

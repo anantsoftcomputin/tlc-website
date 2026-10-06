@@ -1,10 +1,21 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { appCheckDeployProblem } from "./src/lib/security/app-check-policy";
+
+const appCheckProblem = appCheckDeployProblem();
+if (appCheckProblem) throw new Error(appCheckProblem);
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@tlc/shared", "@tlc/ai-chat"],
   outputFileTracingRoot: path.join(process.cwd(), "../.."),
-  images: { remotePatterns: [{ protocol: "https", hostname: "firebasestorage.googleapis.com" }] },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+      // TBO supplier property photos.
+      { protocol: "https", hostname: "www.tboholidays.com" },
+      { protocol: "https", hostname: "api.tbotechnology.in" },
+    ],
+  },
   async redirects() {
     return [
       { source: "/about_us.php", destination: "/about", permanent: true },

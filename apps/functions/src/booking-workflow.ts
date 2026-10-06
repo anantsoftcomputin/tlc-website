@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import {
   bookingCommandInputSchema,
   bookingDocumentUpdateInputSchema,
@@ -7,7 +8,8 @@ import {
   type Booking,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { createBookingFinance } from "./booking-finance.js";
 import { assertFinanceDateOpen } from "./finance-period-guard.js";
 import {
@@ -35,7 +37,7 @@ export const createBooking = onCall(
     const auditRef = database.collection("auditLogs").doc();
     const now = new Date().toISOString();
     let bookingNumber = "";
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const quoteRef = database.collection("quotes").doc(parsed.data.quoteId);
       const quote = await transaction.get(quoteRef);
       if (!quote.exists || quote.data()?.orgId !== identity.orgId)
@@ -158,7 +160,7 @@ export const approveBooking = onCall(
     const ref = database.collection("bookings").doc(parsed.data.bookingId);
     const auditRef = database.collection("auditLogs").doc();
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const snapshot = await transaction.get(ref);
       if (!snapshot.exists || snapshot.data()?.orgId !== identity.orgId)
         throw new HttpsError("not-found", "Booking was not found.");
@@ -221,7 +223,7 @@ export const updateBookingItem = onCall(
     const ref = database.collection("bookings").doc(parsed.data.bookingId);
     const auditRef = database.collection("auditLogs").doc();
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const snapshot = await transaction.get(ref);
       if (!snapshot.exists || snapshot.data()?.orgId !== identity.orgId)
         throw new HttpsError("not-found", "Booking was not found.");
@@ -300,7 +302,7 @@ export const updateBookingDocument = onCall(
     const ref = database.collection("bookings").doc(parsed.data.bookingId);
     const auditRef = database.collection("auditLogs").doc();
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const snapshot = await transaction.get(ref);
       if (!snapshot.exists || snapshot.data()?.orgId !== identity.orgId)
         throw new HttpsError("not-found", "Booking was not found.");

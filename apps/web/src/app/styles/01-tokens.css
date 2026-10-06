@@ -1,0 +1,40 @@
+/* ============================================================
+   TLC Holidays — design system
+   Cinematic editorial: real photography, confident serif type,
+   ivory canvas, wine darks, TLC red used with intent.
+   ============================================================ */
+
+:root {
+  --tlc-red: #e31e24;
+  --tlc-red-dark: #a31319;
+  --tlc-wine: #4a1619;
+  --tlc-wine-deep: #2a0b0d;
+  --tlc-blush: #f8e9e9;
+  --tlc-ivory: #fff9f5;
+  --ink: #241619;
+  --muted: #7d6c6e;
+  --border: #eadada;
+  --white: #fff;
+
+  --paper: var(--tlc-ivory);
+  --sand: var(--tlc-blush);
+  --forest: var(--tlc-wine);
+  --forest-2: var(--tlc-wine-deep);
+  --gold: var(--tlc-red);
+  --clay: var(--tlc-red-dark);
+
+  --display: var(--font-display), Georgia, serif;
+  --body: var(--font-body), Arial, sans-serif;
+
+  --r-xl: 30px;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-pill: 999px;
+
+  --shadow-card: 0 24px 60px -28px rgba(42, 11, 13, 0.28);
+  --shadow-float: 0 18px 50px -12px rgba(42, 11, 13, 0.35);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --gutter: clamp(20px, 4.5vw, 64px);
+  --section-gap: clamp(56px, 6vw, 88px);
+}

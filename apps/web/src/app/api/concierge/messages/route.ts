@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { conversationSession } from "@/lib/security/conversation-session";
+import { getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+export async function GET(request:Request){const id=new URL(request.url).searchParams.get("sessionId")||"";try{const session=await conversationSession(request,id);if(!isFirebaseAdminConfigured)return NextResponse.json({status:"bot",messages:[]});const messages=await getAdminFirestore().collection("conversations").doc(id).collection("messages").orderBy("sentAt","desc").limit(100).get();return NextResponse.json({status:session.status,messages:messages.docs.reverse().filter(doc=>doc.data().from?.type==="staff").map(doc=>({id:doc.id,body:String(doc.data().body),sentAt:String(doc.data().sentAt)}))},{headers:{"Cache-Control":"no-store"}});}catch{return NextResponse.json({error:"Conversation access denied."},{status:403});}}

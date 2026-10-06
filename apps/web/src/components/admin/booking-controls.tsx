@@ -5,6 +5,7 @@ import { httpsCallable } from "firebase/functions";
 import {
   BadgeCheck,
   CreditCard,
+  PlaneTakeoff,
   FileCheck2,
   Link2,
   RefreshCw,
@@ -46,6 +47,31 @@ export function BookingControls({
       ),
     ),
   );
+  type SupplierPrompt = { itemId: string; kind: "price"; currentCost: number; plannedCost: number } | { itemId: string; kind: "check" };
+  const [supplierPrompt, setSupplierPrompt] = useState<SupplierPrompt>();
+  const [supplierNotice, setSupplierNotice] = useState<string>();
+  async function bookWithSupplier(itemId: string, extra: Record<string, unknown> = {}) {
+    setBusy(`supplier${itemId}`);
+    setError(undefined);
+    setSupplierNotice(undefined);
+    setSupplierPrompt(undefined);
+    try {
+      const result = await httpsCallable<Record<string, unknown>, { pnr: string; bookingRef: string; supplierCost: number; variance: number }>(
+        getFirebaseFunctions(), "fulfilSupplierItem", { timeout: 300_000 },
+      )({ bookingId: booking.id, itemId, ...extra });
+      setSupplierNotice(`Booked with TBO. Reference ${result.data.pnr || result.data.bookingRef}${result.data.variance > 0 ? `; cost was ${result.data.variance} above plan and finance has been alerted.` : "."}`);
+      router.refresh();
+    } catch (caught) {
+      const details = (caught as { details?: { code?: string; currentCost?: number; plannedCost?: number } }).details;
+      if (details?.code === "price-changed" && details.currentCost)
+        setSupplierPrompt({ itemId, kind: "price", currentCost: details.currentCost, plannedCost: details.plannedCost || 0 });
+      else if (details?.code === "check-supplier") setSupplierPrompt({ itemId, kind: "check" });
+      setError(message(caught));
+      router.refresh();
+    } finally {
+      setBusy(undefined);
+    }
+  }
   async function call(name: string, data: Record<string, unknown>) {
     setBusy(name + String(data.itemId || data.paymentId || ""));
     setError(undefined);
@@ -66,6 +92,7 @@ export function BookingControls({
   return (
     <div className="booking-controls">
       {error && <p className="form-error">{error}</p>}
+      {supplierNotice && <p className="admin-notice" role="status">{supplierNotice}</p>}
       {booking.status === "pendingApproval" && canApprove && (
         <section className="booking-command-card">
           <div>
@@ -154,6 +181,30 @@ export function BookingControls({
                 <RefreshCw />
                 Update
               </button>
+              {String((item as { raw?: { provider?: string } }).raw?.provider || "").startsWith("tbo-") && item.itemStatus === "pending" && canApprove && (
+                <div className="supplier-action">
+                  <button type="button" className="button primary" disabled={!booking.approvedAt || Boolean(busy)} onClick={() => bookWithSupplier(item.id)}>
+                    <PlaneTakeoff />
+                    {busy === `supplier${item.id}` ? "Booking with TBO…" : "Book with TBO"}
+                  </button>
+                  <small>Re-checks the exact flight or room and its price, then books it for the travellers on this booking.</small>
+                  {(item as { fulfilment?: { status?: string; error?: string } }).fulfilment?.status === "failed" && (
+                    <small className="form-error">Last attempt: {(item as { fulfilment?: { error?: string } }).fulfilment?.error}</small>
+                  )}
+                  {supplierPrompt?.itemId === item.id && supplierPrompt.kind === "price" && (
+                    <div className="supplier-prompt">
+                      <span>TBO now charges {item.currency} {supplierPrompt.currentCost.toLocaleString("en-IN")} against a planned {supplierPrompt.plannedCost.toLocaleString("en-IN")}.</span>
+                      <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => bookWithSupplier(item.id, { acceptCost: supplierPrompt.currentCost })}>Accept and book</button>
+                    </div>
+                  )}
+                  {(supplierPrompt?.itemId === item.id && supplierPrompt.kind === "check") || (item as { fulfilment?: { status?: string } }).fulfilment?.status === "unknown" ? (
+                    <div className="supplier-prompt">
+                      <span>TBO did not confirm the last attempt. Check the TBO portal first; retry only if no booking exists.</span>
+                      <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => bookWithSupplier(item.id, { confirmNoDuplicate: true })}>I checked TBO: retry</button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </form>
           ))}
         </div>

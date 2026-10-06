@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { mergeHouseholdProfile } from "@/lib/travel/household-merge";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import type { InquiryRepository } from "@/repositories/interfaces/inquiry-repository";
@@ -107,17 +109,38 @@ export class FirestoreInquiryRepository implements InquiryRepository {
   ) {
     const database = getAdminFirestore();
     const now = new Date().toISOString();
-    const inquiryRef = database.collection("inquiries").doc();
+    const digest = createHash("sha256").update(JSON.stringify(input)).digest("hex");
+    const key = context.idempotencyKey || `${digest}:${Math.floor(Date.now()/600000)}`;
+    const inquiryRef = database.collection("inquiries").doc(createHash("sha256").update(`${ORG_ID}:${key}`).digest("hex"));
     const leadRef = database
       .collection("leads")
       .doc(`inquiry-${inquiryRef.id}`);
-    const customerRef = database
-      .collection("customers")
-      .doc(`inquiry-${inquiryRef.id}`);
+    const phone = input.phone.replace(/[^+0-9]/g, "");
+    const email = input.email?.toLowerCase() || "";
+    const contactKey = createHash("sha256").update(`${ORG_ID}:${phone}:${email}`).digest("hex");
+    const candidates = await database.collection("customers").where("orgId","==",ORG_ID).where("phones","array-contains-any",[...new Set([phone,input.phone])]).get();
+    const match = candidates.docs.find(doc=>email && (doc.data().emails || []).map((value:string)=>value.toLowerCase()).includes(email));
+    const customerRef = match?.ref || database.collection("customers").doc(`web-${contactKey}`);
     const activityRef = leadRef.collection("activities").doc();
     const auditRef = database.collection("auditLogs").doc();
-    const intelligence = input.intelligence;
-    const destinationIds = intelligence?.trip.destinations.length
+    const brief = context.vacation?.shortlist.brief;
+    // The saved search is authoritative; hidden form defaults must not replace it.
+    const intelligence = input.intelligence && brief ? {
+      ...input.intelligence,
+      trip: {
+        ...input.intelligence.trip,
+        destinations: [brief.destinationSlug], destinationScope: "specific" as const,
+        startDate: brief.checkIn, endDate: brief.checkOut, flexibleDays: 0,
+        nights: Math.round((Date.parse(brief.checkOut) - Date.parse(brief.checkIn)) / 86400000),
+        adults: brief.rooms.reduce((sum, room) => sum + room.adults, 0),
+        children: brief.rooms.flatMap(room => room.childrenAges).filter(age => age >= 2).length,
+        infants: brief.rooms.flatMap(room => room.childrenAges).filter(age => age < 2).length,
+        rooms: brief.rooms.length, includeFlights: Boolean(brief.flights),
+        originAirports: brief.flights ? [brief.flights.origin] : [],
+        ...(brief.budget ? { budgetMax: brief.budget } : {}), budgetScope: "total" as const,
+      },
+    } : input.intelligence;
+    const destinationIds = context.vacation ? [context.vacation.shortlist.brief.destinationSlug] : intelligence?.trip.destinations.length
       ? intelligence.trip.destinations
       : input.destinationIds || [];
     const { assignedUid, responseMinutes } = await resolveWebsiteAssignee(
@@ -134,8 +157,21 @@ export class FirestoreInquiryRepository implements InquiryRepository {
       .doc(inquiryRef.id);
     const completeness = intelligence ? profileCompleteness(intelligence) : 0;
 
+    let savedCustomerId = customerRef.id;
     await database.runTransaction(async (transaction) => {
+      const [existing, customer, conversation, household] = await Promise.all([
+        transaction.get(inquiryRef), transaction.get(customerRef), context.conversationId ? transaction.get(database.collection("conversations").doc(context.conversationId)) : Promise.resolve(null),
+        intelligence?.permissions.saveProfile ? transaction.get(householdRef) : Promise.resolve(null),
+      ]);
+      if (existing.exists) {
+        if (existing.data()?.requestDigest !== digest) throw new Error("This request has already been submitted with different details.");
+        savedCustomerId = String(existing.data()?.customerId);
+        return;
+      }
+      if (context.conversationId && (!conversation?.exists || conversation.data()?.orgId !== ORG_ID)) throw new Error("Conversation was not found.");
       transaction.create(inquiryRef, {
+        ...(context.vacation ? { vacationShortlist: context.vacation.shortlist } : {}),
+        requestDigest: digest, customerId: customerRef.id,
         id: inquiryRef.id,
         orgId: ORG_ID,
         source: input.source,
@@ -167,11 +203,11 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
-      transaction.create(customerRef, {
+      if (!customer.exists) transaction.create(customerRef, {
         id: customerRef.id,
         orgId: ORG_ID,
         name: input.fullName,
-        phones: [input.phone],
+        phones: [phone],
         emails: input.email ? [input.email.toLowerCase()] : [],
         tags: [
           input.source === "ai_concierge"
@@ -187,6 +223,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         },
         source: input.source === "ai_concierge" ? "chatbot" : "website",
         ownerUid: assignedUid,
+        modelTrainingAllowed: intelligence?.permissions.modelTraining === true,
         segments: [],
         lifecycleStage: "new",
         mergedFrom: [],
@@ -203,7 +240,10 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         createdBy: actor,
         updatedBy: actor,
       });
+      if (customer.exists) transaction.update(customerRef, {lastActivityAt:now,updatedAt:now,updatedBy:actor});
+      if (context.conversationId) transaction.set(database.collection("conversations").doc(context.conversationId), {customerId:customerRef.id,leadId:leadRef.id,inquiryId:inquiryRef.id,assignedUid,status:"human",handoverAt:now,updatedAt:now,updatedBy:actor},{merge:true});
       transaction.create(leadRef, {
+        ...(context.vacation ? { vacationInventory: context.vacation.evidence } : {}),
         id: leadRef.id,
         orgId: ORG_ID,
         customerId: customerRef.id,
@@ -251,6 +291,19 @@ export class FirestoreInquiryRepository implements InquiryRepository {
                 sharedPreferences: intelligence.sharedPreferences,
               }
             : {}),
+          ...(context.vacation ? {
+            vacationShortlist: context.vacation.shortlist,
+            startDate: context.vacation.shortlist.brief.checkIn,
+            endDate: context.vacation.shortlist.brief.checkOut,
+            flexible: false,
+            pax: {
+              adults: context.vacation.shortlist.brief.rooms.reduce((sum, room) => sum + room.adults, 0),
+              children: context.vacation.shortlist.brief.rooms.flatMap((room) => room.childrenAges).filter((age) => age >= 2).length,
+              infants: context.vacation.shortlist.brief.rooms.flatMap((room) => room.childrenAges).filter((age) => age < 2).length,
+            },
+            ...(context.vacation.shortlist.brief.budget ? { budgetMax: context.vacation.shortlist.brief.budget } : {}),
+            preferences: context.vacation.shortlist.brief.interests,
+          } : {}),
         },
         valueEstimate: 0,
         expectedMargin: 0,
@@ -303,19 +356,31 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         });
       }
       if (intelligence?.permissions.saveProfile) {
-        transaction.create(householdRef, {
+        // Repeat enquiries enrich the stored household instead of replacing it.
+        const stored = household?.exists && household.data()?.orgId === ORG_ID ? household.data() : undefined;
+        const merged = mergeHouseholdProfile(stored as Parameters<typeof mergeHouseholdProfile>[0], {
+          homeCity: intelligence.trip.originCity,
+          travellers: intelligence.travellers,
+          sharedPreferences: intelligence.sharedPreferences as Record<string, unknown>,
+        });
+        const mergedCompleteness = Math.max(
+          Number(stored?.completeness || 0),
+          profileCompleteness({ ...intelligence, travellers: merged.travellers, sharedPreferences: merged.sharedPreferences as typeof intelligence.sharedPreferences }),
+        );
+        transaction.set(householdRef, {
           id: householdRef.id,
           orgId: ORG_ID,
           primaryCustomerId: customerRef.id,
-          homeCity: intelligence.trip.originCity,
-          travellers: intelligence.travellers,
-          sharedPreferences: intelligence.sharedPreferences,
+          homeCity: merged.homeCity,
+          travellers: merged.travellers,
+          sharedPreferences: merged.sharedPreferences,
+          // Consent is always the most recent explicit answer.
           permissions: intelligence.permissions,
-          completeness,
+          completeness: mergedCompleteness,
           lastConfirmedAt: now,
-          createdAt: now,
+          createdAt: merged.createdAt || now,
           updatedAt: now,
-          createdBy: actor,
+          createdBy: merged.createdBy || actor,
           updatedBy: actor,
         });
         transaction.create(preferenceSignalRef, {
@@ -363,6 +428,68 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         updatedBy: actor,
       });
     });
-    return { id: inquiryRef.id, createdAt: now };
+    return { id: inquiryRef.id, createdAt: now, customerId: savedCustomerId, leadId: leadRef.id };
+  }
+
+  /**
+   * Adds a later handover from the same conversation to its existing lead instead of
+   * creating a duplicate enquiry. Retrying the same request is a no-op.
+   */
+  async appendHandover(input: {
+    conversationId: string;
+    fullName: string;
+    phone: string;
+    email?: string;
+    preferredContact?: string;
+    summary: string;
+  }) {
+    const database = getAdminFirestore();
+    const conversationRef = database.collection("conversations").doc(input.conversationId);
+    const digest = createHash("sha256").update(JSON.stringify(input)).digest("hex").slice(0, 40);
+    const now = new Date().toISOString();
+    const actor = "public-concierge";
+    return database.runTransaction(async (transaction) => {
+      const conversation = await transaction.get(conversationRef);
+      const data = conversation.data();
+      if (!data || data.orgId !== ORG_ID || !data.leadId) throw new Error("Conversation has no linked lead.");
+      const leadRef = database.collection("leads").doc(String(data.leadId));
+      const activityRef = leadRef.collection("activities").doc(`handover-${digest}`);
+      const [lead, activity] = await Promise.all([transaction.get(leadRef), transaction.get(activityRef)]);
+      if (!lead.exists || lead.data()?.orgId !== ORG_ID) throw new Error("Linked lead was not found.");
+      const result = { id: String(data.inquiryId || ""), leadId: leadRef.id, customerId: String(data.customerId || "") };
+      if (activity.exists) return result;
+      transaction.create(activityRef, {
+        id: activityRef.id,
+        orgId: ORG_ID,
+        leadId: leadRef.id,
+        type: "note",
+        body: [
+          "The traveller asked for the TLC team again from the AI concierge.",
+          `Name: ${input.fullName}`,
+          `Phone: ${input.phone}`,
+          input.email ? `Email: ${input.email}` : "",
+          input.preferredContact ? `Preferred contact: ${input.preferredContact}` : "",
+          "",
+          input.summary,
+        ].filter((line, index, lines) => line || lines[index - 1]).join("\n").slice(0, 4000),
+        by: actor,
+        ts: now,
+        attachments: [],
+        createdAt: now,
+        updatedAt: now,
+        createdBy: actor,
+        updatedBy: actor,
+      });
+      transaction.update(leadRef, { updatedAt: now, updatedBy: actor });
+      transaction.set(conversationRef, { status: "human", handoverAt: now, updatedAt: now, updatedBy: actor }, { merge: true });
+      const auditRef = database.collection("auditLogs").doc();
+      transaction.create(auditRef, {
+        id: auditRef.id, orgId: ORG_ID, actorUid: actor, actorRole: "system",
+        action: "conversation.handover.repeat", collection: "leads", docId: leadRef.id,
+        before: null, after: { activityId: activityRef.id, conversationId: input.conversationId },
+        ts: now, createdAt: now, updatedAt: now, createdBy: actor, updatedBy: actor,
+      });
+      return result;
+    });
   }
 }

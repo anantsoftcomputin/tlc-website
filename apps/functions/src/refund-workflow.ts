@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import { CommerceProviderRegistry } from "@tlc/integrations";
 import {
   cancellationCommandInputSchema,
@@ -9,7 +10,8 @@ import {
   type Payment,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import {
   bookingStatus,
   bookingTimeline,
@@ -98,7 +100,7 @@ export const executeCancellationRefund = onCall(
       }
     }
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const freshCancellation = await transaction.get(cancellationRef);
       const bookingRef = database
         .collection("bookings")
@@ -316,7 +318,7 @@ export const reconcileRefund = onCall(
     const paymentId = cancellation.data()?.refundPaymentId;
     if (!paymentId) return { ok: true };
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const paymentRef = database.collection("payments").doc(paymentId);
       const payment = await transaction.get(paymentRef);
       if (payment.data()?.reconciledAt) return;

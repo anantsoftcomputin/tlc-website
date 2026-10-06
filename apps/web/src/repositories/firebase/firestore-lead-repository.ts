@@ -101,6 +101,7 @@ function mapLead(
       ...(data.requirement?.sharedPreferences
         ? { sharedPreferences: data.requirement.sharedPreferences }
         : {}),
+      ...(data.requirement?.vacationShortlist ? { vacationShortlist: data.requirement.vacationShortlist } : {}),
       notes: String(data.requirement?.notes || ""),
     },
     valueEstimate: Number(

@@ -1,4 +1,5 @@
 "use client";
+import { publicRequestHeaders } from "@/lib/firebase/client";
 
 import { CheckCircle2, LoaderCircle, UserRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
@@ -23,7 +24,7 @@ export function ConciergeHandover({
     try {
       const response = await fetch("/api/concierge/handover", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await publicRequestHeaders(),
         body: JSON.stringify({
           sessionId,
           fullName: data.get("fullName"),

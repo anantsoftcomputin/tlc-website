@@ -17,12 +17,16 @@ export const MODEL_OUTPUTS = [
 export type TrainingExample = {
   customer: number[];
   offer: number[];
+  /**
+   * Short-horizon labels are always observed. Long-horizon labels are null until
+   * their 365-day outcome window has closed and are then excluded from the loss.
+   */
   labels: {
     propensity: 0 | 1;
     travel90: 0 | 1;
-    churn: 0 | 1;
-    clv12m: number;
-    upgrade: 0 | 1;
+    churn: 0 | 1 | null;
+    clv12m: number | null;
+    upgrade: 0 | 1 | null;
   };
   occurredAt: string;
 };
@@ -113,21 +117,37 @@ export function buildTravelModel() {
   });
 }
 
-function focalLoss(alpha = 0.25, gamma = 2) {
+/** Sentinel for an unobserved label; masked rows contribute nothing to the loss. */
+export const UNOBSERVED_LABEL = -1;
+
+function maskedMean(values: tf.Tensor, mask: tf.Tensor) {
+  return tf.div(tf.sum(tf.mul(values, mask)), tf.maximum(tf.sum(mask), 1));
+}
+
+export function focalLoss(alpha = 0.25, gamma = 2) {
   return (truth: tf.Tensor, prediction: tf.Tensor) =>
     tf.tidy(() => {
+      const mask = tf.cast(tf.greaterEqual(truth, 0), "float32");
+      const target = tf.mul(truth, mask);
       const p = tf.clipByValue(prediction, 1e-7, 1 - 1e-7);
-      const positive = truth
+      const positive = target
         .mul(tf.pow(tf.sub(1, p), gamma))
         .mul(tf.log(p))
         .mul(-alpha);
       const negative = tf
-        .sub(1, truth)
+        .sub(1, target)
         .mul(tf.pow(p, gamma))
         .mul(tf.log(tf.sub(1, p)))
         .mul(-(1 - alpha));
-      return tf.add(positive, negative).mean();
+      return maskedMean(tf.add(positive, negative), mask);
     });
+}
+
+export function maskedSquaredError(truth: tf.Tensor, prediction: tf.Tensor) {
+  return tf.tidy(() => {
+    const mask = tf.cast(tf.greaterEqual(truth, 0), "float32");
+    return maskedMean(tf.square(tf.sub(prediction, truth)), mask);
+  });
 }
 
 export function compileTravelModel(model: tf.LayersModel) {
@@ -137,7 +157,7 @@ export function compileTravelModel(model: tf.LayersModel) {
       focalLoss(),
       focalLoss(),
       focalLoss(),
-      tf.losses.meanSquaredError,
+      maskedSquaredError,
       focalLoss(),
     ],
     lossWeights: [1, 0.55, 0.45, 0.2, 0.35],
@@ -166,7 +186,7 @@ export async function trainTravelModel(
   );
   const outputs = MODEL_OUTPUTS.map((name) =>
     tf.tensor2d(
-      split.train.map((row) => [row.labels[name]]),
+      split.train.map((row) => [row.labels[name] ?? UNOBSERVED_LABEL]),
       [split.train.length, 1],
     ),
   );

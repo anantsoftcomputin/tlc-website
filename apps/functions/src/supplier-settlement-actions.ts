@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import {
   paySupplierSettlementInputSchema,
   rejectSupplierSettlementInputSchema,
@@ -6,7 +7,8 @@ import {
   type SupplierSettlement,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import {
   commerceActor,
   commerceAudit,
@@ -43,7 +45,7 @@ export const approveSupplierSettlement = onCall(
     const database = getFirestore();
     const now = new Date().toISOString();
     const auditRef = database.collection("auditLogs").doc();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const { ref, settlement } = await loadSettlement(
         transaction,
         database,
@@ -98,7 +100,7 @@ export const rejectSupplierSettlement = onCall(
     const database = getFirestore();
     const now = new Date().toISOString();
     const auditRef = database.collection("auditLogs").doc();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const { ref, settlement } = await loadSettlement(
         transaction,
         database,
@@ -170,7 +172,7 @@ export const paySupplierSettlement = onCall(
       throw new HttpsError("invalid-argument", "Payment details are invalid.");
     const database = getFirestore();
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const { ref, settlement } = await loadSettlement(
         transaction,
         database,

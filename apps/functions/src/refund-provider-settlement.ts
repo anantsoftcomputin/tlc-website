@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import type { CancellationRequest } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
@@ -18,7 +19,7 @@ export async function completeProviderRefund(
   const cancellationRef = matches.docs[0].ref;
   const cancellation = matches.docs[0].data() as CancellationRequest;
   const now = new Date().toISOString();
-  await database.runTransaction(async (transaction) => {
+  await runFinanceTransaction(database, cancellation.orgId, async (transaction) => {
     const paymentRef = database
       .collection("payments")
       .doc(`${cancellation.id}-refund`);

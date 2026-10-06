@@ -1,4 +1,5 @@
 "use client";
+import { publicRequestHeaders } from "@/lib/firebase/client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, CheckCircle2, LoaderCircle } from "lucide-react";
@@ -24,6 +25,7 @@ type InquiryFormProps = {
   description?: string;
   defaults?: Partial<InquiryInput>;
   compact?: boolean;
+  shortlistMode?: boolean;
   onSuccess?: (inquiryId: string) => void;
 };
 
@@ -33,8 +35,10 @@ export function InquiryForm({
   description = "Share the essentials. A TLC travel expert can help shape everything else.",
   defaults,
   compact = false,
+  shortlistMode = false,
   onSuccess,
 }: InquiryFormProps) {
+  const [requestId] = useState(() => crypto.randomUUID());
   const [serverError, setServerError] = useState("");
   const [complete, setComplete] = useState(false);
   const [intelligence, setIntelligence] = useState(() =>
@@ -86,7 +90,7 @@ export function InquiryForm({
     try {
       const response = await fetch("/api/inquiries", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...utmHeaders },
+        headers: { ...await publicRequestHeaders(), "Idempotency-Key": requestId, ...utmHeaders },
         body: JSON.stringify({ ...values, source, intelligence: profile.data }),
       });
       const payload = (await response.json()) as {
@@ -184,11 +188,11 @@ export function InquiryForm({
           <input tabIndex={-1} autoComplete="off" {...register("website")} />
         </label>
       </div>
-      <TravelProfileCapture
+      {shortlistMode ? <label className="vacation-consent"><input type="checkbox" checked={intelligence.permissions.serviceContact} onChange={(event) => setIntelligence((current) => ({ ...current, permissions: { ...current.permissions, serviceContact: event.target.checked } }))} required /><span>I agree that TLC may contact me about this trip and use my selected options to prepare a quote.</span></label> : <TravelProfileCapture
         value={intelligence}
         onChange={setIntelligence}
         compact={compact}
-      />
+      />}
       {serverError && (
         <div className="form-error" role="alert">
           <p>{serverError}</p>
@@ -213,7 +217,7 @@ export function InquiryForm({
             </>
           ) : (
             <>
-              Send my requirements <ArrowRight />
+              {shortlistMode ? "Request my TLC quote" : "Send my requirements"} <ArrowRight />
             </>
           )}
         </button>

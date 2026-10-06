@@ -1,5 +1,6 @@
 import "server-only";
 import type { DocumentData, Timestamp } from "firebase-admin/firestore";
+import { readAll } from "@/lib/firebase/query";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
 function iso(value: unknown) {
@@ -61,34 +62,53 @@ export class FirestoreConversationRepository {
     private readonly viewer: { uid: string; canViewAll: boolean },
   ) {}
 
-  async list(limit = 100) {
-    const snapshot = await this.database
+  private query() {
+    const base = this.database
       .collection("conversations")
-      .where("orgId", "==", this.orgId)
-      .limit(limit)
-      .get();
-    return snapshot.docs
-      .map((item) => conversation(item.id, item.data()))
-      .filter(
-        (item) =>
-          this.viewer.canViewAll || item.assignedUid === this.viewer.uid,
+      .where("orgId", "==", this.orgId);
+    return (
+      this.viewer.canViewAll
+        ? base
+        : base.where("assignedUid", "==", this.viewer.uid)
+    )
+      .orderBy("lastMessageAt", "desc")
+      .orderBy("__name__", "desc");
+  }
+
+  async list(limit = 50, after?: string) {
+    let query = this.query();
+    if (after) {
+      const cursor = await this.database
+        .collection("conversations")
+        .doc(after)
+        .get();
+      if (
+        cursor.exists &&
+        cursor.data()?.orgId === this.orgId &&
+        (this.viewer.canViewAll ||
+          cursor.data()?.assignedUid === this.viewer.uid)
       )
-      .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+        query = query.startAfter(cursor);
+    }
+    const snapshot = await query.limit(Math.min(100, Math.max(1, limit))).get();
+    return snapshot.docs.map((item) => conversation(item.id, item.data()));
   }
 
   async get(id: string) {
     const ref = this.database.collection("conversations").doc(id);
-    const [snapshot, messages] = await Promise.all([
-      ref.get(),
-      ref.collection("messages").orderBy("sentAt", "asc").limit(200).get(),
-    ]);
+    const snapshot = await ref.get();
     if (!snapshot.exists || snapshot.data()?.orgId !== this.orgId) return null;
     const row = conversation(snapshot.id, snapshot.data()!);
     if (!this.viewer.canViewAll && row.assignedUid !== this.viewer.uid)
       return null;
+    const messages = await ref
+      .collection("messages")
+      .orderBy("sentAt", "desc")
+      .limit(200)
+      .get();
     return {
       conversation: row,
-      messages: messages.docs.map((item) => {
+      messages: [...messages.docs].reverse().map((item) => {
         const data = item.data();
         return {
           id: item.id,
@@ -104,22 +124,19 @@ export class FirestoreConversationRepository {
   }
 
   async metrics() {
-    const [rows, usage] = await Promise.all([
-      this.list(500),
-      this.database
-        .collection("usage")
-        .where("orgId", "==", this.orgId)
-        .where("domain", "==", "llm")
-        .limit(24)
-        .get(),
+    const [snapshots, usage] = await Promise.all([
+      readAll(this.query()),
+      this.viewer.canViewAll
+        ? readAll(
+            this.database
+              .collection("usage")
+              .where("orgId", "==", this.orgId)
+              .where("domain", "==", "llm")
+              .orderBy("__name__"),
+          )
+        : Promise.resolve([]),
     ]);
-    const snapshots = rows.length
-      ? await this.database.getAll(
-          ...rows.slice(0, 500).map((item) =>
-            this.database.collection("conversations").doc(item.id),
-          ),
-        )
-      : [];
+    const rows = snapshots.map((item) => conversation(item.id, item.data()));
     const latencyTotal = snapshots.reduce(
       (sum, item) => sum + Number(item.data()?.latencyMsTotal || 0),
       0,
@@ -137,11 +154,25 @@ export class FirestoreConversationRepository {
       bot: rows.filter((item) => item.status === "bot").length,
       ungrounded: rows.filter((item) => !item.quality.grounded).length,
       resolved: rows.filter((item) => item.status === "closed").length,
-      avgLatencyMs: assistantTurns ? Math.round(latencyTotal / assistantTurns) : 0,
-      handoverRate: rows.length
-        ? Math.round((rows.filter((item) => item.quality.handover).length / rows.length) * 100)
+      avgLatencyMs: assistantTurns
+        ? Math.round(latencyTotal / assistantTurns)
         : 0,
-      recordedCost: usage.docs.reduce(
+      handoverRate: rows.length
+        ? Math.round(
+            (rows.filter((item) => item.quality.handover).length /
+              rows.length) *
+              100,
+          )
+        : 0,
+      unpricedCalls: usage.reduce(
+        (sum, item) => sum + Number(item.data().unpricedCalls || 0),
+        0,
+      ),
+      failedCalls: usage.reduce(
+        (sum, item) => sum + Number(item.data().failedCalls || 0),
+        0,
+      ),
+      recordedCost: usage.reduce(
         (sum, item) => sum + Number(item.data().cost || 0),
         0,
       ),

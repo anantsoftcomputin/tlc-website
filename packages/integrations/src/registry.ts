@@ -1,13 +1,18 @@
 import {
   AmadeusFlightProvider,
   MockFlightProvider,
+  TboFlightProvider,
   type FlightProvider,
 } from "./flights/index.js";
 import {
   HotelbedsHotelProvider,
   MockHotelProvider,
+  TboHotelProvider,
   type HotelProvider,
 } from "./hotels/index.js";
+import { TboClient } from "./tbo/client.js";
+import { tboConfigFromEnv } from "./tbo/config.js";
+import { TboStaticContent } from "./tbo/static-content.js";
 import {
   MockPaymentProvider,
   RazorpayPaymentProvider,
@@ -30,8 +35,17 @@ export class CommerceProviderRegistry {
   private readonly hotels = new Map<string, HotelProvider>();
   private readonly payments = new Map<string, PaymentProvider>();
   private readonly accounting = new Map<string, AccountingProvider>();
+  private tboClient?: TboClient;
 
-  constructor() {
+  /** TBO static hotel content (needs TBO_STATIC_USERNAME/PASSWORD as well). */
+  tboStaticContent() {
+    if (!this.tboClient) throw new Error("TBO is not configured. Set TBO_API_USERNAME and TBO_API_PASSWORD.");
+    if (!this.tboClient.config.staticUsername || !this.tboClient.config.staticPassword)
+      throw new Error("TBO static content needs TBO_STATIC_USERNAME and TBO_STATIC_PASSWORD.");
+    return new TboStaticContent(this.tboClient);
+  }
+
+  constructor(options: { onTboExchange?: TboClient["onExchange"]; tboRequestTimeoutMs?: number } = {}) {
     const mockFlight = new MockFlightProvider();
     const mockHotel = new MockHotelProvider();
     this.registerFlight(mockFlight);
@@ -54,6 +68,15 @@ export class CommerceProviderRegistry {
           process.env.HOTELBEDS_BASE_URL,
         ),
       );
+    // TBO registers only when its agency API login is present in the environment.
+    const tbo = tboConfigFromEnv();
+    if (tbo) {
+      const client = new TboClient(tbo, undefined, undefined, options.tboRequestTimeoutMs, options.tboRequestTimeoutMs);
+      this.tboClient = client;
+      if (options.onTboExchange) client.onExchange = options.onTboExchange;
+      this.registerFlight(new TboFlightProvider(tbo, undefined, client));
+      this.registerHotel(new TboHotelProvider(tbo, undefined, client));
+    }
     const mockPayment = new MockPaymentProvider();
     this.registerPayment(mockPayment);
     this.payments.set("mock", mockPayment);
@@ -130,6 +153,14 @@ export class CommerceProviderRegistry {
     if (!provider)
       throw new Error(`Accounting provider '${key}' is not configured.`);
     return provider;
+  }
+
+  /** Provider keys usable on this server (aliases excluded). */
+  available() {
+    return {
+      flights: [...this.flights.keys()].filter((key) => key !== "mock"),
+      hotels: [...this.hotels.keys()].filter((key) => key !== "mock"),
+    };
   }
 
   resolve(selection: CommerceProviderSelection = {}) {

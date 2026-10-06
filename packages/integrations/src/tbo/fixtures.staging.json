@@ -1,0 +1,108 @@
+{
+ "hotelDetails": {
+  "Status": {
+   "Code": 200,
+   "Description": "Successful"
+  },
+  "HotelDetails": [
+   {
+    "HotelCode": "1011662",
+    "HotelName": "Regenta Hotel and Convention Centre",
+    "Description": "The hotel is strategically located on National Highway 8, Rajokori. It is easily accessible from all parts of the city and is located just 10 minutes away from Indira Gandhi International Airport in Delhi.\n\nThis luxurious air-conditioned hotel comprises a total of 48 rooms. It provides corporate and leisure visitors an ideal and convenient location, as well as world-class accommodation facilities.",
+    "HotelFacilities": [
+     "Restaurant",
+     "Banquet hall",
+     "Room service",
+     "24-hour security",
+     "Wake-up service",
+     "TV",
+     "Newspaper stand",
+     "Laundry service",
+     "Mobile phone coverage",
+     "Bathtub",
+     "Caf\u00e9",
+     "Business centre",
+     "Gym",
+     "Currency exchange facilities",
+     "220V power supply",
+     "Centrally regulated air conditioning",
+     "Secure parking",
+     "Lift access",
+     "Minibar",
+     "Direct dial telephone",
+     "Mini fridge",
+     "Hotel",
+     "Bar",
+     "Plug adaptor",
+     "Air conditioning in public areas",
+     "Bathroom",
+     "Cable TV",
+     "Shower",
+     "Conference room",
+     "Meeting room",
+     "Individually adjustable air conditioning",
+     "Toiletries",
+     "Photocopier",
+     "Hotel safe",
+     "Make-up mirror",
+     "Ironing set",
+     "Newspapers",
+     "Safe",
+     "Air conditioning in Restaurant"
+    ],
+    "Attractions": {},
+    "Image": "https://www.tboholidays.com//imageresource.aspx?img=FbrGPTrju5cc0AnFUdZvcaT421NYlIIKB899kblH89G1FhCspHCKO/CYTc4cw99YZI0dJe7xtIXjrg/w+aqPRfAbKzOr01cO",
+    "Images": [],
+    "Address": "NATIONAL HIGWAY - 8, RAJOKORI, NEW DELHI, DELHI",
+    "PinCode": "110037",
+    "CityId": "130443",
+    "CountryName": "India",
+    "PhoneNumber": "",
+    "Email": "",
+    "HotelWebsiteUrl": "http://www.royalorchidhotels.com/regenta-hotel-convention-centre-delhi/overview.asp",
+    "FaxNumber": "",
+    "Map": "28.54443|77.124444",
+    "HotelRating": 4,
+    "CityName": "Delhi",
+    "CountryCode": "IN",
+    "CheckInTime": "",
+    "CheckOutTime": "",
+    "HotelFees": {
+     "HotelId": "1011662",
+     "Optional": [],
+     "Mandatory": []
+    }
+   }
+  ]
+ },
+ "hotelCodeList": {
+  "Status": {
+   "Code": 200,
+   "Description": "Success"
+  },
+  "Hotels": [
+   {
+    "HotelCode": "1011662",
+    "HotelName": "Regenta Hotel and Convention Centre",
+    "Latitude": "28.54443",
+    "Longitude": "77.124444",
+    "HotelRating": "FourStar",
+    "Address": "NATIONAL HIGWAY - 8, RAJOKORI, NEW DELHI DELHI",
+    "CountryName": "India",
+    "CountryCode": "IN",
+    "CityName": "Delhi"
+   },
+   {
+    "HotelCode": "1011663",
+    "HotelName": "Exotic Villa",
+    "Latitude": "28.628621",
+    "Longitude": "77.212859",
+    "HotelRating": "FourStar",
+    "Address": "Hanuman Road Connaught PlaceNew Delhi 110001",
+    "CountryName": "India",
+    "CountryCode": "IN",
+    "CityName": "New Delhi"
+   }
+  ]
+ }
+}

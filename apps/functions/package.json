@@ -13,7 +13,8 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run src",
-    "seed": "node src/seed.mjs"
+    "seed": "node src/seed.mjs",
+    "test:integration": "FUNCTIONS_EMULATOR=true vitest run src/commerce-integration.test.ts src/catalogue-integration.test.ts"
   },
   "dependencies": {
     "@tlc/shared": "file:vendor/shared",

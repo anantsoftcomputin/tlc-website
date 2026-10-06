@@ -12,6 +12,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LeadWorkspace } from "@/components/admin/lead-workspace";
 import { LeadAssistPanel } from "@/components/admin/lead-assist-panel";
+import { VacationShortlistPanel } from "@/components/admin/vacation-shortlist-panel";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreLeadRepository } from "@/repositories/firebase/firestore-lead-repository";
 
@@ -80,6 +81,7 @@ export default async function LeadDetailPage({
       </header>
       <div className="lead-detail-grid">
         <main>
+          {lead.requirement.vacationShortlist && <VacationShortlistPanel shortlist={lead.requirement.vacationShortlist} leadId={lead.id} />}
           <section className="profile-panel">
             <header>
               <div>

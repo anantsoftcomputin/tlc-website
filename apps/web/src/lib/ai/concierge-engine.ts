@@ -26,6 +26,7 @@ const modelReplySchema = z.object({
   handoverReason: z.string().trim().max(500),
 });
 type ModelReply = z.infer<typeof modelReplySchema>;
+type Telemetry = { provider: string; failed: boolean; inputTokens: number; outputTokens: number; cost: number | null; groundingIssues: string[] };
 
 const defaultPersona = {
   name: "Tara",
@@ -154,6 +155,7 @@ async function generateReply(
   input: ConciergeChatRequest,
   cards: ConciergeCard[],
   persona: Awaited<ReturnType<typeof activePersona>>,
+  telemetry: Telemetry,
 ) {
   if (!process.env.OPENAI_API_KEY) return fallbackReply(input, cards);
   const controller = new AbortController();
@@ -220,13 +222,20 @@ async function generateReply(
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`OpenAI response ${response.status}`);
+    telemetry.provider = "openai";
     const payload = (await response.json()) as {
+      usage?: { input_tokens?: number; output_tokens?: number };
       output_text?: string;
       output?: Array<{
         type?: string;
         content?: Array<{ type?: string; text?: string }>;
       }>;
     };
+    telemetry.inputTokens = payload.usage?.input_tokens || 0;
+    telemetry.outputTokens = payload.usage?.output_tokens || 0;
+    const inputRate = process.env.OPENAI_INPUT_INR_PER_MILLION;
+    const outputRate = process.env.OPENAI_OUTPUT_INR_PER_MILLION;
+    telemetry.cost = inputRate && outputRate && Number.isFinite(Number(inputRate)) && Number.isFinite(Number(outputRate)) ? (telemetry.inputTokens * Number(inputRate) + telemetry.outputTokens * Number(outputRate)) / 1_000_000 : null;
     const outputText =
       payload.output_text ||
       payload.output
@@ -235,6 +244,7 @@ async function generateReply(
     if (!outputText) throw new Error("OpenAI returned no output text");
     return modelReplySchema.parse(JSON.parse(outputText));
   } catch (error) {
+    telemetry.failed = true; telemetry.provider = "openai-fallback"; telemetry.cost = null;
     console.error(
       "Concierge model fallback",
       error instanceof Error ? error.message : "Unknown model error",
@@ -254,14 +264,15 @@ export async function answerConcierge(input: ConciergeChatRequest) {
       ),
       activePersona(),
     ]);
-  let generated = await generateReply(input, cards, persona);
+  const telemetry: Telemetry = { provider: "deterministic-fallback", failed: false, inputTokens: 0, outputTokens: 0, cost: 0, groundingIssues: [] };
+  let generated = await generateReply(input, cards, persona, telemetry);
   const conflicts = preferenceConflictQuestions(input.message);
   if (
     blockedDestinationNames.some((name) =>
       generated.message.toLowerCase().includes(name.toLowerCase()),
     )
   )
-    generated = fallbackReply(input, cards);
+    { telemetry.groundingIssues.push("Response named a destination excluded by the traveller."); generated = fallbackReply(input, cards); }
   const envelope: AssistantResponseEnvelope = {
     message: generated.message,
     language: "en-IN",
@@ -283,6 +294,7 @@ export async function answerConcierge(input: ConciergeChatRequest) {
   };
   const checked = validateGroundedAssistantResponse(envelope, [evidence]);
   if (!checked.success) {
+    telemetry.groundingIssues.push(...checked.issues);
     const safe = fallbackReply(input, cards);
     return {
       ...envelope,
@@ -293,12 +305,14 @@ export async function answerConcierge(input: ConciergeChatRequest) {
         reason: safe.handoverReason,
         urgency: "normal" as const,
       },
-      persona: { name: persona.name, tagline: persona.tagline },
+      telemetry,
+    persona: { name: persona.name, tagline: persona.tagline },
     };
   }
   return {
     ...checked.response,
     cards,
+    telemetry,
     persona: { name: persona.name, tagline: persona.tagline },
   };
 }

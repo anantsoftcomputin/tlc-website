@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { checkPublicRequest, consumePublicRateLimit } from "@/lib/security/public-request";
+import { createConversationSession, conversationCookie } from "@/lib/security/conversation-session";
+export async function POST(request:Request){const denied=await checkPublicRequest(request);if(denied)return denied;if(!(await consumePublicRateLimit(`chat-session:${request.headers.get("x-forwarded-for")||"unknown"}`,60,3600000)).allowed)return NextResponse.json({error:"Please try again later."},{status:429});const session=await createConversationSession(request);const response=NextResponse.json({sessionId:session.id});response.cookies.set(conversationCookie,session.cookie,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"strict",path:"/api/concierge",maxAge:90*86400});return response;}

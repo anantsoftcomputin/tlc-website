@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Heart, Menu, MessageCircle, Phone, Search, X } from "lucide-react";
+import { CircleUserRound, ChevronDown, Heart, Menu, MessageCircle, Phone, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./logo";
 
@@ -42,7 +42,7 @@ export function Header() {
         </Link>)}
       </nav>
       <div className="header-actions">
-        <Link className="market-search-link desktop-only" href="/trips"><Search /> Search</Link>
+        <Link className="market-search-link desktop-only" href="/client"><CircleUserRound /> My journeys</Link>
         <Link className="icon-link desktop-only" href="/saved" aria-label="Saved trips"><Heart /></Link>
         <Link className="button market-plan-button desktop-only" href="/plan-my-trip">Plan my trip</Link>
         <button className="menu-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Toggle menu">{open ? <X /> : <Menu />}</button>
@@ -50,6 +50,7 @@ export function Header() {
       {open && <div className="mobile-menu market-mobile-menu">
         <p>Explore TLC Holidays</p>
         {links.map(([label, href], index) => <Link key={label} href={href} style={{ animationDelay: `${index * 40}ms` }}>{label}</Link>)}
+        <Link href="/client"><CircleUserRound /> My journeys</Link>
         <div><Link href="/saved"><Heart /> Saved trips</Link><a href="tel:+918948888873"><Phone /> Call an expert</a></div>
         <Link className="button button-gold" href="/plan-my-trip">Plan my trip</Link>
       </div>}

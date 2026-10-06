@@ -28,6 +28,14 @@ To add realistic local foundation records after the Firestore emulator starts:
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-tlc-holidays pnpm seed
 ```
 
+## Production operations
+
+```bash
+pnpm admin:set-role -- person@example.com manager   # assigns role and organization claim
+pnpm admin:enable-mfa                               # once: enable authenticator-app MFA
+pnpm customers:backfill-search                      # once: index existing customers for search
+```
+
 ## Verification
 
 ```bash

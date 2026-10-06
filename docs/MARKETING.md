@@ -17,7 +17,9 @@ Phase 5 gives TLC a governed offer-to-campaign workflow backed by first-party CR
 
 - The default is `rules-v1`, with plain-language reasoning and feature attributions.
 - The two-tower TensorFlow.js model uses 120 customer features and 48 offer features, a 64-dimensional interaction, and propensity, travel-90-day, churn, CLV and upgrade heads.
-- Training examples are assembled chronologically from campaign delivery/conversion events, customer feature profiles and offers. The last 90 days are held out.
+- Training examples come only from campaign deliveries that stored a `trainingSnapshot` of the customer and offer features at send time, for customers who allowed model training. Current profiles are never joined onto historical events.
+- A delivery becomes a training row 90 days after it was sent, once its propensity and 90-day travel outcomes are observable. Churn, 12-month value and upgrade labels stay unobserved until 365 days have passed; they are masked out of those heads' losses rather than guessed. Activation is judged on the propensity head only.
+- Rows are ordered by send time and the most recent 90 days of rows are held out for validation.
 - Every candidate records the training window, example count, positive-event count, ROC AUC, PR AUC, Brier score and NDCG@10.
 - A candidate is eligible only with at least 500 positive events, ROC AUC ≥ 0.72 and Brier ≤ 0.25. A manager must still activate it.
 - Weights are private in Firebase Storage under `models/{orgId}/{version}/model.json`. Model evidence and lifecycle state stay in Firestore. Previous active versions become `retired`, so rollback is possible by reactivating an eligible version.

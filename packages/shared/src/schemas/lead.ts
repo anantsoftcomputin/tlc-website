@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { vacationShortlistSchema } from "./vacation.js";
 import {
   auditFieldsSchema,
   attributionSchema,
@@ -96,6 +97,7 @@ export const leadSchema = z
       tripBrief: tripBriefInputSchema.optional(),
       travellers: z.array(travellerPreferenceInputSchema).max(50).optional(),
       sharedPreferences: sharedTravelPreferenceSchema.optional(),
+      vacationShortlist: vacationShortlistSchema.optional(),
       notes: z.string().trim().max(10000).default(""),
     }),
     valueEstimate: z.number().nonnegative().default(0),

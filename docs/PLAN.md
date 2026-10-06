@@ -287,3 +287,17 @@ Phase numbering note: the original master brief's AI marketing phase moves here 
 - [x] WhatsApp inbound signatures and 24-hour free-form reply windows are enforced.
 - [x] Quality and cost telemetry is visible to operations staff.
 - [x] Streaming voice remains isolated behind explicit recording consent and is deferred by client direction.
+
+# Hardening pass — portals and review findings (October 2026)
+
+- [x] Role-routed owner, employee and client dashboards; staff team management; client support requests.
+- [x] Single shared permission policy; browser writes denied for business records; server reads enforce ownership.
+- [x] Signed concierge sessions, enforced human takeover, staff replies delivered to the web widget.
+- [x] Server-verified supplier costs on quotes, with a bounded freshness window at send time.
+- [x] Finance postings and period close serialized per organization; last-day period boundary fixed.
+- [x] Unpostable Razorpay events become finance alerts instead of failed webhooks.
+- [x] App Check enforced with a build-time guard; TOTP multi-factor setup script for managers.
+- [x] Dashboards use working-set queries and aggregates; directory-wide customer search.
+- [x] Repeat enquiries enrich household profiles; repeat chat handovers update the existing lead.
+- [x] Marketing training uses send-time snapshots with masked long-horizon labels.
+- [ ] Deploy indexes, run `pnpm admin:enable-mfa` and `pnpm customers:backfill-search` in production.

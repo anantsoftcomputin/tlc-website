@@ -1,3 +1,4 @@
+import { defaultEvidenceMaxAgeHours, inventoryVerificationVersion, sameQuoteTotals, verifyQuoteInventory, verifySendableQuoteItems } from "./quote-inventory.js";
 import { randomBytes } from "node:crypto";
 import {
   assessQuoteGuardrails,
@@ -9,7 +10,8 @@ import {
   type CartItem,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 
 const writerRoles = new Set([
   "super_admin",
@@ -190,10 +192,11 @@ async function createRevision(
         );
     }
     const version = Number(latestQuote?.data().version || 0) + 1;
-    const totals = computeQuoteTotals(input.items);
+    const verifiedItems = await verifyQuoteInventory(transaction, database, identity.orgId, input.items);
+    const totals = computeQuoteTotals(verifiedItems);
     const approvals = approvalsFor(
       identity,
-      input.items,
+      verifiedItems,
       totals,
       organization.data()!,
       now,
@@ -205,7 +208,7 @@ async function createRevision(
       customerId: String(lead.data()?.customerId || ""),
       version,
       quoteNumber: `TLC-${now.slice(0, 4)}-${quoteRef.id.slice(0, 6).toUpperCase()}-V${version}`,
-      items: input.items,
+      items: verifiedItems,
       totals,
       validUntil: input.validUntil,
       status: "draft",
@@ -216,7 +219,7 @@ async function createRevision(
       createdBy: identity.uid,
       updatedBy: identity.uid,
     });
-    transaction.create(quoteRef, quote);
+    transaction.create(quoteRef, { ...quote, inventoryVerification: inventoryVerificationVersion });
     transaction.set(activityRef, {
       id: activityRef.id,
       orgId: identity.orgId,
@@ -383,6 +386,14 @@ export const sendQuote = onCall({ region: "asia-south1" }, async (request) => {
         "failed-precondition",
         "Only the latest quote version can be sent.",
       );
+    const organization = await transaction.get(database.collection("orgs").doc(identity.orgId));
+    const configuredAge = Number(organization.data()?.settings?.quoteEvidenceMaxAgeHours);
+    const currentItems = await verifySendableQuoteItems(transaction, database, identity.orgId, data.items, {
+      verifiedAtCreation: data.inventoryVerification === inventoryVerificationVersion,
+      maxAgeHours: Number.isFinite(configuredAge) && configuredAge > 0 ? configuredAge : defaultEvidenceMaxAgeHours,
+    });
+    if (!sameQuoteTotals(computeQuoteTotals(currentItems), data.totals))
+      throw new HttpsError("failed-precondition", "Supplier costs changed. Revise and approve the quote again.");
     transaction.update(quoteRef, {
       status: "sent",
       sentAt: now,

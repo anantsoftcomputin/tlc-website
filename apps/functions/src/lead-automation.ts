@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 
 const writerRoles = new Set(["super_admin", "owner", "manager", "admin", "sales", "travel_consultant"]);
 const managerRoles = new Set(["super_admin", "owner", "manager", "admin"]);

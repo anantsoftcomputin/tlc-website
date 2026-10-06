@@ -8,7 +8,8 @@ import {
   type AccountingSync,
 } from "@tlc/shared";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { commerceActor, commerceAudit } from "./commerce-command.js";
 
 const registry = new CommerceProviderRegistry();

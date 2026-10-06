@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  canReadCustomer, canReadHousehold, customerSearchQuery, isManagerRole, type AccessIdentity,
   findDuplicateCandidates,
   normalizeCustomerImportRow,
   type Customer,
@@ -102,16 +103,46 @@ function mapNested<T>(document: QueryDocumentSnapshot<DocumentData>): T {
 export class FirestoreCustomerRepository implements CustomerRepository {
   private readonly database = getAdminFirestore();
 
-  constructor(private readonly orgId = "tlc-vacations") {}
+  constructor(private readonly orgId: string, private readonly viewer: AccessIdentity) {
+    if (!orgId || viewer.orgId !== orgId) throw new Error("An organization-bound identity is required.");
+  }
+  private async accessible(customerId: string, household = false) {
+    const snapshot = await this.database.collection("customers").doc(customerId).get();
+    return snapshot.exists && (household ? canReadHousehold(this.viewer, snapshot.data()!) : canReadCustomer(this.viewer, snapshot.data()!));
+  }
 
-  async listCustomers(limit = 200): Promise<CustomerSummary[]> {
-    const snapshot = await this.database
+  async listCustomers(limit = 50, after?: string): Promise<CustomerSummary[]> {
+    let query: FirebaseFirestore.Query = this.database
       .collection("customers")
       .where("orgId", "==", this.orgId)
-      .orderBy("updatedAt", "desc")
-      .limit(limit)
-      .get();
-    return snapshot.docs.map((document) => mapCustomer(document));
+      ;
+    if (!isManagerRole(this.viewer.role) && !["accounts", "marketing", "readonly"].includes(this.viewer.role)) query = query.where("ownerUid", "==", this.viewer.uid);
+    query = query.orderBy("__name__");
+    if (after) query = query.startAfter(after);
+    const snapshot = await query.limit(Math.min(limit, 200)).get();
+    return snapshot.docs.filter(doc => canReadCustomer(this.viewer, doc.data())).map(mapCustomer);
+  }
+
+  /**
+   * Searches the whole accessible directory through the indexed searchTerms field,
+   * then confirms every query word against the stored contact fields.
+   */
+  async searchCustomers(input: string, limit = 50): Promise<CustomerSummary[]> {
+    const plan = customerSearchQuery(input);
+    if (!plan) return [];
+    let query: FirebaseFirestore.Query = this.database
+      .collection("customers")
+      .where("orgId", "==", this.orgId);
+    if (!isManagerRole(this.viewer.role) && !["accounts", "marketing", "readonly"].includes(this.viewer.role)) query = query.where("ownerUid", "==", this.viewer.uid);
+    const snapshot = await query.where("searchTerms", "array-contains", plan.term).limit(200).get();
+    return snapshot.docs
+      .filter((doc) => canReadCustomer(this.viewer, doc.data()))
+      .filter((doc) => {
+        const terms = new Set<string>(Array.isArray(doc.data().searchTerms) ? doc.data().searchTerms : []);
+        return plan.words.every((word) => terms.has(word.slice(0, 24)));
+      })
+      .slice(0, limit)
+      .map(mapCustomer);
   }
 
   async getCustomer(customerId: string) {
@@ -119,13 +150,14 @@ export class FirestoreCustomerRepository implements CustomerRepository {
       .collection("customers")
       .doc(customerId)
       .get();
-    if (!snapshot.exists || snapshot.data()?.orgId !== this.orgId) return null;
+    if (!snapshot.exists || !canReadCustomer(this.viewer, snapshot.data()!)) return null;
     return mapCustomer(snapshot);
   }
 
   async getHouseholdProfile(
     customerId: string,
   ): Promise<HouseholdTravelProfile | null> {
+    if (!await this.accessible(customerId, true)) return null;
     const snapshot = await this.database
       .collection("households")
       .doc(customerId)
@@ -142,6 +174,7 @@ export class FirestoreCustomerRepository implements CustomerRepository {
   }
 
   async listTravelHistory(customerId: string) {
+    if (!await this.accessible(customerId)) return [];
     const snapshot = await this.database
       .collection("customers")
       .doc(customerId)
@@ -155,6 +188,7 @@ export class FirestoreCustomerRepository implements CustomerRepository {
   }
 
   async listEvents(customerId: string) {
+    if (!await this.accessible(customerId, true)) return [];
     const snapshot = await this.database
       .collection("customers")
       .doc(customerId)

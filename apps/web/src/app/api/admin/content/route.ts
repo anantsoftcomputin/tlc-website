@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       updatedAt: now, updatedBy: user.uid,
       publishedAt: clean.status === "published" ? before?.publishedAt || now : before?.publishedAt || null,
     };
+    transaction.set(database.collection("orgs").doc(user.orgId!), { settings: { catalogueMigrated: true } }, { merge: true });
     transaction.set(reference, record);
     transaction.set(audit, {
       id: audit.id, orgId: user.orgId, actorUid: user.uid, actorRole: user.role,
@@ -67,6 +68,7 @@ export async function DELETE(request: Request) {
     if (!snapshot.exists || snapshot.data()?.orgId !== user.orgId) throw new Error("Content record was not found.");
     const before = snapshot.data()!;
     const after = { ...before, status: "archived", featured: false, updatedAt: now, updatedBy: user.uid };
+    transaction.set(database.collection("orgs").doc(user.orgId!), { settings: { catalogueMigrated: true } }, { merge: true });
     transaction.set(reference, after);
     transaction.set(audit, { id:audit.id, orgId:user.orgId, actorUid:user.uid, actorRole:user.role, action:`content.${collection.data}.archive`, collection:collection.data, docId:body.id, before, after, ts:now, createdAt:now, updatedAt:now, createdBy:user.uid, updatedBy:user.uid });
   });

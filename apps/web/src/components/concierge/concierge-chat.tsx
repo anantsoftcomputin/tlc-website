@@ -1,4 +1,5 @@
 "use client";
+import { publicRequestHeaders } from "@/lib/firebase/client";
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -30,20 +31,6 @@ const starterPrompts = [
   "Suggest an international trip for a couple",
 ];
 
-function getSessionId() {
-  const stored = localStorage.getItem("tlc-concierge-session");
-  if (
-    stored &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      stored,
-    )
-  )
-    return stored;
-  const created = crypto.randomUUID();
-  localStorage.setItem("tlc-concierge-session", created);
-  return created;
-}
-
 export function ConciergeChat() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -58,7 +45,18 @@ export function ConciergeChat() {
   const [feedback, setFeedback] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setSessionId(getSessionId()), []);
+  useEffect(() => {
+    if (!open || sessionId) return;
+    let active = true;
+    void publicRequestHeaders().then(headers=>fetch("/api/concierge/session",{method:"POST",headers})).then(async response=>{if(!response.ok)throw new Error("Unable to start chat.");return response.json();}).then(data=>{if(active)setSessionId(data.sessionId);}).catch(()=>{if(active)setError("Unable to start chat. Please try again.");});
+    return ()=>{active=false;};
+  }, [open, sessionId]);
+  useEffect(()=>{
+    if(!open || !sessionId)return;
+    let active=true;
+    const poll=async()=>{try{const response=await fetch(`/api/concierge/messages?sessionId=${encodeURIComponent(sessionId)}`);if(!response.ok)return;const data=await response.json();if(active)setMessages(current=>[...current,...data.messages.filter((item:{id:string})=>!current.some(existing=>existing.id===item.id)).map((item:{id:string;body:string})=>({id:item.id,role:"assistant" as const,content:`TLC team: ${item.body}`}))]);}catch{/* Retry on the next poll. */}};
+    void poll();const timer=setInterval(poll,5000);return()=>{active=false;clearInterval(timer);};
+  },[open,sessionId]);
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -75,6 +73,7 @@ export function ConciergeChat() {
 
   if (
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/client") ||
     pathname.startsWith("/i/") ||
     pathname === "/login"
   )
@@ -95,7 +94,7 @@ export function ConciergeChat() {
     try {
       const response = await fetch("/api/concierge/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await publicRequestHeaders(),
         body: JSON.stringify({
           sessionId,
           message,
@@ -138,7 +137,7 @@ export function ConciergeChat() {
     try {
       const response = await fetch("/api/concierge/preferences", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await publicRequestHeaders(),
         body: JSON.stringify({
           sessionId,
           updates: message.preferenceUpdates.map(
@@ -166,7 +165,7 @@ export function ConciergeChat() {
     setFeedback(rating);
     await fetch("/api/concierge/feedback", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await publicRequestHeaders(),
       body: JSON.stringify({ sessionId, rating }),
     }).catch(() => undefined);
   }

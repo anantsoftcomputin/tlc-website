@@ -73,7 +73,7 @@ export class FirestoreAdminRepository implements AdminRepository {
   }
 
   async countPublishedTrips() {
-    const count = await this.database.collection("trips").where("status", "==", "published").count().get();
+    const count = await this.database.collection("trips").where("orgId", "==", this.orgId).where("status", "==", "published").count().get();
     return count.data().count;
   }
 
@@ -88,7 +88,7 @@ export class FirestoreAdminRepository implements AdminRepository {
       inquiryCountQuery.count().get(),
       this.listLeads(500),
       quoteCountQuery.count().get(),
-      this.database.collection("trips").where("status", "==", "published").count().get(),
+      this.database.collection("trips").where("orgId", "==", this.orgId).where("status", "==", "published").count().get(),
       this.listInquiries(6),
     ]);
     return {

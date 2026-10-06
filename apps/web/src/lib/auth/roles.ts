@@ -1,111 +1,30 @@
-import { userRoles, type UserRole } from "../../types/crm";
-
-export type Permission =
-  | "admin:access"
-  | "content:read"
-  | "content:write"
-  | "crm:read"
-  | "crm:write"
-  | "quotes:write"
-  | "marketing:read"
-  | "marketing:write"
-  | "finance:read"
-  | "finance:write"
-  | "users:manage"
-  | "settings:manage"
-  | "audit:read";
-
-const permissions: Record<UserRole, Permission[]> = {
-  super_admin: [
-    "admin:access",
-    "content:read",
-    "content:write",
-    "crm:read",
-    "crm:write",
-    "quotes:write",
-    "marketing:read",
-    "marketing:write",
-    "finance:read",
-    "finance:write",
-    "users:manage",
-    "settings:manage",
-    "audit:read",
-  ],
-  owner: [
-    "admin:access",
-    "content:read",
-    "content:write",
-    "crm:read",
-    "crm:write",
-    "quotes:write",
-    "marketing:read",
-    "marketing:write",
-    "finance:read",
-    "finance:write",
-    "users:manage",
-    "settings:manage",
-    "audit:read",
-  ],
-  manager: [
-    "admin:access",
-    "content:read",
-    "content:write",
-    "crm:read",
-    "crm:write",
-    "quotes:write",
-    "marketing:read",
-    "marketing:write",
-    "finance:read",
-    "finance:write",
-    "users:manage",
-    "audit:read",
-  ],
-  accounts: [
-    "admin:access",
-    "content:read",
-    "crm:read",
-    "quotes:write",
-    "finance:read",
-    "finance:write",
-    "audit:read",
-  ],
-  marketing: ["admin:access", "content:read", "content:write", "crm:read", "marketing:read", "marketing:write"],
-  readonly: ["admin:access", "content:read", "crm:read", "finance:read"],
-  admin: [
-    "admin:access",
-    "content:read",
-    "content:write",
-    "crm:read",
-    "crm:write",
-    "quotes:write",
-    "marketing:read",
-    "marketing:write",
-    "finance:read",
-    "finance:write",
-    "audit:read",
-  ],
-  content_editor: ["admin:access", "content:read", "content:write"],
-  sales: [
-    "admin:access",
-    "content:read",
-    "crm:read",
-    "crm:write",
-    "quotes:write",
-  ],
-  travel_consultant: [
-    "admin:access",
-    "content:read",
-    "crm:read",
-    "crm:write",
-    "quotes:write",
-  ],
-  customer: [],
-};
-
+import {
+  hasPermission as permits,
+  userRoleSchema,
+  type Permission as DomainPermission,
+} from "@tlc/shared";
+import type { UserRole } from "@/types/crm";
+const mapping = {
+  "admin:access": "console:access",
+  "content:read": "content:read",
+  "content:write": "content:write",
+  "crm:read": "customers:read",
+  "crm:write": "leads:write",
+  "quotes:read": "quotes:read",
+  "quotes:write": "quotes:write",
+  "marketing:read": "campaigns:manage",
+  "marketing:write": "campaigns:manage",
+  "finance:read": "finance:read",
+  "finance:write": "finance:write",
+  "users:manage": "users:manage",
+  "settings:manage": "settings:manage",
+  "audit:read": "audit:read",
+  "business:read": "business:read",
+} satisfies Record<string, DomainPermission>;
+export type Permission = keyof typeof mapping;
 export function isUserRole(value: unknown): value is UserRole {
-  return typeof value === "string" && userRoles.includes(value as UserRole);
+  return userRoleSchema.safeParse(value).success;
 }
-
 export function hasPermission(role: UserRole, permission: Permission) {
-  return permissions[role].includes(permission);
+  return permits(role, mapping[permission]);
 }

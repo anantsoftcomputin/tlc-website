@@ -39,6 +39,14 @@ export type FlightOffer = {
   seatsRemaining?: number;
   price: { currency: string; base: number; taxes: number; total: number };
   expiresAt: string;
+  /** Supplier session data needed to re-price or book without server memory. */
+  supplier?: {
+    provider: string;
+    traceId?: string;
+    resultIndexes?: string[];
+    isLCC?: boolean[];
+    publishedFare?: number;
+  };
 };
 
 export type FlightTraveller = {
@@ -47,6 +55,10 @@ export type FlightTraveller = {
   lastName: string;
   dob: string;
   type: "adult" | "child" | "infant";
+  gender?: "male" | "female";
+  passportNo?: string;
+  passportExpiry?: string;
+  nationality?: string;
 };
 
 export type FlightBooking = {
@@ -58,7 +70,8 @@ export type FlightBooking = {
 
 export interface FlightProvider extends HealthCheckableProvider {
   search(request: FlightSearchRequest): Promise<SourcedResult<FlightOffer[]>>;
-  priceCheck(offerId: string): Promise<SourcedResult<FlightOffer>>;
+  /** `cached` is the stored offer, for providers whose sessions live in the offer. */
+  priceCheck(offerId: string, cached?: FlightOffer): Promise<SourcedResult<FlightOffer>>;
   book(request: {
     offerId: string;
     travellers: FlightTraveller[];
@@ -191,3 +204,4 @@ export class MockFlightProvider implements FlightProvider {
 }
 
 export { AmadeusFlightProvider } from "./amadeus.js";
+export { TboFlightProvider } from "../tbo/flights.js";

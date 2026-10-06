@@ -1,9 +1,20 @@
 import { getApps, initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import { HttpsError, onRequest } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { buildBootstrapDocuments, initialOrgId } from "./bootstrap.js";
+export { fulfilSupplierItem } from "./supplier-fulfilment.js";
+export {
+  listTboCities,
+  refreshTboCatalogue,
+  syncTboCatalogue,
+} from "./tbo-catalogue.js";
+export {
+  backfillCustomerSearch,
+  indexCustomerSearch,
+} from "./customer-search-index.js";
 export {
   commitCustomerImport,
   previewCustomerImport,
@@ -48,9 +59,11 @@ export {
   refreshManagementAnalytics,
 } from "./management-analytics.js";
 export {
+  inventoryProviderStatus,
   priceCheckInventory,
   searchFlightInventory,
   searchHotelInventory,
+  updateInventoryProviders,
 } from "./inventory.js";
 export {
   approveQuote,

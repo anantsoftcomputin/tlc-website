@@ -82,3 +82,6 @@ Desktop.ini
 /qa/
 /.lighthouseci/
 /lighthouse-report*/
+
+# TBO certification log exports
+tbo-logs/

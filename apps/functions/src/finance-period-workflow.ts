@@ -1,10 +1,12 @@
+import { runFinanceTransaction, inFinancePeriod } from "./finance-transaction.js";
 import {
   closeFinancePeriodInputSchema,
   reopenFinancePeriodInputSchema,
   type FinancePeriod,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { commerceActor, commerceAudit } from "./commerce-command.js";
 
 export const closeFinancePeriod = onCall(
@@ -20,26 +22,14 @@ export const closeFinancePeriod = onCall(
     if (!parsed.success || parsed.data.endDate < parsed.data.startDate)
       throw new HttpsError("invalid-argument", "Finance period is invalid.");
     const database = getFirestore();
-    const [journals, payments, settlements, cancellations] = await Promise.all([
-      database
-        .collection("financeJournals")
-        .where("orgId", "==", identity.orgId)
-        .get(),
-      database
-        .collection("payments")
-        .where("orgId", "==", identity.orgId)
-        .get(),
-      database
-        .collection("supplierSettlements")
-        .where("orgId", "==", identity.orgId)
-        .get(),
-      database
-        .collection("cancellationRequests")
-        .where("orgId", "==", identity.orgId)
-        .get(),
-    ]);
+    const periodId = `${identity.orgId}-${parsed.data.startDate}-${parsed.data.endDate}`;
+    const ref = database.collection("financePeriods").doc(periodId);
+    return runFinanceTransaction(database, identity.orgId, async transaction => {
+    const [journals, payments, settlements, cancellations] = await Promise.all(
+      ["financeJournals", "payments", "supplierSettlements", "cancellationRequests"].map(collection => transaction.get(database.collection(collection).where("orgId", "==", identity.orgId)))
+    );
     const inPeriod = (date: string) =>
-      date >= parsed.data.startDate && date <= parsed.data.endDate;
+      inFinancePeriod(date, parsed.data.startDate, parsed.data.endDate);
     const periodJournals = journals.docs
       .map((item) => item.data())
       .filter((item) => inPeriod(String(item.date)));
@@ -82,8 +72,6 @@ export const closeFinancePeriod = onCall(
         "Resolve unreconciled payments and pending approvals before closing.",
         reconciliation,
       );
-    const periodId = `${identity.orgId}-${parsed.data.startDate}-${parsed.data.endDate}`;
-    const ref = database.collection("financePeriods").doc(periodId);
     const now = new Date().toISOString();
     const record: FinancePeriod = {
       id: periodId,
@@ -99,7 +87,6 @@ export const closeFinancePeriod = onCall(
       updatedBy: identity.uid,
     };
     const auditRef = database.collection("auditLogs").doc();
-    await database.runTransaction(async (transaction) => {
       const existing = await transaction.get(ref);
       if (existing.exists && existing.data()?.status === "closed")
         throw new HttpsError(
@@ -120,8 +107,8 @@ export const closeFinancePeriod = onCall(
           now,
         ),
       );
-    });
     return { periodId, reconciliation };
+    }, { allowClosed: true });
   },
 );
 
@@ -140,7 +127,7 @@ export const reopenFinancePeriod = onCall(
     const database = getFirestore();
     const ref = database.collection("financePeriods").doc(parsed.data.periodId);
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const existing = await transaction.get(ref);
       if (
         !existing.exists ||
@@ -173,7 +160,7 @@ export const reopenFinancePeriod = onCall(
           now,
         ),
       );
-    });
+    }, { allowClosed: true });
     return { ok: true };
   },
 );

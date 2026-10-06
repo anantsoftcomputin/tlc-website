@@ -77,7 +77,7 @@ Phase 3 completion adds four bounded aggregates around that journal: cancellatio
 
 The public travel catalogue is owned by Firestore collections `destinations`, `hotels`, `trips`, `travelStyles`, and `tripCategories`. Catalogue documents share a validated publishing contract: draft/published/archived status, featured placement, deterministic display order, SEO metadata, organization ownership, and immutable audit attribution. Trips may link to hotels and both styles and categories without duplicating hotel operational inventory.
 
-Content reads and writes follow different paths. Public pages read only published records through a cached server repository, with the checked-in catalogue retained as a migration-safe fallback. Staff read all organization records through authenticated server components. Creates, updates, publishing and archive operations pass through `/api/admin/content`; the command validates the collection-specific Zod schema and commits the content record and audit evidence atomically. Browser Firestore writes remain denied. Public images are validated and uploaded by `/api/admin/media`, then recorded in the media registry.
+Content reads and writes follow different paths. Public pages read only published records for the configured organization through a cached server repository. The checked-in catalogue is used before the first CMS write (`settings.catalogueMigrated`) and, uncached, while Firestore is unavailable; an outage serves the last good catalogue from that server instance when one exists. Staff read all organization records through authenticated server components. Creates, updates, publishing and archive operations pass through `/api/admin/content`; the command validates the collection-specific Zod schema and commits the content record and audit evidence atomically. Browser Firestore writes remain denied. Public images are validated and uploaded by `/api/admin/media`, then recorded in the media registry.
 
 The editorial hotel catalogue is deliberately separate from temporary provider inventory. CMS hotels describe TLC-curated stays and their destination, facilities, room/meal options and internal supplier reference. Live rates and availability still come only from a configured hotel adapter and are never inferred from CMS content.
 
@@ -87,15 +87,29 @@ Marketing intelligence reads organization-scoped offers, campaigns, propensity s
 
 Audience generation and delivery are separate operations. The audience layer filters on recorded channel consent and opt-outs; the command layer requires an authorized human approval; the delivery adapter rechecks consent immediately before sending. Campaign reporting is derived only from immutable delivery, engagement and booking events, so empty production data remains zero rather than being replaced with demo metrics.
 
+## Workspaces and portals
+
+Sign-in at `/login` routes each account by role: owners, managers and admins to `/admin/owner`, other staff to `/admin/employee`, and customers to `/client`. Customers self-register and must verify their email; the client portal shows only customer records whose stored emails match that verified address. Staff accounts are created and changed at `/admin/team` (`users:manage`), which keeps custom claims, the `users` profile and an audit entry in step and revokes existing sessions. Clients raise support requests from their portal; the assigned consultant or a manager replies at `/admin/support`.
+
+Dashboards read only the current working set (open pipeline, pending approvals, active bookings, open alerts and support requests) and use Firestore count/sum aggregates for history-wide totals, so their cost follows workload rather than the age of the business.
+
+Customer search covers the whole directory through a normalized `searchTerms` array maintained by the `indexCustomerSearch` trigger. Run `pnpm customers:backfill-search` once after deploying to index customers created earlier.
+
+## Supplier inventory (TBO)
+
+TBO provides flights and hotels through `tbo-flight` and `tbo-hotel` adapters selected per organization. Static hotel content is imported city by city into `supplierHotels` and published through CMS `hotels`, and is refreshed every 15 days. Live prices are re-checked with TBO before they enter a quote. See `docs/TBO_INTEGRATION.md`.
+
 ## Security baseline
 
 - Firebase Auth sessions are stored in secure, HTTP-only cookies.
-- Owner and manager roles require MFA before production launch.
-- Firestore rules enforce `orgId`, role, ownership and assignment.
+- Owners, managers and admins must sign in with an authenticator app (TOTP) in production. The project needs Firebase Authentication with Identity Platform; run `pnpm admin:enable-mfa` once to turn TOTP on. Callable functions enforce the same requirement.
+- Firestore rules enforce `orgId`, role, ownership and assignment, and deny browser writes to business records; all writes go through server commands.
+- Public endpoints and callable functions verify App Check tokens. Production builds fail unless `NEXT_PUBLIC_APP_CHECK_SITE_KEY` is set; to deploy without App Check, set `APP_CHECK_ENFORCEMENT=off` for both the web app and Functions.
+- Razorpay webhook events that cannot be posted, for example an overpayment or a payment dated inside a closed finance period, are acknowledged and raised as high-severity `PROVIDER_PAYMENT_EXCEPTION` alerts for finance to reconcile, instead of failing and being retried.
 - Passport and government ID values are encrypted outside normal document fields.
 - Secrets are server-only and ultimately stored in Google Secret Manager.
 - Sensitive writes are audited; audit records are immutable to browser clients.
-- Public endpoints use validation, rate limiting and App Check.
+- Public endpoints use validation, Firestore-backed rate limiting and App Check.
 
 ## Deployment regions
 

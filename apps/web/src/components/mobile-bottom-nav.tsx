@@ -78,6 +78,7 @@ export function MobileBottomNav() {
 
   if (
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/client") ||
     pathname.startsWith("/i/") ||
     pathname === "/login"
   )

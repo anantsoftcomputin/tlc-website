@@ -15,6 +15,15 @@ describe("computeQuoteTotals", () => {
     expect(totals).toEqual({ cost: 80000, sell: 106000, tax: 5000, fees: 2000, discount: 1000, commission: 3000, gp: 24000, marginPct: 23.76, currency: "INR" });
   });
 
+  it("does not charge included supplier taxes twice", () => {
+    const item = cartItemSchema.parse({ ...baseItem, costPrice: 105000, sellPrice: 110000, serviceFee: 0, discount: 0, commission: 0, taxes: [{ name: "Provider taxes", amount: 5000, included: true }] });
+    const totals = computeQuoteTotals([item]);
+    expect(totals.sell).toBe(110000);
+    expect(totals.cost).toBe(105000);
+    expect(totals.gp).toBe(5000);
+    expect(totals.tax).toBe(5000);
+  });
+
   it("rejects mixed currencies", () => {
     const usd = cartItemSchema.parse({ ...baseItem, id: "hotel-2", currency: "USD" });
     expect(() => computeQuoteTotals([cartItemSchema.parse(baseItem), usd])).toThrow("same currency");

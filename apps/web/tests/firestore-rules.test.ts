@@ -14,8 +14,8 @@ beforeAll(async () => {
   environment = await initializeTestEnvironment({
     projectId: "demo-tlc-holidays",
     firestore: {
-      host: "127.0.0.1",
-      port: 8080,
+      host: process.env.FIRESTORE_EMULATOR_HOST?.split(":")[0] || "127.0.0.1",
+      port: Number(process.env.FIRESTORE_EMULATOR_HOST?.split(":")[1] || 8080),
       rules: readFileSync(
         new URL("../../../firebase/firestore.rules", import.meta.url),
         "utf8",
@@ -24,18 +24,22 @@ beforeAll(async () => {
   });
   await environment.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), "destinations", "published"), {
+      orgId: "tlc-vacations",
       status: "published",
       name: "Published",
     });
     await setDoc(doc(context.firestore(), "destinations", "draft"), {
+      orgId: "tlc-vacations",
       status: "draft",
       name: "Draft",
     });
     await setDoc(doc(context.firestore(), "hotels", "published"), {
+      orgId: "tlc-vacations",
       status: "published",
       name: "Published hotel",
     });
     await setDoc(doc(context.firestore(), "hotels", "draft"), {
+      orgId: "tlc-vacations",
       status: "draft",
       name: "Draft hotel",
     });
@@ -194,11 +198,12 @@ describe("public and content rules", () => {
 
   it("allows editors to review content while keeping audited writes server-owned", async () => {
     const database = environment
-      .authenticatedContext("editor", { role: "content_editor" })
+      .authenticatedContext("editor", { role: "content_editor", orgId: "tlc-vacations" })
       .firestore();
     await assertFails(
       setDoc(doc(database, "destinations", "new"), {
-        status: "draft",
+        orgId: "tlc-vacations",
+      status: "draft",
         name: "New",
       }),
     );
@@ -221,12 +226,12 @@ describe("CRM and audit rules", () => {
     );
   });
 
-  it("allows sales staff to read inquiries and create leads", async () => {
+  it("allows assigned reads but rejects browser lead creation", async () => {
     const database = environment
       .authenticatedContext("sales", { role: "sales", orgId: "tlc-vacations" })
       .firestore();
     await assertSucceeds(getDoc(doc(database, "inquiries", "one")));
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(database, "leads", "new"), {
         orgId: "tlc-vacations",
         status: "new",
@@ -237,7 +242,7 @@ describe("CRM and audit rules", () => {
     await assertFails(getDoc(doc(database, "leads", "other-org")));
   });
 
-  it("allows assigned staff to append but not rewrite lead activity", async () => {
+  it("keeps lead activity commands server-owned", async () => {
     const database = environment
       .authenticatedContext("sales", { role: "sales", orgId: "tlc-vacations" })
       .firestore();
@@ -248,7 +253,7 @@ describe("CRM and audit rules", () => {
       "activities",
       "call-one",
     );
-    await assertSucceeds(
+    await assertFails(
       setDoc(activity, {
         orgId: "tlc-vacations",
         leadId: "assigned-sales",
@@ -356,6 +361,9 @@ describe("CRM and audit rules", () => {
       .authenticatedContext("admin", { role: "owner", orgId: "tlc-vacations" })
       .firestore();
     await assertFails(getDoc(doc(database, "inventoryOffers", "one")));
+    await assertFails(getDoc(doc(database, "vacationSearches", "one")));
+    await assertFails(setDoc(doc(database, "vacationSearches", "forged"), { orgId: "tlc-vacations" }));
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), "vacationSearches", "one")));
     await assertFails(
       setDoc(doc(database, "inventoryOffers", "forged"), {
         orgId: "tlc-vacations",
@@ -457,5 +465,26 @@ describe("CRM and audit rules", () => {
         status: "completed",
       }),
     );
+  });
+});
+
+
+describe("hardened role boundaries",()=>{
+  it("rejects CRM mutations even for owners and readonly inquiry updates",async()=>{
+    for(const role of ["owner","sales","readonly"]){const db=environment.authenticatedContext("sales",{role,orgId:"tlc-vacations"}).firestore();
+      await assertFails(updateDoc(doc(db,"inquiries","one"),{orgId:"another-org",status:"closed"}));
+      await assertFails(updateDoc(doc(db,"leads","assigned-sales"),{assignedUid:"other",status:"won"}));
+      await assertFails(updateDoc(doc(db,"customers","customer-one"),{clv:{score:100}}));
+    }
+  });
+  it("prevents another organization's editor from opening drafts",async()=>{
+    const db=environment.authenticatedContext("foreign-editor",{role:"content_editor",orgId:"other-org"}).firestore();
+    await assertFails(getDoc(doc(db,"destinations","draft")));
+    await assertFails(getDoc(doc(db,"hotels","draft")));
+  });
+  it("keeps client access on the verified server projection",async()=>{
+    const db=environment.authenticatedContext("client",{role:"customer",orgId:"tlc-vacations",email_verified:true}).firestore();
+    for(const collection of ["customers","quotes","bookings","payments","financeJournals","supportRequests","publicRateLimits","financeLocks"])
+      await assertFails(getDoc(doc(db,collection,"one")));
   });
 });

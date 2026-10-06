@@ -20,14 +20,15 @@ const date = (value: string) =>
     timeZone: "Asia/Kolkata",
   }).format(new Date(value));
 
-export default async function ConversationsPage() {
+export default async function ConversationsPage({ searchParams }: { searchParams: Promise<{ after?: string }> }) {
+  const { after } = await searchParams;
   const user = await requireAdminUser("crm:read");
   const repository = new FirestoreConversationRepository(
     user.orgId || "tlc-vacations",
     { uid: user.uid, canViewAll: managerRoles.has(user.role) },
   );
   const [rows, metrics] = await Promise.all([
-    repository.list(),
+    repository.list(50, after),
     repository.metrics(),
   ]);
   return (
@@ -50,7 +51,7 @@ export default async function ConversationsPage() {
         <article><Clock3 /><b>{metrics.avgLatencyMs.toLocaleString("en-IN")} ms</b><span>Average response</span></article>
         <article><MessageCircleMore /><b>{metrics.handoverRate}%</b><span>Handover rate</span></article>
         <article><Star /><b>{metrics.satisfaction?.toFixed(1) || "—"}</b><span>Satisfaction</span></article>
-        <article><IndianRupee /><b>{metrics.recordedCost.toLocaleString("en-IN")}</b><span>Recorded AI cost</span></article>
+        <article><IndianRupee /><b>{metrics.recordedCost.toLocaleString("en-IN")}</b><span>Recorded AI cost · {metrics.unpricedCalls} unpriced calls · {metrics.failedCalls} failures</span></article>
       </section>
       <section className="admin-panel conversation-list">
         <header><div><span><MessageCircleMore /></span><div><h2>Latest threads</h2><p>Most recently active first</p></div></div></header>
@@ -69,6 +70,7 @@ export default async function ConversationsPage() {
           <div className="admin-empty"><MessagesSquare /><h3>No conversations yet</h3><p>Website and WhatsApp threads will appear here as visitors speak with Tara.</p></div>
         )}
       </section>
+      {rows.length === 50 && <Link className="button button-outline" href={`/admin/conversations?after=${encodeURIComponent(rows[rows.length - 1].id)}`}>Older conversations</Link>}
     </>
   );
 }

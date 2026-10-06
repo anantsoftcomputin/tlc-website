@@ -1,6 +1,8 @@
+import { readQueryPages } from "./query-pages.js";
 import { customerImportCommitSchema, customerImportPreviewSchema, findDuplicateCandidates, normalizeCustomerImportRow } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 
 const importRoles = new Set(["super_admin", "owner", "manager", "admin"]);
 
@@ -19,7 +21,7 @@ export const previewCustomerImport = onCall({ region: "asia-south1", timeoutSeco
   const parsed = customerImportPreviewSchema.safeParse({ ...body, orgId: identity.orgId, defaults: { ...rawDefaults, ownerUid: identity.uid } });
   if (!parsed.success) throw new HttpsError("invalid-argument", "Import data is invalid.", parsed.error.flatten());
   const database = getFirestore();
-  const existingSnapshot = await database.collection("customers").where("orgId", "==", identity.orgId).limit(5000).get();
+  const existingSnapshot = await readQueryPages(database.collection("customers").where("orgId", "==", identity.orgId).orderBy("__name__"));
   const existing = existingSnapshot.docs.map((document) => {
     const data = document.data();
     return { id: document.id, name: String(data.name || ""), phones: Array.isArray(data.phones) ? data.phones.map(String) : [], emails: Array.isArray(data.emails) ? data.emails.map(String) : [], ...(data.city ? { city: String(data.city) } : {}) };

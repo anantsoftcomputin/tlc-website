@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { travelIntelligenceInputSchema } from "@tlc/shared";
+import { travelIntelligenceInputSchema, vacationSelectionSchema } from "@tlc/shared";
 
 export const inquirySourceSchema = z.enum([
   "trip",
@@ -30,6 +30,7 @@ export const inquirySchema = z
     travelMonth: z.string().max(80).optional(),
     travellerType: z.string().max(80).optional(),
     intelligence: travelIntelligenceInputSchema.optional(),
+    vacationSelection: vacationSelectionSchema.optional(),
     website: z.literal("").optional(),
   })
   .superRefine((inquiry, context) => {

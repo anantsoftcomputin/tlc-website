@@ -1,0 +1,444 @@
+.vacation-designer,
+.vacation-review {
+  max-width: 1240px;
+  margin: auto;
+  padding: 48px 28px 90px;
+}
+.vacation-hero {
+  max-width: 780px;
+  padding: 12px 0 36px;
+}
+.vacation-hero .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vacation-hero h1,
+.vacation-review h1 {
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.1;
+  margin: 16px 0;
+}
+.vacation-hero p {
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.vacation-hero button,
+.vacation-text-button,
+.vacation-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  color: var(--tlc-red-dark);
+  padding: 12px 0;
+  font: inherit;
+  cursor: pointer;
+}
+.vacation-search {
+  padding: 28px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow-card);
+}
+.vacation-search fieldset {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 24px;
+  padding: 0 0 24px;
+  min-width: 0;
+}
+.vacation-search legend {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 20px;
+}
+.vacation-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 18px 0;
+}
+.vacation-fields label,
+.vacation-rooms label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.vacation-fields input,
+.vacation-fields select,
+.vacation-rooms input {
+  min-width: 0;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  min-height: 45px;
+}
+.vacation-fields .vacation-check,
+.vacation-check,
+.vacation-consent {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 10px;
+  font-size: 14px;
+}
+.vacation-check input,
+.vacation-consent input {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--tlc-red);
+}
+.vacation-rooms > div {
+  display: grid;
+  grid-template-columns: 90px 120px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px dashed var(--border);
+}
+.vacation-rooms button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.vacation-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.vacation-chips label {
+  position: relative;
+  cursor: pointer;
+}
+.vacation-chips input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.vacation-chips span {
+  display: block;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  font-size: 13px;
+}
+.vacation-chips input:checked + span {
+  border-color: var(--tlc-red);
+  background: var(--tlc-blush);
+  color: var(--tlc-red-dark);
+}
+.vacation-chips input:focus-visible + span {
+  outline: 2px solid var(--tlc-red);
+  outline-offset: 3px;
+}
+.vacation-search-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+.vacation-search-action p {
+  max-width: 550px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.vacation-search-action button {
+  flex-shrink: 0;
+}
+.vacation-results {
+  margin-top: 52px;
+}
+.vacation-results > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.vacation-results h2 {
+  font-size: 32px;
+  margin: 12px 0;
+}
+.vacation-results h3 {
+  margin: 32px 0 20px;
+  font-size: 23px;
+}
+.vacation-results > header > span {
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+.vacation-notice {
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: var(--tlc-ivory);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.vacation-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.vacation-options article {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+.vacation-options article.selected {
+  border: 2px solid var(--tlc-red);
+}
+.vacation-option-photo {
+  position: relative;
+  height: 200px;
+  background: var(--tlc-blush);
+}
+.vacation-option-photo img {
+  object-fit: cover;
+}
+.vacation-option-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 12px;
+}
+.vacation-option-body h4 {
+  font-size: 19px;
+  margin: 0;
+}
+.vacation-option-body p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  color: var(--muted);
+}
+.vacation-availability {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.vacation-availability.live {
+  color: #286440;
+}
+.vacation-availability.test {
+  color: #8a4e13;
+}
+.vacation-reasons {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.vacation-reasons li {
+  display: flex;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+.vacation-reasons svg {
+  flex-shrink: 0;
+  color: #36755b;
+  margin-top: 2px;
+}
+.vacation-option-body details {
+  font-size: 12px;
+  line-height: 1.65;
+}
+.vacation-option-body summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.vacation-option-body details ul {
+  padding-left: 16px;
+}
+.vacation-option-actions {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+.vacation-option-actions a {
+  font-size: 12px;
+  text-decoration: underline;
+}
+.vacation-option-actions button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid var(--tlc-red);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--tlc-red-dark);
+  background: white;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.vacation-option-actions button[aria-pressed="true"] {
+  background: var(--tlc-blush);
+}
+.vacation-option-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.vacation-shortlist-bar {
+  position: sticky;
+  bottom: 20px;
+  z-index: 20;
+  background: var(--tlc-wine-deep);
+  color: white;
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-top: 32px;
+  box-shadow: var(--shadow-float);
+}
+.vacation-shortlist-bar span {
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.vacation-review-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 40px;
+  margin-top: 24px;
+}
+.vacation-review-grid > aside {
+  padding: 24px;
+  background: var(--tlc-ivory);
+  border-radius: 16px;
+  align-self: start;
+}
+.vacation-review-grid > aside p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.vacation-review-grid ul {
+  list-style: none;
+  padding: 0;
+}
+.vacation-review-grid li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.vacation-review-grid li span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.vacation-consent {
+  align-items: flex-start;
+  line-height: 1.6;
+  margin: 20px 0;
+}
+.vacation-simple {
+  max-width: 850px;
+  margin: auto;
+  padding: 32px 24px 100px;
+}
+.vacation-empty {
+  padding: 40px;
+  background: var(--tlc-ivory);
+  border-radius: 16px;
+}
+.vacation-search .form-error button {
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.vacation-designer button:focus-visible,
+.vacation-review button:focus-visible {
+  outline: 2px solid var(--tlc-red);
+  outline-offset: 4px;
+}
+@media (max-width: 900px) {
+  .vacation-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vacation-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vacation-review-grid {
+    grid-template-columns: 1fr;
+  }
+  .vacation-search-action {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .vacation-shortlist-bar {
+    bottom: 76px;
+  }
+}
+@media (max-width: 600px) {
+  .vacation-designer,
+  .vacation-review {
+    padding: 28px 16px 130px;
+  }
+  .vacation-search {
+    padding: 20px 16px;
+  }
+  .vacation-fields {
+    grid-template-columns: 1fr;
+  }
+  .vacation-rooms > div {
+    grid-template-columns: 1fr 1fr;
+  }
+  .vacation-rooms label {
+    grid-column: auto;
+  }
+  .vacation-rooms label:last-of-type {
+    grid-column: 1/-1;
+  }
+  .vacation-options {
+    grid-template-columns: 1fr;
+  }
+  .vacation-results > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .vacation-shortlist-bar {
+    padding: 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .vacation-shortlist-bar .button {
+    justify-content: center;
+  }
+  .vacation-review-grid {
+    gap: 20px;
+  }
+  .vacation-review-grid > aside {
+    padding: 18px;
+  }
+  .vacation-search-action .button {
+    width: 100%;
+    justify-content: center;
+  }
+}

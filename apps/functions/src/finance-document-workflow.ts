@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import {
   calculateGst,
   defaultTaxProfile,
@@ -13,7 +14,8 @@ import {
   type TaxProfile,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { commerceActor, commerceAudit } from "./commerce-command.js";
 import { assertFinanceDateOpen } from "./finance-period-guard.js";
 
@@ -70,7 +72,7 @@ async function issue(input: {
   const prefix =
     input.type === "invoice" ? "INV" : input.type === "receipt" ? "RCP" : "CN";
   let result!: FinanceDocument;
-  await database.runTransaction(async (transaction) => {
+  await runFinanceTransaction(database, input.identity.orgId, async (transaction) => {
     const current = await transaction.get(ref);
     if (current.exists) {
       result = current.data() as FinanceDocument;

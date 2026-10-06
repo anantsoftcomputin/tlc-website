@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
+import "./dashboard.css";
 import { FirebaseAnalytics } from "@/components/firebase-analytics";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { SiteChrome } from "@/components/site-chrome";

@@ -4,7 +4,8 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 
 const app = getApps()[0] ?? initializeApp();

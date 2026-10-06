@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import {
   createCancellationInputSchema,
   rejectCancellationInputSchema,
@@ -8,7 +9,8 @@ import {
   type CancellationRequest,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { commerceActor, commerceAudit } from "./commerce-command.js";
 import { assertFinanceDateOpen } from "./finance-period-guard.js";
 
@@ -149,7 +151,7 @@ export const createCancellationRequest = onCall(
       { bookingId: booking.id, refundAmount },
       now,
     );
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       transaction.create(ref, record);
       transaction.create(auditRef, audit);
       transaction.update(bookingRef, {
@@ -180,7 +182,7 @@ export const approveCancellationRequest = onCall(
       throw new HttpsError("invalid-argument", "Cancellation ID is invalid.");
     const database = getFirestore();
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const { ref, cancellation } = await loadCancellation(
         transaction,
         parsed.data.cancellationId,
@@ -234,7 +236,7 @@ export const rejectCancellationRequest = onCall(
       );
     const database = getFirestore();
     const now = new Date().toISOString();
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const { ref, cancellation } = await loadCancellation(
         transaction,
         parsed.data.cancellationId,

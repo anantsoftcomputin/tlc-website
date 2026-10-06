@@ -50,7 +50,7 @@ const navGroups = [
   {
     label: "Overview",
     items: [
-      { label: "Command centre", href: "/admin", icon: LayoutDashboard },
+      { label: "My dashboard", href: "/admin", icon: LayoutDashboard },
       {
         label: "Alerts",
         href: "/admin/alerts",
@@ -61,7 +61,7 @@ const navGroups = [
         label: "Performance",
         href: "/admin/management",
         icon: Gauge,
-        permission: "crm:read" as const,
+        permission: "business:read" as const,
       },
     ],
   },
@@ -96,13 +96,14 @@ const navGroups = [
         label: "Quotes",
         href: "/admin/quotes",
         icon: FileText,
-        permission: "quotes:write" as const,
+        permission: "quotes:read" as const,
       },
     ],
   },
   {
     label: "Operations",
     items: [
+      { label: "Client support", href: "/admin/support", icon: MessagesSquare, permission: "crm:write" as const },
       {
         label: "Bookings",
         href: "/admin/bookings",
@@ -143,6 +144,12 @@ const navGroups = [
         href: "/admin/content/trips",
         icon: FileText,
         permission: "content:read" as const,
+      },
+      {
+        label: "Supplier catalogue",
+        href: "/admin/content/suppliers",
+        icon: Building2,
+        permission: "content:write" as const,
       },
     ],
   },
@@ -201,6 +208,7 @@ const navGroups = [
   {
     label: "Control",
     items: [
+      { label: "Team & access", href: "/admin/team", icon: ContactRound, permission: "users:manage" as const },
       {
         label: "Audit trail",
         href: "/admin/audit",
@@ -224,7 +232,11 @@ const navGroups = [
 ];
 
 const routeNames: Record<string, string> = {
-  admin: "Command centre",
+  admin: "My dashboard",
+  owner: "Business dashboard",
+  employee: "My workspace",
+  team: "Team & access",
+  support: "Client support",
   inquiries: "Inquiry inbox",
   conversations: "Conversation inbox",
   crm: "Lead pipeline",

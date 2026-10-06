@@ -12,6 +12,7 @@ import { httpsCallable } from "firebase/functions";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getFirebaseFunctions } from "@/lib/firebase/client";
+import { vacationParty, type VacationBrief } from "@tlc/shared";
 
 type FlightOffer = {
   offerId: string;
@@ -70,9 +71,11 @@ function message(error: unknown) {
     : "Search failed. Please try again.";
 }
 
-export function InventorySearch() {
+export function InventorySearch({ initialBrief, initialLeadId }: { initialBrief?: VacationBrief; initialLeadId?: string } = {}) {
   const router = useRouter();
-  const [mode, setMode] = useState<"flight" | "hotel">("flight");
+  const [mode, setMode] = useState<"flight" | "hotel">(initialBrief ? "hotel" : "flight");
+  const [searchRooms, setSearchRooms] = useState(() => (initialBrief?.rooms || [{ adults: 2, childrenAges: [] }]).map((room) => ({ adults: room.adults, ages: room.childrenAges.join(", ") })));
+  const initialParty = initialBrief ? vacationParty(initialBrief) : { adults: 2, children: 0, infants: 0 };
   const [flights, setFlights] = useState<InventoryResult<FlightOffer> | null>(
     null,
   );
@@ -103,14 +106,14 @@ export function InventorySearch() {
     const pax = {
       adults: Number(form.get("adults")),
       children: Number(form.get("children")),
-      infants: 0,
+      infants: Number(form.get("infants") || 0),
     };
     setFlightPax(pax);
     try {
       const search = httpsCallable<
         Record<string, unknown>,
         InventoryResult<FlightOffer>
-      >(getFirebaseFunctions(), "searchFlightInventory");
+      >(getFirebaseFunctions(), "searchFlightInventory", { timeout: 160_000 });
       const result = await search({
         origin: String(form.get("origin")),
         destination: String(form.get("destination")),
@@ -118,6 +121,7 @@ export function InventorySearch() {
         returnDate: String(form.get("returnDate")) || undefined,
         adults: pax.adults,
         children: pax.children,
+        infants: pax.infants,
         cabinClass: String(form.get("cabinClass")),
         currency: "INR",
       });
@@ -135,7 +139,8 @@ export function InventorySearch() {
     setError(undefined);
     setNotice(undefined);
     const form = new FormData(event.currentTarget);
-    const pax = { adults: Number(form.get("adults")), children: 0, infants: 0 };
+    const rooms = searchRooms.map((room) => ({ adults: room.adults, childrenAges: room.ages.trim() ? room.ages.split(",").map((age) => age.trim() === "" ? NaN : Number(age.trim())) : [] }));
+    const pax = { adults: rooms.reduce((sum, room) => sum + room.adults, 0), children: rooms.flatMap((room) => room.childrenAges).filter((age) => age >= 2).length, infants: rooms.flatMap((room) => room.childrenAges).filter((age) => age < 2).length };
     setHotelPax(pax);
     try {
       const search = httpsCallable<
@@ -146,7 +151,8 @@ export function InventorySearch() {
         destination: String(form.get("destination")),
         checkIn: String(form.get("checkIn")),
         checkOut: String(form.get("checkOut")),
-        rooms: [{ adults: pax.adults }],
+        rooms,
+        guestNationality: String(form.get("nationality") || "IN"),
         currency: "INR",
       });
       setHotels(result.data);
@@ -162,12 +168,19 @@ export function InventorySearch() {
     setError(undefined);
     setNotice(undefined);
     try {
-      const check = httpsCallable(
-        getFirebaseFunctions(),
-        "priceCheckInventory",
-      );
-      await check({ kind, offerId });
-      setNotice("Price and availability rechecked successfully.");
+      const check = httpsCallable<
+        { kind: string; offerId: string },
+        { validation: string; priceChanged?: boolean; previousTotal?: number; fetchedAt: string; data: FlightOffer | HotelOffer }
+      >(getFirebaseFunctions(), "priceCheckInventory", { timeout: 130_000 });
+      const result = await check({ kind, offerId });
+      if (kind === "hotel") setHotels(current => current && ({ ...current, fetchedAt: result.data.fetchedAt, data: current.data.map(offer => offer.offerId === offerId ? result.data.data as HotelOffer : offer) }));
+      else setFlights(current => current && ({ ...current, fetchedAt: result.data.fetchedAt, data: current.data.map(offer => offer.offerId === offerId ? result.data.data as FlightOffer : offer) }));
+      const price = `${result.data.data.price.currency} ${result.data.data.price.total.toLocaleString("en-IN")}`;
+      if (result.data.validation === "live-supplier")
+        setNotice(result.data.priceChanged
+          ? `Supplier re-priced this to ${price} (was ${result.data.previousTotal?.toLocaleString("en-IN")}). Add it again so the quote uses the new price.`
+          : `Supplier confirmed ${price} just now.`);
+      else setNotice("Cached offer is still valid. Search again for the latest supplier price and availability.");
     } catch (caught) {
       setError(message(caught));
     } finally {
@@ -200,14 +213,14 @@ export function InventorySearch() {
           last?.arrivalAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
       },
       pax: flightPax,
-      costPrice: offer.price.base,
-      sellPrice: offer.price.base,
+      costPrice: offer.price.total,
+      sellPrice: offer.price.total,
       taxes: offer.price.taxes
         ? [
             {
               name: "Provider taxes",
               amount: offer.price.taxes,
-              included: false,
+              included: true,
             },
           ]
         : [],
@@ -233,14 +246,14 @@ export function InventorySearch() {
       description: `${offer.hotelName} · ${offer.roomName} · ${offer.mealPlan}`,
       dates: { start: offer.checkIn, end: offer.checkOut },
       pax: hotelPax,
-      costPrice: offer.price.base,
-      sellPrice: offer.price.base,
+      costPrice: offer.price.total,
+      sellPrice: offer.price.total,
       taxes: offer.price.taxes
         ? [
             {
               name: "Provider taxes",
               amount: offer.price.taxes,
-              included: false,
+              included: true,
             },
           ]
         : [],
@@ -261,7 +274,7 @@ export function InventorySearch() {
         "tlc-quote-cart",
         JSON.stringify([...(Array.isArray(cart) ? cart : []), item]),
       );
-      router.push("/admin/quotes/new");
+      router.push(`/admin/quotes/new${initialLeadId ? `?leadId=${encodeURIComponent(initialLeadId)}` : ""}`);
     } catch {
       setError("This inventory item could not be added to the quote cart.");
     }
@@ -306,24 +319,24 @@ export function InventorySearch() {
           <form className="inventory-form" onSubmit={searchFlights}>
             <label>
               From
-              <input name="origin" defaultValue="BOM" maxLength={3} required />
+              <input name="origin" defaultValue={initialBrief?.flights?.origin || "BOM"} maxLength={3} required />
             </label>
             <label>
               To
               <input
                 name="destination"
-                defaultValue="DXB"
+                defaultValue={initialBrief?.flights?.destination || "DXB"}
                 maxLength={3}
                 required
               />
             </label>
             <label>
               Departure
-              <input name="departureDate" type="date" required />
+              <input name="departureDate" type="date" defaultValue={initialBrief?.checkIn} required />
             </label>
             <label>
               Return <small>Optional</small>
-              <input name="returnDate" type="date" />
+              <input name="returnDate" type="date" defaultValue={initialBrief?.checkOut} />
             </label>
             <label>
               Adults
@@ -332,7 +345,7 @@ export function InventorySearch() {
                 type="number"
                 min="1"
                 max="9"
-                defaultValue="2"
+                defaultValue={initialParty.adults}
                 required
               />
             </label>
@@ -343,12 +356,13 @@ export function InventorySearch() {
                 type="number"
                 min="0"
                 max="8"
-                defaultValue="0"
+                defaultValue={initialParty.children}
               />
             </label>
+            <label>Infants<input name="infants" type="number" min={0} max={4} defaultValue={initialParty.infants} /></label>
             <label>
               Cabin
-              <select name="cabinClass" defaultValue="economy">
+              <select name="cabinClass" defaultValue={initialBrief?.flights?.cabinClass || "economy"}>
                 <option value="economy">Economy</option>
                 <option value="premiumEconomy">Premium economy</option>
                 <option value="business">Business</option>
@@ -364,27 +378,19 @@ export function InventorySearch() {
           <form className="inventory-form hotel" onSubmit={searchHotels}>
             <label>
               Destination
-              <input name="destination" defaultValue="Dubai" required />
+              <input name="destination" defaultValue={initialBrief?.destinationSlug || "Dubai"} required />
             </label>
             <label>
               Check-in
-              <input name="checkIn" type="date" required />
+              <input name="checkIn" type="date" defaultValue={initialBrief?.checkIn} required />
             </label>
             <label>
               Check-out
-              <input name="checkOut" type="date" required />
+              <input name="checkOut" type="date" defaultValue={initialBrief?.checkOut} required />
             </label>
-            <label>
-              Guests
-              <input
-                name="adults"
-                type="number"
-                min="1"
-                max="8"
-                defaultValue="2"
-                required
-              />
-            </label>
+            <label>Nationality code<input name="nationality" maxLength={2} minLength={2} defaultValue={initialBrief?.nationality || "IN"} required /></label>
+            {searchRooms.map((room, index) => <div key={index}><label>Room {index + 1} adults<input type="number" min={1} max={8} value={room.adults} onChange={(event) => setSearchRooms(searchRooms.map((item, i) => i === index ? { ...item, adults: Number(event.target.value) } : item))} required /></label><label>Children’s ages<input value={room.ages} placeholder="e.g. 4, 9" onChange={(event) => setSearchRooms(searchRooms.map((item, i) => i === index ? { ...item, ages: event.target.value } : item))} /></label>{searchRooms.length > 1 && <button type="button" onClick={() => setSearchRooms(searchRooms.filter((_, i) => i !== index))}>Remove room</button>}</div>)}
+            {searchRooms.length < 4 && <button type="button" className="button secondary" onClick={() => setSearchRooms([...searchRooms, { adults: 2, ages: "" }])}>Add room</button>}
             <button className="button primary" disabled={loading}>
               <Search />
               {loading ? "Searching…" : "Search hotels"}

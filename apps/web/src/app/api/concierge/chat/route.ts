@@ -1,13 +1,15 @@
+import { conversationSession } from "@/lib/security/conversation-session";
 import { NextResponse } from "next/server";
 import { answerConcierge } from "@/lib/ai/concierge-engine";
 import { hasTrustedOrigin } from "@/lib/security/request-origin";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { consumePublicRateLimit as consumeRateLimit, checkPublicRequest } from "@/lib/security/public-request";
 import { conciergeChatRequestSchema } from "@/lib/validation/concierge";
 import { FirestoreConciergeRepository } from "@/repositories/firebase/firestore-concierge-repository";
 
 const repository = new FirestoreConciergeRepository();
 
 export async function POST(request: Request) {
+  const denied = await checkPublicRequest(request); if (denied) return denied;
   if (!hasTrustedOrigin(request))
     return NextResponse.json(
       { error: "Untrusted request origin." },
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
     .get("x-forwarded-for")
     ?.split(",")[0]
     ?.trim();
-  const limit = consumeRateLimit(
+  const limit = await consumeRateLimit(
     `concierge:${forwardedFor || "unknown"}`,
     30,
     10 * 60 * 1000,
@@ -38,15 +40,19 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     const startedAt = Date.now();
-    const response = await answerConcierge(parsed.data);
-    await repository.recordTurn({
+    const session = await conversationSession(request, parsed.data.sessionId);
+    const response = session.status === "bot" ? await answerConcierge(parsed.data) : undefined;
+    const accepted = await repository.recordTurn({
       sessionId: parsed.data.sessionId,
       page: parsed.data.page,
       message: parsed.data.message,
       response,
       latencyMs: Date.now() - startedAt,
     });
-    return NextResponse.json(response, {
+    if (!accepted || !response) return NextResponse.json({ status: "human", message: "Your message is with the TLC team.", cards: [], followUpQuestions: [], preferenceUpdates: [], handover: { required: false } });
+    const { telemetry: _telemetry, ...publicResponse } = response;
+    void _telemetry;
+    return NextResponse.json(publicResponse, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

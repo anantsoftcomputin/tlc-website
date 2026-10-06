@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node --env-file-if-exists=../../.env node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -15,6 +15,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@opentelemetry/api": "^1.9.1",
     "@tlc/ai-chat": "workspace:*",
+    "@tlc/integrations": "workspace:*",
     "@tlc/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

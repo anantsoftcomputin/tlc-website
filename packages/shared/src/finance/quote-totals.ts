@@ -13,14 +13,15 @@ export function computeQuoteTotals(items: readonly CartItem[]): QuoteTotals {
     cost: sum.cost + item.costPrice,
     grossSell: sum.grossSell + item.sellPrice,
     tax: sum.tax + item.taxes.reduce((tax, line) => tax + line.amount, 0),
+    additionalTax: sum.additionalTax + item.taxes.filter(line => !line.included).reduce((tax, line) => tax + line.amount, 0),
     fees: sum.fees + item.serviceFee,
     discount: sum.discount + item.discount,
     commission: sum.commission + item.commission,
-  }), { cost: 0, grossSell: 0, tax: 0, fees: 0, discount: 0, commission: 0 });
+  }), { cost: 0, grossSell: 0, tax: 0, additionalTax: 0, fees: 0, discount: 0, commission: 0 });
 
   const netRevenue = totals.grossSell + totals.fees - totals.discount;
   if (netRevenue < 0) throw new Error("Discount cannot exceed sell price plus service fees.");
-  const sell = netRevenue + totals.tax;
+  const sell = netRevenue + totals.additionalTax;
   const gp = netRevenue + totals.commission - totals.cost;
   const marginPct = netRevenue === 0 ? 0 : (gp / netRevenue) * 100;
 

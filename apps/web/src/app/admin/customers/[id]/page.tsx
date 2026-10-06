@@ -36,7 +36,7 @@ export default async function CustomerDetailPage({
 }) {
   const user = await requireAdminUser("crm:read");
   const { id } = await params;
-  const repository = new FirestoreCustomerRepository(user.orgId);
+  const repository = new FirestoreCustomerRepository(user.orgId, user);
   const [customer, household, travelHistory, events] = await Promise.all([
     repository.getCustomer(id),
     repository.getHouseholdProfile(id),

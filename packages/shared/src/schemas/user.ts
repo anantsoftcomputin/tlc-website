@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { auditFieldsSchema, documentIdSchema, orgIdSchema } from "./base.js";
 
-export const canonicalUserRoles = ["owner", "manager", "sales", "accounts", "marketing", "readonly"] as const;
+export const canonicalUserRoles = ["owner", "manager", "sales", "accounts", "marketing", "readonly", "customer"] as const;
 export const legacyUserRoles = ["super_admin", "admin", "content_editor", "travel_consultant"] as const;
 export const userRoleSchema = z.enum([...canonicalUserRoles, ...legacyUserRoles]);
 

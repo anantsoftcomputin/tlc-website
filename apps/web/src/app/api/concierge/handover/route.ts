@@ -1,14 +1,14 @@
+import { conversationSession } from "@/lib/security/conversation-session";
 import { NextResponse } from "next/server";
 import { hasTrustedOrigin } from "@/lib/security/request-origin";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { consumePublicRateLimit as consumeRateLimit, checkPublicRequest } from "@/lib/security/public-request";
 import { conciergeHandoverSchema } from "@/lib/validation/concierge";
-import { FirestoreConciergeRepository } from "@/repositories/firebase/firestore-concierge-repository";
 import { FirestoreInquiryRepository } from "@/repositories/firebase/firestore-inquiry-repository";
 
-const conversations = new FirestoreConciergeRepository();
 const inquiries = new FirestoreInquiryRepository();
 
 export async function POST(request: Request) {
+  const denied = await checkPublicRequest(request); if (denied) return denied;
   if (!hasTrustedOrigin(request))
     return NextResponse.json(
       { error: "Untrusted request origin." },
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     .get("x-forwarded-for")
     ?.split(",")[0]
     ?.trim();
-  const limit = consumeRateLimit(
+  const limit = await consumeRateLimit(
     `concierge-handover:${forwardedFor || "unknown"}`,
     5,
     10 * 60 * 1000,
@@ -39,28 +39,41 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     const input = parsed.data;
-    const inquiry = await inquiries.create(
-      {
-        source: "ai_concierge",
-        fullName: input.fullName,
-        phone: input.phone,
-        email: input.email,
-        preferredContact: input.preferredContact,
-        destinationIds: input.destinationIds,
-        requirements:
-          `${input.summary}\n\nAI conversation: ${input.sessionId}`.slice(
-            0,
-            2000,
-          ),
-      },
-      { userAgent: request.headers.get("user-agent") || undefined },
-    );
-    await conversations.attachHandover({
-      sessionId: input.sessionId,
-      inquiryId: inquiry.id,
-      customerId: `inquiry-${inquiry.id}`,
-      leadId: `inquiry-${inquiry.id}`,
-    });
+    const session = await conversationSession(request, input.sessionId);
+    const followUp = {
+      conversationId: input.sessionId,
+      fullName: input.fullName,
+      phone: input.phone,
+      email: input.email,
+      preferredContact: input.preferredContact,
+      summary: input.summary,
+    };
+    // A conversation becomes one lead; later handovers add to it rather than failing.
+    let inquiry: { id: string };
+    if (session.leadId) inquiry = await inquiries.appendHandover(followUp);
+    else
+      try {
+        inquiry = await inquiries.create(
+          {
+            source: "ai_concierge",
+            fullName: input.fullName,
+            phone: input.phone,
+            email: input.email,
+            preferredContact: input.preferredContact,
+            destinationIds: input.destinationIds,
+            requirements:
+              `${input.summary}\n\nAI conversation: ${input.sessionId}`.slice(
+                0,
+                2000,
+              ),
+          },
+          { idempotencyKey: `handover:${input.sessionId}`, conversationId: input.sessionId, userAgent: request.headers.get("user-agent") || undefined },
+        );
+      } catch (error) {
+        // A concurrent first handover won the race; attach these details to its lead.
+        if (!(error instanceof Error) || !error.message.includes("different details")) throw error;
+        inquiry = await inquiries.appendHandover(followUp);
+      }
     return NextResponse.json({
       ok: true,
       inquiryId: inquiry.id,

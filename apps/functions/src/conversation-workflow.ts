@@ -13,6 +13,9 @@ const verifyToken = defineSecret("WHATSAPP_VERIFY_TOKEN");
 const appSecret = defineSecret("WHATSAPP_APP_SECRET");
 const accessToken = defineSecret("WHATSAPP_ACCESS_TOKEN");
 const phoneNumberId = defineSecret("WHATSAPP_PHONE_NUMBER_ID");
+// WhatsApp stays off (no secrets bound or required at deploy) until WHATSAPP_ENABLED=true
+// is set in apps/functions/.env and the four WHATSAPP_* secrets exist in Secret Manager.
+const whatsappEnabled = process.env.WHATSAPP_ENABLED === "true";
 
 type MetaMessage = {
   id?: string;
@@ -131,8 +134,12 @@ async function receiveWhatsAppMessage(message: MetaMessage) {
 }
 
 export const whatsappConversationWebhook = onRequest(
-  { region, secrets: [verifyToken, appSecret] },
+  { region, secrets: whatsappEnabled ? [verifyToken, appSecret] : [] },
   async (request, response) => {
+    if (!whatsappEnabled) {
+      response.status(503).send("WhatsApp is not enabled.");
+      return;
+    }
     if (request.method === "GET") {
       const valid =
         request.query["hub.mode"] === "subscribe" &&
@@ -155,9 +162,10 @@ export const deliverWhatsAppConversationMessage = onDocumentCreated(
   {
     region,
     document: "conversations/{conversationId}/messages/{messageId}",
-    secrets: [accessToken, phoneNumberId],
+    secrets: whatsappEnabled ? [accessToken, phoneNumberId] : [],
   },
   async (event) => {
+    if (!whatsappEnabled) return;
     const message = event.data?.data();
     if (
       !message ||

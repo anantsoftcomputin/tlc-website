@@ -1,3 +1,4 @@
+import { readQueryPages } from "./query-pages.js";
 import { createHash } from "node:crypto";
 import {
   campaignDraftInputSchema,
@@ -25,7 +26,8 @@ import {
 } from "@tlc/integrations";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { z } from "zod";
 import {
@@ -292,7 +294,7 @@ async function scoreOfferForOrg(
       "Use an approved or active offer.",
     );
   const [customers, activeModels] = await Promise.all([
-    db.collection("customers").where("orgId", "==", orgId).limit(5000).get(),
+    readQueryPages(db.collection("customers").where("orgId", "==", orgId).orderBy("__name__")),
     db
       .collection("models")
       .where("orgId", "==", orgId)
@@ -302,7 +304,7 @@ async function scoreOfferForOrg(
   ]);
   const active = activeModels.docs[0];
   let neuralModel: Awaited<ReturnType<typeof loadTravelModel>> | null = null;
-  if (active?.data().activationEligible && active.data().storagePath) {
+  if (active?.data().activationEligible && active.data().datasetVersion === "event-time-v2" && active.data().storagePath) {
     try {
       const [contents] = await getStorage()
         .bucket()
@@ -446,11 +448,10 @@ export const scoreActiveOffersNightly = onSchedule(
   },
   async () => {
     const db = getFirestore();
-    const offers = await db
+    const offers = await readQueryPages(db
       .collection("offers")
       .where("status", "==", "active")
-      .limit(100)
-      .get();
+      .orderBy("__name__"));
     for (const offer of offers.docs)
       await scoreOfferForOrg(
         String(offer.data().orgId),
@@ -474,7 +475,7 @@ async function audience(
   },
 ) {
   const [customers, scores] = await Promise.all([
-    db.collection("customers").where("orgId", "==", orgId).limit(5000).get(),
+    readQueryPages(db.collection("customers").where("orgId", "==", orgId).orderBy("__name__")),
     db
       .collection("propensity")
       .where("orgId", "==", orgId)
@@ -759,6 +760,7 @@ async function deliverCampaign(
     },
   });
   const provider = providerFor(campaign.channel);
+  const offerSnapshot = await db.collection("offers").doc(String(campaign.offerId)).get();
   let sent = 0;
   let delivered = 0;
   for (const customer of selected.customers) {
@@ -769,6 +771,10 @@ async function deliverCampaign(
     const current = await db.collection("customers").doc(customer.id).get();
     const access = eligible(current.data() || {}, campaign.channel);
     if (!access.ok) continue;
+    const capturedAt = new Date().toISOString();
+    const profile = current.data()?.profile as ComputedProfile | undefined;
+    const offer = offerSnapshot.data();
+    const trainingSnapshot = current.data()?.modelTrainingAllowed === true && profile && offer?.orgId === orgId ? { version: "event-time-v2", customer: Array.from(featurize(profile)), offer: offerFeatures({ destinations: offer.destinations || [], priceBand: offer.priceBand || "mid", type: offer.type, exclusive: offer.exclusive }), capturedAt, averageSpend: profile.avgSpend, modelTrainingAllowed: true } : null;
     const receipt = await provider.send(
       {
         customerId: customer.id,
@@ -788,6 +794,7 @@ async function deliverCampaign(
     const batch = db.batch();
     batch.create(deliveryRef, {
       id: deliveryRef.id,
+      trainingSnapshot,
       orgId,
       campaignId,
       customerId: customer.id,
@@ -1036,13 +1043,12 @@ export const deliverScheduledCampaigns = onSchedule(
   },
   async () => {
     const db = getFirestore();
-    const due = await db
+    const due = await readQueryPages(db
       .collection("campaigns")
       .where("status", "==", "scheduled")
       .where("approvalStatus", "==", "approved")
       .where("schedule.sendAt", "<=", new Date().toISOString())
-      .limit(25)
-      .get();
+      .orderBy("__name__"));
     for (const campaign of due.docs)
       await deliverCampaign(
         String(campaign.data().orgId),
@@ -1061,12 +1067,11 @@ export const expireMarketingOffers = onSchedule(
   async () => {
     const db = getFirestore();
     const today = new Date().toISOString().slice(0, 10);
-    const expired = await db
+    const expired = await readQueryPages(db
       .collection("offers")
       .where("status", "in", ["approved", "active", "paused"])
       .where("validity.end", "<", today)
-      .limit(400)
-      .get();
+      .orderBy("__name__"));
     if (expired.empty) return;
     const now = new Date().toISOString();
     const batch = db.batch();

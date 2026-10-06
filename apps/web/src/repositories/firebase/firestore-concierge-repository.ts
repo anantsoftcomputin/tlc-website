@@ -109,159 +109,37 @@ export class FirestoreConciergeRepository {
   }
 
   async recordTurn(input: {
-    sessionId: string;
-    page: string;
-    message: string;
-    response: AssistantResponseEnvelope & {
-      persona: { name: string; tagline: string };
-    };
+    sessionId: string; page: string; message: string;
+    response?: AssistantResponseEnvelope & { persona: { name: string; tagline: string }; telemetry?: { provider: string; failed: boolean; inputTokens: number; outputTokens: number; cost: number | null; groundingIssues: string[] } };
     latencyMs: number;
   }) {
-    if (!isFirebaseAdminConfigured) return;
-    const database = getAdminFirestore();
-    const conversationRef = database
-      .collection("conversations")
-      .doc(input.sessionId);
-    const inboundRef = conversationRef.collection("messages").doc();
-    const outboundRef = conversationRef.collection("messages").doc();
-    const now = new Date().toISOString();
-    const baseAudit = {
-      orgId: ORG_ID,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: "public-concierge",
-      updatedBy: "public-concierge",
-    };
-    const batch = database.batch();
-    batch.set(
-      conversationRef,
-      {
-        id: input.sessionId,
-        ...baseAudit,
-        channel: "web",
-        mode: "text",
-        participants: [
-          {
-            id: input.sessionId,
-            type: "customer",
-            displayName: "Website visitor",
-          },
-          { id: "tara", type: "bot", displayName: input.response.persona.name },
-        ],
-        status: input.response.handover.required ? "human" : "bot",
-        personaSnapshot: input.response.persona,
-        summary: input.message.slice(0, 1000),
-        landingPage: input.page,
-        lastMessageAt: now,
-        expiresAt: new Date(
-          Date.now() + 90 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
-        turnCount: FieldValue.increment(1),
-        latencyMsTotal: FieldValue.increment(input.latencyMs),
-        assistantTurns: FieldValue.increment(1),
-        groundingFailures: FieldValue.increment(
-          input.response.grounding.ungroundedClaims.length,
-        ),
-        handoverCount: FieldValue.increment(
-          input.response.handover.required ? 1 : 0,
-        ),
-        ...(input.response.preferenceUpdates.length
-          ? {
-              pendingPreferenceUpdates: FieldValue.arrayUnion(
-                ...input.response.preferenceUpdates,
-              ),
-            }
-          : {}),
-      },
-      { merge: true },
-    );
-    batch.create(inboundRef, {
-      id: inboundRef.id,
-      ...baseAudit,
-      conversationId: input.sessionId,
-      direction: "inbound",
-      from: { id: input.sessionId, type: "customer" },
-      body: input.message,
-      inputMode: "text",
-      media: [],
-      deliveryStatus: "read",
-      aiGenerated: false,
-      toolCalls: [],
-      sentAt: now,
+    if (!isFirebaseAdminConfigured) return Boolean(input.response);
+    const database=getAdminFirestore(); const ref=database.collection("conversations").doc(input.sessionId);
+    return database.runTransaction(async transaction=>{
+      const snapshot=await transaction.get(ref);const current=snapshot.data();
+      if(!current || current.orgId!==ORG_ID)throw new Error("Conversation not found.");
+      const accepted=current.status === "bot" && Boolean(input.response);
+      const response=accepted ? input.response : undefined;
+      const now=new Date().toISOString();
+      const audit={orgId:ORG_ID,createdAt:now,updatedAt:now,createdBy:"public-concierge",updatedBy:"public-concierge"};
+      const inbound=ref.collection("messages").doc();
+      transaction.create(inbound,{id:inbound.id,...audit,conversationId:ref.id,direction:"inbound",from:{id:ref.id,type:"customer"},body:input.message,inputMode:"text",media:[],deliveryStatus:"read",aiGenerated:false,toolCalls:[],sentAt:now});
+      transaction.set(ref,{updatedAt:now,updatedBy:"public-concierge",lastMessageAt:now,summary:input.message.slice(0,1000),landingPage:input.page,turnCount:FieldValue.increment(1),
+        status:response ? (response.handover.required ? "human" : "bot") : current.status === "closed" ? "human" : current.status,
+        ...(response ? {personaSnapshot:response.persona,assistantTurns:FieldValue.increment(1),latencyMsTotal:FieldValue.increment(input.latencyMs),groundingFailures:FieldValue.increment(response.telemetry?.groundingIssues.length || 0),handoverCount:FieldValue.increment(response.handover.required?1:0),...(response.preferenceUpdates.length?{pendingPreferenceUpdates:FieldValue.arrayUnion(...response.preferenceUpdates)}:{})}:{}),
+      },{merge:true});
+      if(response){
+        const out=ref.collection("messages").doc();
+        const {telemetry,...experience}=response; void telemetry;
+        transaction.create(out,{id:out.id,...audit,conversationId:ref.id,direction:"outbound",from:{id:"tara",type:"bot"},body:response.message,inputMode:"text",media:[],deliveryStatus:"sent",aiGenerated:true,toolCalls:[],experience,sentAt:now});
+      }
+      // Count a provider call even when staff took over while it was in flight.
+      if(input.response){const telemetry=input.response.telemetry;const provider=telemetry?.provider||"deterministic-fallback";
+        const usage=database.collection("usage").doc(`${ORG_ID}-llm-${provider}-${now.slice(0,7)}`);
+        transaction.set(usage,{id:usage.id,orgId:ORG_ID,month:now.slice(0,7),provider,domain:"llm",calls:FieldValue.increment(1),successfulCalls:FieldValue.increment(telemetry?.failed?0:1),failedCalls:FieldValue.increment(telemetry?.failed?1:0),inputTokens:FieldValue.increment(telemetry?.inputTokens||0),outputTokens:FieldValue.increment(telemetry?.outputTokens||0),unpricedCalls:FieldValue.increment(telemetry?.cost===null?1:0),cost:FieldValue.increment(telemetry?.cost||0),currency:"INR",latencyMsTotal:FieldValue.increment(input.latencyMs),updatedAt:now,updatedBy:"public-concierge"},{merge:true});
+      }
+      return accepted;
     });
-    batch.create(outboundRef, {
-      id: outboundRef.id,
-      ...baseAudit,
-      conversationId: input.sessionId,
-      direction: "outbound",
-      from: { id: "tara", type: "bot" },
-      body: input.response.message,
-      inputMode: "text",
-      media: [],
-      deliveryStatus: "sent",
-      aiGenerated: true,
-      reasoning:
-        "Response generated from current TLC CMS evidence and the active persona.",
-      toolCalls: input.response.grounding.toolResultIds.map((id) => ({
-        name: "search_tlc_catalogue",
-        input: { query: input.message },
-        output: {
-          entityIds: input.response.cards.map((card) => card.entityId),
-        },
-        source: id,
-        fetchedAt: now,
-      })),
-      experience: input.response,
-      sentAt: now,
-    });
-    const month = now.slice(0, 7);
-    const usageRef = database.collection("usage").doc(`${ORG_ID}-llm-${month}`);
-    batch.set(
-      usageRef,
-      {
-        id: usageRef.id,
-        orgId: ORG_ID,
-        month,
-        provider: process.env.OPENAI_API_KEY ? "openai" : "deterministic-fallback",
-        domain: "llm",
-        calls: FieldValue.increment(1),
-        successfulCalls: FieldValue.increment(1),
-        failedCalls: FieldValue.increment(0),
-        latencyMsTotal: FieldValue.increment(input.latencyMs),
-        cost: FieldValue.increment(0),
-        currency: "INR",
-        createdAt: now,
-        updatedAt: now,
-        createdBy: "public-concierge",
-        updatedBy: "public-concierge",
-      },
-      { merge: true },
-    );
-    await batch.commit();
   }
 
-  async attachHandover(input: {
-    sessionId: string;
-    customerId: string;
-    leadId: string;
-    inquiryId: string;
-  }) {
-    if (!isFirebaseAdminConfigured) return;
-    const now = new Date().toISOString();
-    await getAdminFirestore()
-      .collection("conversations")
-      .doc(input.sessionId)
-      .set(
-        {
-          customerId: input.customerId,
-          leadId: input.leadId,
-          inquiryId: input.inquiryId,
-          status: "human",
-          handoverAt: now,
-          updatedAt: now,
-          updatedBy: "public-concierge",
-        },
-        { merge: true },
-      );
-  }
 }

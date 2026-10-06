@@ -1,6 +1,8 @@
+import { readQueryPages } from "./query-pages.js";
 import { buildCustomerProfile, evaluateSupervisor, featurize, segmentCustomer } from "@tlc/ai-core";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { z } from "zod";
 
@@ -15,9 +17,9 @@ function completeProfile(profile: ReturnType<typeof buildCustomerProfile>, histo
 
 async function buildProfiles(orgId?: string) {
   const database = getFirestore(); let query: FirebaseFirestore.Query = database.collection("customers"); if (orgId) query = query.where("orgId", "==", orgId);
-  const customers = await query.limit(1000).get(); let updated = 0;
+  const customers = await readQueryPages(query.orderBy("__name__")); let updated = 0;
   for (const customer of customers.docs) {
-    const [historySnapshot, eventSnapshot] = await Promise.all([customer.ref.collection("travelHistory").limit(500).get(), customer.ref.collection("events").limit(1000).get()]);
+    const [historySnapshot, eventSnapshot] = await Promise.all([readQueryPages(customer.ref.collection("travelHistory").orderBy("__name__")), readQueryPages(customer.ref.collection("events").orderBy("__name__"))]);
     const history = historySnapshot.docs.map((item) => item.data()); const events = eventSnapshot.docs.map((item) => item.data());
     const computed = buildCustomerProfile(history, events); const profile = completeProfile(computed, history); const segments = segmentCustomer(computed); const featureVector = [...featurize(computed)];
     const clv = customer.data().clv || { score: Math.min(100, Math.round(computed.avgSpend / 10000 + computed.totalTrips * 5)), revenue: computed.avgSpend * computed.totalTrips, gp: 0, frequency: computed.totalTrips, atv: computed.avgSpend, predictedNext12mo: computed.avgSpend * Math.max(1, computed.tripsLast12m), reasoning: "Rule-based estimate from recorded trip frequency and average spend; no neural model is active yet." };
@@ -29,7 +31,7 @@ async function buildProfiles(orgId?: string) {
 function severityRank(value: string) { return ["LOW", "MEDIUM", "HIGH", "CRITICAL"].indexOf(value); }
 async function runSupervisor(orgId?: string) {
   const database = getFirestore(); const now = new Date().toISOString(); let query: FirebaseFirestore.Query = database.collection("leads").where("status", "in", ["new", "contacted", "quoted", "negotiating", "dormant"]); if (orgId) query = query.where("orgId", "==", orgId);
-  const leads = await query.limit(2000).get(); const activeKeys = new Set<string>(); let createdOrUpdated = 0;
+  const leads = await readQueryPages(query.orderBy("__name__")); const activeKeys = new Set<string>(); let createdOrUpdated = 0;
   for (const lead of leads.docs) {
     const data = lead.data(); const findings = evaluateSupervisor({ now, valueEstimate: Number(data.valueEstimate || 0), highValueThreshold: 150000, firstResponseDueAt: data.sla?.firstResponseDueAt, firstResponseAt: data.sla?.firstResponseAt, nextFollowUpAt: data.sla?.nextFollowUpAt || data.nextFollowUpAt, lastActivityAt: typeof data.updatedAt === "string" ? data.updatedAt : data.updatedAt?.toDate?.().toISOString(), priority: data.priority, sentimentScore: data.sentiment?.score, minimumMarginPct: 8, marginPct: data.expectedMargin });
     for (const item of findings) {
@@ -41,7 +43,7 @@ async function runSupervisor(orgId?: string) {
     }
   }
   let openQuery: FirebaseFirestore.Query = database.collection("alerts").where("source", "==", "ai-supervisor-v1").where("status", "in", ["open", "acknowledged"]); if (orgId) openQuery = openQuery.where("orgId", "==", orgId);
-  const open = await openQuery.limit(2000).get(); await Promise.all(open.docs.filter((item) => !activeKeys.has(String(item.data().dedupeKey))).map((item) => item.ref.update({ status: "resolved", resolvedAt: now, updatedAt: now, updatedBy: "runSupervisor" })));
+  const open = await readQueryPages(openQuery.orderBy("__name__")); await Promise.all(open.docs.filter((item) => !activeKeys.has(String(item.data().dedupeKey))).map((item) => item.ref.update({ status: "resolved", resolvedAt: now, updatedAt: now, updatedBy: "runSupervisor" })));
   return { evaluated: leads.size, activeAlerts: activeKeys.size, createdOrUpdated };
 }
 

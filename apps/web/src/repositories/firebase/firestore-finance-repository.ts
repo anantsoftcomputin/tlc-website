@@ -1,4 +1,5 @@
 import "server-only";
+import { readSnapshot } from "@/lib/firebase/query";
 
 import {
   ageingSummary,
@@ -59,7 +60,7 @@ export class FirestoreFinanceRepository {
   private readonly database = getAdminFirestore();
   constructor(private readonly orgId: string) {}
 
-  async workspace(limit = 200): Promise<FinanceWorkspace> {
+  async workspace(pageSize = 250): Promise<FinanceWorkspace> {
     const [
       ledgerResult,
       journalResult,
@@ -72,51 +73,15 @@ export class FirestoreFinanceRepository {
       periodResult,
       orgResult,
     ] = await Promise.all([
-      this.database
-        .collection("ledger")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("financeJournals")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("supplierSettlements")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("bookings")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("payments")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("cancellationRequests")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("financeDocuments")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("accountingSyncs")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
-      this.database
-        .collection("financePeriods")
-        .where("orgId", "==", this.orgId)
-        .limit(limit)
-        .get(),
+      readSnapshot(this.database.collection("ledger").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("financeJournals").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("supplierSettlements").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("bookings").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("payments").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("cancellationRequests").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("financeDocuments").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("accountingSyncs").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(this.database.collection("financePeriods").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
       this.database.collection("orgs").doc(this.orgId).get(),
     ]);
     const ledger = ledgerResult.docs.map((item) => ({

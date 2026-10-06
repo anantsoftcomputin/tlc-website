@@ -2,12 +2,16 @@ import { createHash } from "node:crypto";
 import { CommerceProviderRegistry } from "@tlc/integrations";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
+import { tboExchangeSink } from "./tbo-logs.js";
+import { tboHotelCodesFor } from "./tbo-catalogue.js";
+import type { FlightOffer, HotelOffer, TboHotelProvider } from "@tlc/integrations";
 import { z } from "zod";
 
 const app = getApps()[0] ?? initializeApp();
 const database = getFirestore(app);
-const registry = new CommerceProviderRegistry();
+const registry = new CommerceProviderRegistry({ onTboExchange: tboExchangeSink() });
 const commerceRoles = new Set([
   "super_admin",
   "owner",
@@ -60,13 +64,14 @@ const hotelSearchSchema = z
           adults: z.number().int().min(1).max(8),
           childrenAges: z
             .array(z.number().int().min(0).max(17))
-            .max(6)
+            .max(4)
             .optional(),
         }),
       )
       .min(1)
       .max(8),
     currency: currencySchema.default("INR"),
+    guestNationality: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/).default("IN"),
   })
   .refine((value) => value.checkOut > value.checkIn, {
     path: ["checkOut"],
@@ -203,15 +208,44 @@ function offerDocumentId(orgId: string, kind: string, offerId: string) {
     .digest("hex");
 }
 
+/**
+ * Aggregated, non-personal market evidence from each search: destination, dates, party
+ * size and the price distribution. Used for price-band features and demand trends.
+ */
+async function recordRateObservation(
+  orgId: string,
+  kind: "flight" | "hotel",
+  source: string,
+  market: string,
+  prices: { currency: string; total: number }[],
+  context: { checkIn: string; checkOut: string; rooms: number; stars: number[] },
+) {
+  const totals = prices.map((price) => price.total).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!totals.length) return;
+  const nights = context.checkOut ? Math.max(0, Math.round((Date.parse(context.checkOut) - Date.parse(context.checkIn)) / 86_400_000)) : 0;
+  const ref = database.collection("supplierRateObservations").doc();
+  await ref.set({
+    id: ref.id, orgId, kind, source, market: market.toLowerCase().trim().slice(0, 120),
+    travelDate: context.checkIn, nights, partySize: context.rooms,
+    leadDays: Math.round((Date.parse(context.checkIn) - Date.now()) / 86_400_000),
+    currency: prices[0].currency, offers: totals.length,
+    minTotal: totals[0], medianTotal: totals[Math.floor(totals.length / 2)], maxTotal: totals[totals.length - 1],
+    avgStars: context.stars.length ? context.stars.reduce((sum, value) => sum + value, 0) / context.stars.length : null,
+    observedAt: new Date().toISOString(),
+  }).catch((error) => console.error("Rate observation failed", error instanceof Error ? error.message : error));
+}
+
 async function cacheOffers(
   orgId: string,
   kind: "flight" | "hotel",
   source: string,
   fetchedAt: string,
   offers: { offerId: string; expiresAt: string }[],
+  request?: unknown,
 ) {
+  for (let offset = 0; offset < offers.length; offset += 400) {
   const batch = database.batch();
-  for (const offer of offers) {
+  for (const offer of offers.slice(offset, offset + 400)) {
     const id = offerDocumentId(orgId, kind, offer.offerId);
     batch.set(database.collection("inventoryOffers").doc(id), {
       id,
@@ -221,14 +255,17 @@ async function cacheOffers(
       fetchedAt,
       expiresAt: offer.expiresAt,
       offer,
+      // The search that produced the offer, so a booking can re-find the same service.
+      request: request ? JSON.parse(JSON.stringify(request)) : null,
       createdAt: FieldValue.serverTimestamp(),
     });
   }
   await batch.commit();
+  }
 }
 
 export const searchFlightInventory = onCall(
-  { region: "asia-south1", timeoutSeconds: 60, memory: "512MiB" },
+  { region: "asia-south1", timeoutSeconds: 150, memory: "512MiB" },
   async (request) => {
     const { orgId } = authorize(request);
     const input = flightSearchSchema.safeParse(request.data);
@@ -242,12 +279,14 @@ export const searchFlightInventory = onCall(
         "flights",
         () => providers.flight.search(input.data),
       );
+      await recordRateObservation(orgId, "flight", result.source, `${input.data.origin}-${input.data.destination}`, result.data.map((offer) => offer.price), { checkIn: input.data.departureDate, checkOut: input.data.returnDate || "", rooms: input.data.adults + input.data.children + input.data.infants, stars: [] });
       await cacheOffers(
         orgId,
         "flight",
         result.source,
         result.fetchedAt,
         result.data,
+        input.data,
       );
       return result;
     } catch (error) {
@@ -272,14 +311,22 @@ export const searchHotelInventory = onCall(
         orgId,
         providers.hotel.key,
         "hotels",
-        () => providers.hotel.search(input.data),
+        async () => {
+          // TBO searches by property code; resolve codes from the synced catalogue.
+          if (providers.hotel.key !== "tbo-hotel") return providers.hotel.search(input.data);
+          const properties = await tboHotelCodesFor(orgId, input.data.destination);
+          (providers.hotel as TboHotelProvider).rememberHotels(properties);
+          return providers.hotel.search({ ...input.data, hotelCodes: properties.map((item) => item.hotelCode) });
+        },
       );
+      await recordRateObservation(orgId, "hotel", result.source, input.data.destination, result.data.map((offer) => offer.price), { checkIn: input.data.checkIn, checkOut: input.data.checkOut, rooms: input.data.rooms.length, stars: result.data.map((offer) => offer.starRating) });
       await cacheOffers(
         orgId,
         "hotel",
         result.source,
         result.fetchedAt,
         result.data,
+        input.data,
       );
       return result;
     } catch (error) {
@@ -292,7 +339,7 @@ export const searchHotelInventory = onCall(
 );
 
 export const priceCheckInventory = onCall(
-  { region: "asia-south1", timeoutSeconds: 30, memory: "256MiB" },
+  { region: "asia-south1", timeoutSeconds: 120, memory: "256MiB" },
   async (request) => {
     const { orgId } = authorize(request);
     const input = priceCheckSchema.safeParse(request.data);
@@ -311,11 +358,60 @@ export const priceCheckInventory = onCall(
         "failed-precondition",
         "Inventory offer expired. Search again.",
       );
+    // TBO fares and rooms are re-priced live (FareQuote / PreBook); others use the cache.
+    if (String(data.source).startsWith("tbo-")) {
+      const live = input.data.kind === "flight"
+        ? await providerCall(orgId, data.source, "flights", () => registry.flight(data.source).priceCheck(input.data.offerId, data.offer as FlightOffer))
+        : await providerCall(orgId, data.source, "hotels", () => registry.hotel(data.source).availability(input.data.offerId));
+      const offer = input.data.kind === "hotel"
+        ? { ...(data.offer as HotelOffer), ...(live.data as HotelOffer), checkIn: data.offer.checkIn, checkOut: data.offer.checkOut, destination: data.offer.destination, hotelName: data.offer.hotelName, starRating: data.offer.starRating, expiresAt: (live.data as HotelOffer).expiresAt }
+        : live.data;
+      await database.collection("inventoryOffers").doc(id).set({ ...data, offer, fetchedAt: live.fetchedAt, expiresAt: offer.expiresAt }, { merge: false });
+      const before = Number(data.offer?.price?.total || 0);
+      return { data: offer, source: live.source, fetchedAt: live.fetchedAt, checkedAt: new Date().toISOString(), validation: "live-supplier", priceChanged: Math.abs(Number(offer.price.total) - before) > 0.009, previousTotal: before };
+    }
     return {
       data: data.offer,
       source: String(data.source),
-      fetchedAt: new Date().toISOString(),
-      originalFetchedAt: String(data.fetchedAt),
+      fetchedAt: String(data.fetchedAt),
+      checkedAt: new Date().toISOString(),
+      validation: "cached-offer",
     };
   },
 );
+
+const managerRoles = new Set(["super_admin", "owner", "manager", "admin"]);
+
+/** Which flight/hotel providers are configured on the server and which the org uses. */
+export const inventoryProviderStatus = onCall({ region: "asia-south1" }, async (request) => {
+  const { orgId } = authorize(request);
+  const selected = await providerKeys(orgId);
+  return {
+    available: registry.available(),
+    selected: { flights: selected.flights || "mock-flight", hotels: selected.hotels || "mock-hotel" },
+  };
+});
+
+export const updateInventoryProviders = onCall({ region: "asia-south1" }, async (request) => {
+  const { orgId, uid } = authorize(request);
+  if (!managerRoles.has(String(request.auth?.token.role || "")))
+    throw new HttpsError("permission-denied", "Only managers can change inventory providers.");
+  const parsed = z.object({ flights: z.string().trim().min(1).max(60), hotels: z.string().trim().min(1).max(60) }).safeParse(request.data);
+  if (!parsed.success) throw new HttpsError("invalid-argument", "Choose a flight and a hotel provider.");
+  const available = registry.available();
+  if (!available.flights.includes(parsed.data.flights) || !available.hotels.includes(parsed.data.hotels))
+    throw new HttpsError("failed-precondition", "That provider is not configured on the server.");
+  const ref = database.collection("orgs").doc(orgId);
+  const now = new Date().toISOString();
+  await database.runTransaction(async (transaction) => {
+    const before = (await transaction.get(ref)).data()?.settings?.integrations || null;
+    const integrations = {
+      flights: { enabled: !parsed.data.flights.startsWith("mock"), provider: parsed.data.flights },
+      hotels: { enabled: !parsed.data.hotels.startsWith("mock"), provider: parsed.data.hotels },
+    };
+    transaction.set(ref, { settings: { integrations }, updatedAt: now, updatedBy: uid }, { merge: true });
+    const auditRef = database.collection("auditLogs").doc();
+    transaction.create(auditRef, { id: auditRef.id, orgId, actorUid: uid, action: "org.inventory_providers.update", collection: "orgs", docId: orgId, before, after: integrations, ts: now, createdAt: now, updatedAt: now, createdBy: uid, updatedBy: uid });
+  });
+  return { ok: true };
+});

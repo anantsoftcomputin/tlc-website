@@ -1,0 +1,80 @@
+/* Supplier catalogue import (admin/content/suppliers) */
+.cms-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+  align-items: end;
+}
+.cms-form label {
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+}
+.cms-form label > span {
+  font-weight: 600;
+}
+.cms-form input:not([type="checkbox"]),
+.cms-form select {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background: var(--white);
+  font: inherit;
+}
+.cms-form .cms-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.cms-form .button {
+  justify-self: start;
+}
+.admin-notice {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(54, 117, 91, 0.12);
+  color: #1f4d3a;
+}
+
+/* Supplier booking action on booking items */
+.supplier-action {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+}
+.supplier-action .button {
+  justify-self: start;
+}
+.supplier-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 0.625rem;
+  background: var(--tlc-blush);
+}
+
+/* Hotel detail photo gallery */
+.hotel-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin-block: 1.5rem;
+}
+.hotel-gallery > div {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: var(--tlc-blush);
+}
+.hotel-gallery img {
+  object-fit: cover;
+}

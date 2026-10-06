@@ -1,3 +1,4 @@
+import { runFinanceTransaction } from "./finance-transaction.js";
 import {
   createSupplierSettlementInputSchema,
   ledgerOutstanding,
@@ -6,7 +7,8 @@ import {
   type LedgerEntry,
 } from "@tlc/shared";
 import { getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "./secure-call.js";
 import { commerceActor, commerceAudit } from "./commerce-command.js";
 import { bookingApprovalJournal } from "./finance-journal.js";
 import { assertFinanceDateOpen } from "./finance-period-guard.js";
@@ -26,7 +28,7 @@ export const initializeBookingFinance = onCall(
       .doc(`${bookingId}-approval`);
     const auditRef = database.collection("auditLogs").doc();
     let created = false;
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const [bookingSnapshot, journalSnapshot] = await Promise.all([
         transaction.get(bookingRef),
         transaction.get(journalRef),
@@ -107,7 +109,7 @@ export const createSupplierSettlement = onCall(
     );
     const now = new Date().toISOString();
     let settlementNumber = "";
-    await database.runTransaction(async (transaction) => {
+    await runFinanceTransaction(database, identity.orgId, async (transaction) => {
       const [bookingSnapshot, ...entrySnapshots] = await Promise.all([
         transaction.get(bookingRef),
         ...ledgerRefs.map((ref) => transaction.get(ref)),

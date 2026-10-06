@@ -5,6 +5,11 @@ export * from "./hotels/index.js";
 export * from "./messaging/index.js";
 export * from "./payments/index.js";
 export * from "./registry.js";
+export * from "./tbo/config.js";
+export { TboClient, TboError, istDay, redactTbo, type TboExchange } from "./tbo/client.js";
+export * from "./tbo/static-content.js";
+export { tboOffersFromResults, mapTboOffer } from "./tbo/flights.js";
+export { mapTboRoom, hotelCodeFromBookingCode } from "./tbo/hotels.js";
 
 import type { HealthCheckableProvider } from "./common.js";
 
