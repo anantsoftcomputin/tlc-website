@@ -1,6 +1,7 @@
 import type { ExperienceCard } from "@tlc/shared";
 import type { ToolEvidence } from "@tlc/ai-chat";
 import { getPublicContent } from "@/lib/public-content";
+import { rankWithTlcModel } from "./tlc-ranking";
 import {
   extractConciergeConstraints,
   matchesRequestedStyles,
@@ -240,13 +241,29 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
 
   const ranked = candidates.sort((left, right) => right.score - left.score);
   const positive = ranked.filter((candidate) => candidate.score > 0);
-  const selected = (
+  const eligible = (
     positive.length
       ? positive
       : ranked.filter((item) => item.card.kind !== "hotel")
   )
-    .slice(0, 6)
+    .slice(0, 20)
     .map((candidate) => candidate.card);
+  // A kind prefix prevents destination/hotel IDs with the same value colliding.
+  const modelRanking = await rankWithTlcModel(
+    query,
+    eligible.map((card) => ({
+      id: `${card.kind}:${card.entityId}`,
+      title: card.title,
+      facts: [card.subtitle || "", ...card.highlights],
+    })),
+  );
+  const selected = [...eligible]
+    .sort(
+      (a, b) =>
+        modelRanking.ids.indexOf(`${a.kind}:${a.entityId}`) -
+        modelRanking.ids.indexOf(`${b.kind}:${b.entityId}`),
+    )
+    .slice(0, 6);
   const evidence: ToolEvidence = {
     id: resultId,
     source: "TLC published CMS",

@@ -9,6 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
+import { InboxRefresh } from "@/components/dashboard/client-messages";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreConversationRepository } from "@/repositories/firebase/firestore-conversation-repository";
 
@@ -38,10 +39,11 @@ export default async function ConversationsPage({ searchParams }: { searchParams
           <p className="eyebrow">Human + AI service desk</p>
           <h1>Conversation inbox</h1>
           <p>
-            Continue web and WhatsApp journeys, take over from Tara, and review
+            Continue website, email and WhatsApp journeys, take over from Tara, and review
             grounding quality from one queue.
           </p>
         </div>
+        <InboxRefresh />
       </header>
       <section className="conversation-metrics">
         <article><MessagesSquare /><b>{metrics.total}</b><span>Conversations</span></article>
@@ -67,7 +69,7 @@ export default async function ConversationsPage({ searchParams }: { searchParams
             ))}
           </div>
         ) : (
-          <div className="admin-empty"><MessagesSquare /><h3>No conversations yet</h3><p>Website and WhatsApp threads will appear here as visitors speak with Tara.</p></div>
+          <div className="admin-empty"><MessagesSquare /><h3>No conversations yet</h3><p>Website, email and WhatsApp threads will appear here as visitors speak with Tara.</p></div>
         )}
       </section>
       {rows.length === 50 && <Link className="button button-outline" href={`/admin/conversations?after=${encodeURIComponent(rows[rows.length - 1].id)}`}>Older conversations</Link>}

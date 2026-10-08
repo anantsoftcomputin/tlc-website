@@ -1,5 +1,6 @@
+import { recordCommunicationStatus } from "./communication-delivery.js";
 import { readQueryPages } from "./query-pages.js";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   campaignDraftInputSchema,
   campaignSchema,
@@ -28,6 +29,11 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { HttpsError } from "firebase-functions/v2/https";
 import { onCall } from "./secure-call.js";
+import { defineSecret } from "firebase-functions/params";
+import {
+  personalizeMarketing,
+  marketingFrequencyAllows,
+} from "./marketing-personalization.js";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { z } from "zod";
 import {
@@ -35,6 +41,17 @@ import {
   channelEligibility,
 } from "./marketing-policy.js";
 
+const marketingSecrets = [
+  ...(process.env.WHATSAPP_ENABLED === "true"
+    ? [
+        defineSecret("WHATSAPP_ACCESS_TOKEN"),
+        defineSecret("WHATSAPP_PHONE_NUMBER_ID"),
+      ]
+    : []),
+  ...(process.env.EMAIL_ENABLED === "true"
+    ? [defineSecret("RESEND_API_KEY")]
+    : []),
+];
 const marketingRoles = new Set([
   "super_admin",
   "owner",
@@ -97,7 +114,7 @@ function audit(
   };
 }
 function bestChannel(customer: FirebaseFirestore.DocumentData) {
-  const preferred = String(customer.profile?.preferredChannel || "web");
+  const preferred = String(customer.communicationPreferences?.preferredChannel || customer.profile?.preferredChannel || "web");
   for (const channel of [preferred, "whatsapp", "email", "phone", "web"])
     if (channel === "web" || channel === "phone" || customer.consent?.[channel])
       return channel as "whatsapp" | "email" | "phone" | "web";
@@ -294,7 +311,12 @@ async function scoreOfferForOrg(
       "Use an approved or active offer.",
     );
   const [customers, activeModels] = await Promise.all([
-    readQueryPages(db.collection("customers").where("orgId", "==", orgId).orderBy("__name__")),
+    readQueryPages(
+      db
+        .collection("customers")
+        .where("orgId", "==", orgId)
+        .orderBy("__name__"),
+    ),
     db
       .collection("models")
       .where("orgId", "==", orgId)
@@ -304,7 +326,11 @@ async function scoreOfferForOrg(
   ]);
   const active = activeModels.docs[0];
   let neuralModel: Awaited<ReturnType<typeof loadTravelModel>> | null = null;
-  if (active?.data().activationEligible && active.data().datasetVersion === "event-time-v2" && active.data().storagePath) {
+  if (
+    active?.data().activationEligible &&
+    active.data().datasetVersion === "event-time-v2" &&
+    active.data().storagePath
+  ) {
     try {
       const [contents] = await getStorage()
         .bucket()
@@ -448,10 +474,12 @@ export const scoreActiveOffersNightly = onSchedule(
   },
   async () => {
     const db = getFirestore();
-    const offers = await readQueryPages(db
-      .collection("offers")
-      .where("status", "==", "active")
-      .orderBy("__name__"));
+    const offers = await readQueryPages(
+      db
+        .collection("offers")
+        .where("status", "==", "active")
+        .orderBy("__name__"),
+    );
     for (const offer of offers.docs)
       await scoreOfferForOrg(
         String(offer.data().orgId),
@@ -475,7 +503,12 @@ async function audience(
   },
 ) {
   const [customers, scores] = await Promise.all([
-    readQueryPages(db.collection("customers").where("orgId", "==", orgId).orderBy("__name__")),
+    readQueryPages(
+      db
+        .collection("customers")
+        .where("orgId", "==", orgId)
+        .orderBy("__name__"),
+    ),
     db
       .collection("propensity")
       .where("orgId", "==", orgId)
@@ -725,15 +758,27 @@ export const approveMarketingCampaign = onCall(
 );
 
 function providerFor(channel: MarketingChannel): MarketingMessagingProvider {
-  const accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken =
+    process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId =
+    process.env.WHATSAPP_PHONE_NUMBER_ID ||
+    process.env.META_WHATSAPP_PHONE_NUMBER_ID;
   if (channel === "whatsapp" && accessToken && phoneNumberId)
     return new MetaWhatsAppMarketingProvider({ phoneNumberId, accessToken });
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.MARKETING_EMAIL_FROM;
   if (channel === "email" && apiKey && from)
-    return new ResendEmailMarketingProvider({ apiKey, from });
-  return new MockMarketingMessagingProvider();
+    return new ResendEmailMarketingProvider({
+      apiKey,
+      from,
+      replyTo: process.env.EMAIL_REPLY_TO,
+    });
+  if (process.env.FUNCTIONS_EMULATOR === "true")
+    return new MockMarketingMessagingProvider();
+  throw new HttpsError(
+    "failed-precondition",
+    `Configure the ${channel} provider before sending. No messages were sent.`,
+  );
 }
 async function deliverCampaign(
   orgId: string,
@@ -760,130 +805,303 @@ async function deliverCampaign(
     },
   });
   const provider = providerFor(campaign.channel);
-  const offerSnapshot = await db.collection("offers").doc(String(campaign.offerId)).get();
-  let sent = 0;
-  let delivered = 0;
-  for (const customer of selected.customers) {
-    const deliveryRef = db
-      .collection("campaignDeliveries")
-      .doc(`${campaignId}_${customer.id}`);
-    if ((await deliveryRef.get()).exists) continue;
-    const current = await db.collection("customers").doc(customer.id).get();
-    const access = eligible(current.data() || {}, campaign.channel);
-    if (!access.ok) continue;
-    const capturedAt = new Date().toISOString();
-    const profile = current.data()?.profile as ComputedProfile | undefined;
-    const offer = offerSnapshot.data();
-    const trainingSnapshot = current.data()?.modelTrainingAllowed === true && profile && offer?.orgId === orgId ? { version: "event-time-v2", customer: Array.from(featurize(profile)), offer: offerFeatures({ destinations: offer.destinations || [], priceBand: offer.priceBand || "mid", type: offer.type, exclusive: offer.exclusive }), capturedAt, averageSpend: profile.avgSpend, modelTrainingAllowed: true } : null;
-    const receipt = await provider.send(
-      {
+  const publicUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || process.env.TLC_SITE_URL;
+  if (
+    campaign.channel === "email" &&
+    (!publicUrl || !publicUrl.startsWith("https://")) &&
+    process.env.FUNCTIONS_EMULATOR !== "true"
+  )
+    throw new HttpsError(
+      "failed-precondition",
+      "Configure TLC_SITE_URL for email unsubscribe links.",
+    );
+  const lease = randomBytes(16).toString("hex");
+  await db.runTransaction(async (tx) => {
+    const current = (await tx.get(ref)).data()!;
+    if (
+      !campaignDeliveryDecision(current, explicitApproval).allowed ||
+      Date.parse(current.deliveryLeaseUntil || "") > Date.now()
+    )
+      throw new HttpsError(
+        "failed-precondition",
+        "Campaign is already being delivered or no longer approved.",
+      );
+    tx.update(ref, {
+      deliveryLease: lease,
+      deliveryLeaseUntil: new Date(Date.now() + 600000).toISOString(),
+    });
+  });
+  try {
+    const offerSnapshot = await db
+      .collection("offers")
+      .doc(String(campaign.offerId))
+      .get();
+    const liveOffer = offerSnapshot.data();
+    const today = new Date().toISOString().slice(0, 10);
+    if (
+      liveOffer?.orgId !== orgId ||
+      liveOffer.status !== "active" ||
+      (liveOffer.validity?.end && liveOffer.validity.end < today)
+    )
+      throw new HttpsError(
+        "failed-precondition",
+        "The campaign offer is no longer active.",
+      );
+    let sent = 0;
+    let delivered = 0;
+    let uncertain = 0;
+    for (const customer of selected.customers) {
+      const deliveryRef = db
+        .collection("campaignDeliveries")
+        .doc(`${campaignId}_${customer.id}`);
+      if ((await deliveryRef.get()).exists) continue;
+      const current = await db.collection("customers").doc(customer.id).get();
+      const access = eligible(current.data() || {}, campaign.channel);
+      if (
+        !access.ok ||
+        current.data()?.orgId !== orgId ||
+        !marketingFrequencyAllows(current.data() || {})
+      )
+        continue;
+      const capturedAt = new Date().toISOString();
+      const profile = current.data()?.profile as ComputedProfile | undefined;
+      const offer = offerSnapshot.data();
+      const trainingSnapshot =
+        current.data()?.modelTrainingAllowed === true &&
+        profile &&
+        offer?.orgId === orgId
+          ? {
+              version: "event-time-v2",
+              customer: Array.from(featurize(profile)),
+              offer: offerFeatures({
+                destinations: offer.destinations || [],
+                priceBand: offer.priceBand || "mid",
+                type: offer.type,
+                exclusive: offer.exclusive,
+              }),
+              capturedAt,
+              averageSpend: profile.avgSpend,
+              modelTrainingAllowed: true,
+            }
+          : null;
+      const token = randomBytes(32).toString("hex");
+      const tokenRef = db
+        .collection("marketingUnsubscribes")
+        .doc(createHash("sha256").update(token).digest("hex"));
+      const message = {
+        campaignId,
+        body: personalizeMarketing(
+          campaign.message.body,
+          current.data() || {},
+          offer || {},
+        ),
+        ...(campaign.message.subject
+          ? {
+              subject: personalizeMarketing(
+                campaign.message.subject,
+                current.data() || {},
+                offer || {},
+              ),
+            }
+          : {}),
+        templateName: campaign.message.templateName,
+        templateLanguage: campaign.message.templateLanguage || "en",
+        templateParameters: (campaign.message.templateParameters || []).map(
+          (value: string) =>
+            personalizeMarketing(value, current.data() || {}, offer || {}),
+        ),
+        ...(publicUrl
+          ? {
+              unsubscribeUrl: `${publicUrl.replace(/\/$/, "")}/unsubscribe?token=${token}`,
+            }
+          : {}),
+      };
+      const claimed = await db.runTransaction(async (tx) => {
+        const [delivery, latest, liveCampaign] = await Promise.all([
+          tx.get(deliveryRef),
+          tx.get(current.ref),
+          tx.get(ref),
+        ]);
+        if (
+          delivery.exists ||
+          latest.data()?.orgId !== orgId ||
+          !eligible(latest.data() || {}, campaign.channel).ok ||
+          !marketingFrequencyAllows(latest.data() || {}) ||
+          liveCampaign.data()?.deliveryLease !== lease ||
+          liveCampaign.data()?.approvalStatus !== "approved" ||
+          !["draft", "scheduled"].includes(liveCampaign.data()?.status)
+        )
+          return false;
+        tx.create(deliveryRef, {
+          orgId,
+          campaignId,
+          customerId: customer.id,
+          channel: campaign.channel,
+          status: "sending",
+          createdAt: capturedAt,
+          updatedAt: capturedAt,
+        });
+        tx.update(current.ref, { lastMarketingContactAt: capturedAt });
+        if (campaign.channel === "email")
+          tx.create(tokenRef, {
+            orgId,
+            customerId: customer.id,
+            channel: "email",
+            createdAt: capturedAt,
+          });
+        return true;
+      });
+      if (!claimed) continue;
+      let receipt;
+      try {
+        receipt = await provider.send(
+          {
+            customerId: customer.id,
+            channel: campaign.channel,
+            address: access.address,
+            consent: access.consent,
+            optedOut: access.optedOut,
+          },
+          message,
+        );
+      } catch {
+        await deliveryRef.update({
+          status: "unknown",
+          reasoning:
+            "Provider outcome uncertain. Reconcile provider logs before resending.",
+          updatedAt: new Date().toISOString(),
+        });
+        uncertain += 1;
+        continue;
+      }
+      const now = new Date().toISOString();
+      const batch = db.batch();
+      batch.set(deliveryRef, {
+        id: deliveryRef.id,
+        trainingSnapshot,
+        orgId,
+        campaignId,
         customerId: customer.id,
         channel: campaign.channel,
-        address: access.address,
-        consent: access.consent,
-        optedOut: access.optedOut,
-      },
-      {
-        campaignId,
-        body: campaign.message.body,
-        subject: campaign.message.subject,
-        templateName: campaign.message.templateName,
-      },
-    );
-    const now = new Date().toISOString();
-    const batch = db.batch();
-    batch.create(deliveryRef, {
-      id: deliveryRef.id,
-      trainingSnapshot,
-      orgId,
-      campaignId,
-      customerId: customer.id,
-      channel: campaign.channel,
-      status: receipt.status,
-      provider: receipt.source,
-      externalId: receipt.externalId,
-      reasoning: receipt.reasoning,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: actorUid,
-      updatedBy: actorUid,
-    });
-    const event = db
-      .collection("customers")
-      .doc(customer.id)
-      .collection("events")
-      .doc();
-    batch.create(event, {
-      id: event.id,
-      orgId,
-      type:
-        receipt.status === "delivered" ? "campaignDelivered" : "campaignSent",
-      payload: {
-        campaignId,
-        offerId: campaign.offerId,
+        status: receipt.status,
         provider: receipt.source,
         externalId: receipt.externalId,
+        reasoning: receipt.reasoning,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: actorUid,
+        updatedBy: actorUid,
+      });
+      const event = db
+        .collection("customers")
+        .doc(customer.id)
+        .collection("events")
+        .doc();
+      batch.create(event, {
+        id: event.id,
+        orgId,
+        type:
+          receipt.status === "delivered" ? "campaignDelivered" : "campaignSent",
+        payload: {
+          campaignId,
+          offerId: campaign.offerId,
+          provider: receipt.source,
+          externalId: receipt.externalId,
+        },
+        channel: campaign.channel,
+        ts: now,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: actorUid,
+        updatedBy: actorUid,
+      });
+      batch.set(
+        db
+          .collection("communicationReceipts")
+          .doc(
+            createHash("sha256")
+              .update(`${campaign.channel}:${receipt.externalId}`)
+              .digest("hex"),
+          ),
+        {
+          orgId,
+          channel: campaign.channel,
+          externalId: receipt.externalId,
+          messagePath: deliveryRef.path,
+          status: receipt.status,
+          campaignId,
+          customerId: customer.id,
+        },
+      );
+      await batch.commit();
+      await recordCommunicationStatus(
+        db,
+        campaign.channel,
+        receipt.externalId,
+        receipt.status,
+        orgId,
+      );
+      sent += 1;
+      if (receipt.status === "delivered") delivered += 1;
+    }
+    const now = new Date().toISOString();
+    const after = {
+      status: uncertain ? "paused" : "completed",
+      "stats.sent": FieldValue.increment(sent),
+      "stats.delivered": FieldValue.increment(delivered),
+      lastDelivery: {
+        provider: provider.key,
+        uncertain,
+        completedAt: now,
+        eligible: selected.eligible,
+        excludedNoConsent: selected.excludedNoConsent,
+        excludedOptOut: selected.excludedOptOut,
       },
-      channel: campaign.channel,
+      updatedAt: now,
+      updatedBy: actorUid,
+    };
+    const finalBatch = db.batch();
+    finalBatch.update(ref, after);
+    finalBatch.set(db.collection("auditLogs").doc(), {
+      orgId,
+      actorUid,
+      action: "campaign.send",
+      collection: "campaigns",
+      docId: campaignId,
+      before: { status: campaign.status, stats: campaign.stats },
+      after: { status: after.status, sent, delivered, uncertain },
       ts: now,
       createdAt: now,
       updatedAt: now,
       createdBy: actorUid,
       updatedBy: actorUid,
     });
-    await batch.commit();
-    sent += 1;
-    if (receipt.status === "delivered") delivered += 1;
-  }
-  const now = new Date().toISOString();
-  const after = {
-    status: "completed",
-    stats: {
-      ...campaign.stats,
-      sent: Number(campaign.stats?.sent || 0) + sent,
-      delivered: Number(campaign.stats?.delivered || 0) + delivered,
-    },
-    lastDelivery: {
+    await finalBatch.commit();
+    return {
+      ok: true,
+      sent,
+      delivered,
       provider: provider.key,
-      completedAt: now,
-      eligible: selected.eligible,
-      excludedNoConsent: selected.excludedNoConsent,
-      excludedOptOut: selected.excludedOptOut,
-    },
-    updatedAt: now,
-    updatedBy: actorUid,
-  };
-  const finalBatch = db.batch();
-  finalBatch.update(ref, after);
-  finalBatch.set(db.collection("auditLogs").doc(), {
-    orgId,
-    actorUid,
-    action: "campaign.send",
-    collection: "campaigns",
-    docId: campaignId,
-    before: { status: campaign.status, stats: campaign.stats },
-    after,
-    ts: now,
-    createdAt: now,
-    updatedAt: now,
-    createdBy: actorUid,
-    updatedBy: actorUid,
-  });
-  await finalBatch.commit();
-  return {
-    ok: true,
-    sent,
-    delivered,
-    provider: provider.key,
-    audience: {
-      eligible: selected.eligible,
-      excludedNoConsent: selected.excludedNoConsent,
-      excludedOptOut: selected.excludedOptOut,
-    },
-  };
+      audience: {
+        eligible: selected.eligible,
+        excludedNoConsent: selected.excludedNoConsent,
+        excludedOptOut: selected.excludedOptOut,
+      },
+    };
+  } finally {
+    await db.runTransaction(async (tx) => {
+      const current = (await tx.get(ref)).data();
+      if (current?.deliveryLease === lease)
+        tx.update(ref, {
+          deliveryLease: FieldValue.delete(),
+          deliveryLeaseUntil: FieldValue.delete(),
+        });
+    });
+  }
 }
 export const sendMarketingCampaign = onCall(
-  { region: "asia-south1", timeoutSeconds: 540 },
+  { region: "asia-south1", timeoutSeconds: 540, secrets: marketingSecrets },
   async (request) => {
     const identity = actor(request);
     const parsed = marketingEntityCommandSchema
@@ -1037,24 +1255,36 @@ export const recordMarketingEvent = onCall(
 export const deliverScheduledCampaigns = onSchedule(
   {
     schedule: "every 15 minutes",
+    secrets: marketingSecrets,
     timeZone: "Asia/Kolkata",
     region: "asia-south1",
     timeoutSeconds: 540,
   },
   async () => {
     const db = getFirestore();
-    const due = await readQueryPages(db
-      .collection("campaigns")
-      .where("status", "==", "scheduled")
-      .where("approvalStatus", "==", "approved")
-      .where("schedule.sendAt", "<=", new Date().toISOString())
-      .orderBy("__name__"));
-    for (const campaign of due.docs)
-      await deliverCampaign(
-        String(campaign.data().orgId),
-        campaign.id,
-        "deliverScheduledCampaigns",
-      );
+    const due = await readQueryPages(
+      db
+        .collection("campaigns")
+        .where("status", "==", "scheduled")
+        .where("approvalStatus", "==", "approved")
+        .where("schedule.sendAt", "<=", new Date().toISOString())
+        .orderBy("__name__"),
+    );
+    for (const campaign of due.docs) {
+      try {
+        await deliverCampaign(
+          String(campaign.data().orgId),
+          campaign.id,
+          "deliverScheduledCampaigns",
+        );
+      } catch {
+        await campaign.ref.update({
+          lastDeliveryError:
+            "Delivery is blocked. Check provider configuration, approval and delivery records.",
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
   },
 );
 
@@ -1067,11 +1297,13 @@ export const expireMarketingOffers = onSchedule(
   async () => {
     const db = getFirestore();
     const today = new Date().toISOString().slice(0, 10);
-    const expired = await readQueryPages(db
-      .collection("offers")
-      .where("status", "in", ["approved", "active", "paused"])
-      .where("validity.end", "<", today)
-      .orderBy("__name__"));
+    const expired = await readQueryPages(
+      db
+        .collection("offers")
+        .where("status", "in", ["approved", "active", "paused"])
+        .where("validity.end", "<", today)
+        .orderBy("__name__"),
+    );
     if (expired.empty) return;
     const now = new Date().toISOString();
     const batch = db.batch();

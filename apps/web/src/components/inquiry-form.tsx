@@ -88,7 +88,7 @@ export function InquiryForm({
     });
 
     try {
-      const response = await fetch("/api/inquiries", {
+      const response = await fetch(defaults?.journeySelection ? "/api/concierge/plan/quote" : "/api/inquiries", {
         method: "POST",
         headers: { ...await publicRequestHeaders(), "Idempotency-Key": requestId, ...utmHeaders },
         body: JSON.stringify({ ...values, source, intelligence: profile.data }),

@@ -57,6 +57,7 @@ const server = spawn(
       APP_CHECK_ENFORCEMENT: "off",
       TBO_API_USERNAME: "",
       TBO_API_PASSWORD: "",
+      TLC_AI_PROVIDER: "disabled",
     },
     stdio: ["ignore", "ignore", "pipe"],
   },
@@ -72,7 +73,7 @@ try {
     if (server.exitCode !== null)
       throw new Error(`Website exited: ${serverErrors.slice(-2000)}`);
     try {
-      ready = (await fetch(`${origin}/plan-my-trip`)).ok;
+      ready = (await fetch(`${origin}/plan-my-trip?mode=search`)).ok;
     } catch {}
     if (ready) break;
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -85,7 +86,7 @@ try {
   });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(`${origin}/plan-my-trip`);
+  await page.goto(`${origin}/plan-my-trip?mode=search`);
   await page.locator("select[name=destination]").selectOption("dubai");
   await page
     .getByLabel("Children's ages in room 1", { exact: true })

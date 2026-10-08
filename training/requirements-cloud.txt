@@ -1,0 +1,8 @@
+# Candidate CUDA/Vertex environment; install a PyTorch build appropriate to the GPU image.
+# This cloud recipe has not been executed on this laptop.
+trl==0.29.0
+peft==0.18.1
+transformers>=4.56.2,<6
+datasets>=3,<6
+accelerate>=1.4,<2
+torch>=2.6,<3

@@ -75,6 +75,7 @@ function mapCustomer(
     ...(Array.isArray(data.vector) ? { vector: data.vector } : {}),
     ...(data.modelVersion ? { modelVersion: String(data.modelVersion) } : {}),
     ...(data.clv ? { clv: data.clv } : {}),
+    ...(data.communicationPreferences ? { communicationPreferences: data.communicationPreferences } : {}),
     lifecycleStage: data.lifecycleStage || "new",
     ...(data.lastActivityAt
       ? { lastActivityAt: toIso(data.lastActivityAt) }

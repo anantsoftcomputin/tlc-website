@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { journeyDate } from "@tlc/shared";
 import { mergeHouseholdProfile } from "@/lib/travel/household-merge";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase/admin";
@@ -125,7 +126,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
     const auditRef = database.collection("auditLogs").doc();
     const brief = context.vacation?.shortlist.brief;
     // The saved search is authoritative; hidden form defaults must not replace it.
-    const intelligence = input.intelligence && brief ? {
+    let intelligence = input.intelligence && brief ? {
       ...input.intelligence,
       trip: {
         ...input.intelligence.trip,
@@ -140,7 +141,15 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         ...(brief.budget ? { budgetMax: brief.budget } : {}), budgetScope: "total" as const,
       },
     } : input.intelligence;
-    const destinationIds = context.vacation ? [context.vacation.shortlist.brief.destinationSlug] : intelligence?.trip.destinations.length
+    const journeyBrief = context.journey?.plan.brief;
+    const journeyPax = journeyBrief ? { adults: journeyBrief.rooms.reduce((sum, room) => sum + room.adults, 0), children: journeyBrief.rooms.flatMap(room => room.childrenAges).filter(age => age >= 2).length, infants: journeyBrief.rooms.flatMap(room => room.childrenAges).filter(age => age < 2).length } : undefined;
+    if (intelligence && journeyBrief) intelligence = { ...intelligence, trip: { ...intelligence.trip, destinations: journeyBrief.destinationSlugs, ...(journeyBrief.startDate ? { startDate: journeyBrief.startDate, endDate: journeyDate(journeyBrief.startDate, journeyBrief.nights)! } : {}), nights: journeyBrief.nights, days: journeyBrief.nights + 1, flexibleDays: journeyBrief.startDate ? 0 : 7, ...journeyPax!, rooms: journeyBrief.rooms.length, ...(journeyBrief.budget ? { budgetMax: journeyBrief.budget } : {}), budgetScope: "total", includeFlights: journeyBrief.includeFlights } };
+    if (intelligence && journeyBrief && !journeyBrief.startDate) {
+      // Proposed dates for one hotel stop must not become the dates of the whole flexible journey.
+      delete intelligence.trip.startDate;
+      delete intelligence.trip.endDate;
+    }
+    const destinationIds = context.journey ? context.journey.plan.brief.destinationSlugs : context.vacation ? [context.vacation.shortlist.brief.destinationSlug] : intelligence?.trip.destinations.length
       ? intelligence.trip.destinations
       : input.destinationIds || [];
     const { assignedUid, responseMinutes } = await resolveWebsiteAssignee(
@@ -170,6 +179,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
       }
       if (context.conversationId && (!conversation?.exists || conversation.data()?.orgId !== ORG_ID)) throw new Error("Conversation was not found.");
       transaction.create(inquiryRef, {
+        ...(context.journey ? { journey: context.journey } : {}),
         ...(context.vacation ? { vacationShortlist: context.vacation.shortlist } : {}),
         requestDigest: digest, customerId: customerRef.id,
         id: inquiryRef.id,
@@ -254,6 +264,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
         assignedUid,
         assignedTo: assignedUid,
         requirement: {
+          ...(context.journey ? { journey: context.journey } : {}),
           destinations: destinationIds,
           ...(intelligence?.trip.startDate
             ? { startDate: intelligence.trip.startDate }
@@ -293,6 +304,7 @@ export class FirestoreInquiryRepository implements InquiryRepository {
             : {}),
           ...(context.vacation ? {
             vacationShortlist: context.vacation.shortlist,
+            ...(!journeyBrief ? {
             startDate: context.vacation.shortlist.brief.checkIn,
             endDate: context.vacation.shortlist.brief.checkOut,
             flexible: false,
@@ -303,7 +315,9 @@ export class FirestoreInquiryRepository implements InquiryRepository {
             },
             ...(context.vacation.shortlist.brief.budget ? { budgetMax: context.vacation.shortlist.brief.budget } : {}),
             preferences: context.vacation.shortlist.brief.interests,
+            } : {}),
           } : {}),
+          ...(journeyBrief ? { flexible: !journeyBrief.startDate, pax: journeyPax!, ...(journeyBrief.startDate ? { startDate: journeyBrief.startDate, endDate: journeyDate(journeyBrief.startDate, journeyBrief.nights)! } : {}), ...(journeyBrief.budget ? {budgetMax:journeyBrief.budget}:{}), preferences:journeyBrief.interests } : {}),
         },
         valueEstimate: 0,
         expectedMargin: 0,

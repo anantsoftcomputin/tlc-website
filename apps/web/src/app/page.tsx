@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, BadgeIndianRupee, Headphones, MessageCircle, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { SearchConsole } from "@/components/search-console";
+import { PlanningPrompt } from "@/components/journey/planning-prompt";
 import { TripCard } from "@/components/trip-card";
 import { testimonials } from "@/lib/data";
 import { getPublicContent } from "@/lib/public-content";
@@ -30,9 +30,9 @@ export default async function Home() {
       <div className="market-hero-shade" />
       <div className="market-hero-content">
         <span className="market-kicker"><Sparkles /> Holidays made personal</span>
-        <h1>Find a trip you’ll talk about for years.</h1>
+        <h1>Imagine your next holiday.</h1>
         <p>Explore handpicked journeys across India and the world, then make every detail your own with a TLC travel expert.</p>
-        <SearchConsole />
+        <PlanningPrompt />
         <div className="market-quick-links"><span>Popular:</span><Link href="/destinations/thailand">Thailand</Link><Link href="/destinations/dubai">Dubai</Link><Link href="/destinations/maldives">Maldives</Link><Link href="/destinations/kerala">Kerala</Link></div>
       </div>
     </section>

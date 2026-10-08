@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { communicationPreferencesSchema } from "./communication-preferences.js";
 import {
   auditFieldsSchema,
   currencySchema,
@@ -86,7 +87,7 @@ export const customerSchema = z
     id: documentIdSchema,
     orgId: orgIdSchema,
     name: z.string().trim().min(2).max(160),
-    phones: z.array(z.string().trim().min(7).max(20)).min(1),
+    phones: z.array(z.string().trim().min(7).max(20)).default([]),
     emails: z.array(z.email()).default([]),
     whatsappId: z.string().trim().optional(),
     city: z.string().trim().max(100).optional(),
@@ -104,6 +105,7 @@ export const customerSchema = z
     ownerUid: documentIdSchema,
     householdId: documentIdSchema.optional(),
     declaredPreferences: sharedTravelPreferenceSchema.optional(),
+    communicationPreferences: communicationPreferencesSchema.optional(),
     preferenceCompleteness: z.number().min(0).max(100).optional(),
     profile: customerProfileSchema.optional(),
     segments: z.array(customerSegmentSchema).default([]),
@@ -114,7 +116,14 @@ export const customerSchema = z
     lastActivityAt: isoDateTimeSchema.optional(),
     mergedFrom: z.array(documentIdSchema).default([]),
   })
-  .and(auditFieldsSchema);
+  .and(auditFieldsSchema)
+  .refine(
+    (customer) => customer.phones.length > 0 || customer.emails.length > 0,
+    {
+      message: "A phone number or email address is required.",
+      path: ["phones"],
+    },
+  );
 
 export const travelHistorySchema = z
   .object({

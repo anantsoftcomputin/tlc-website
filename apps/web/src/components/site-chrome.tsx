@@ -9,6 +9,7 @@ import { ScrollReveal } from "@/components/motion/scroll-reveal";
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   if (
+    pathname === "/plan-my-trip" ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/client") ||
     pathname.startsWith("/i/") ||

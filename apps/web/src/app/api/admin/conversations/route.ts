@@ -8,7 +8,8 @@ import { hasTrustedOrigin } from "@/lib/security/request-origin";
 const actionSchema = z.object({
   id: z.string().trim().min(1).max(128),
   action: z.enum(["takeover", "resume", "close", "reply"]),
-  body: z.string().trim().max(20000).optional(),
+  body: z.string().trim().max(4000).optional(),
+  requestId: z.string().uuid().optional(),
 });
 const managerRoles = new Set(["super_admin", "owner", "manager", "admin"]);
 
@@ -19,7 +20,7 @@ export async function PATCH(request: Request) {
   if (!user?.orgId || !hasPermission(user.role, "crm:write"))
     return NextResponse.json({ error: "Conversation write access is required." }, { status: 403 });
   const parsed = actionSchema.safeParse(await request.json());
-  if (!parsed.success || (parsed.data.action === "reply" && !parsed.data.body))
+  if (!parsed.success || (parsed.data.action === "reply" && (!parsed.data.body || !parsed.data.requestId)))
     return NextResponse.json({ error: "The conversation action is invalid." }, { status: 400 });
 
   const database = getAdminFirestore();
@@ -49,7 +50,8 @@ export async function PATCH(request: Request) {
         Object.assign(updates, { status: "closed", closedAt: now, closedBy: user.uid });
       if (parsed.data.action === "reply") {
         Object.assign(updates, { status: "human", assignedUid: user.uid, lastMessageAt: now });
-        const messageRef = ref.collection("messages").doc();
+        const messageRef = ref.collection("messages").doc(parsed.data.requestId!);
+        if ((await transaction.get(messageRef)).exists) return;
         transaction.create(messageRef, {
           id: messageRef.id,
           orgId: user.orgId,
@@ -59,7 +61,7 @@ export async function PATCH(request: Request) {
           body: parsed.data.body,
           inputMode: "text",
           media: [],
-          deliveryStatus: data?.channel === "whatsapp" ? "queued" : "sent",
+          deliveryStatus: ["whatsapp", "email"].includes(data?.channel) ? "queued" : "sent",
           aiGenerated: false,
           toolCalls: [],
           sentAt: now,

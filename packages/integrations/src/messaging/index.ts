@@ -11,6 +11,9 @@ export type MarketingMessage = {
   body: string;
   subject?: string;
   templateName?: string;
+  templateLanguage?: string;
+  templateParameters?: string[];
+  unsubscribeUrl?: string;
 };
 export type DeliveryReceipt = {
   externalId: string;
@@ -66,6 +69,8 @@ export class MetaWhatsAppMarketingProvider implements MarketingMessagingProvider
       `https://graph.facebook.com/${this.config.apiVersion || "v23.0"}/${this.config.phoneNumberId}/messages`,
       {
         method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(20000),
         headers: {
           authorization: `Bearer ${this.config.accessToken}`,
           "content-type": "application/json",
@@ -74,7 +79,23 @@ export class MetaWhatsAppMarketingProvider implements MarketingMessagingProvider
           messaging_product: "whatsapp",
           to: recipient.address,
           type: "template",
-          template: { name: message.templateName, language: { code: "en" } },
+          template: {
+            name: message.templateName,
+            language: { code: message.templateLanguage || "en" },
+            ...(message.templateParameters?.length
+              ? {
+                  components: [
+                    {
+                      type: "body",
+                      parameters: message.templateParameters.map((text) => ({
+                        type: "text",
+                        text,
+                      })),
+                    },
+                  ],
+                }
+              : {}),
+          },
         }),
       },
     );
@@ -100,7 +121,7 @@ export class MetaWhatsAppMarketingProvider implements MarketingMessagingProvider
 export class ResendEmailMarketingProvider implements MarketingMessagingProvider {
   readonly key = "resend-email";
   constructor(
-    private readonly config: { apiKey: string; from: string },
+    private readonly config: { apiKey: string; from: string; replyTo?: string },
     private readonly clock: () => Date = () => new Date(),
   ) {}
   async send(recipient: MarketingRecipient, message: MarketingMessage) {
@@ -110,15 +131,31 @@ export class ResendEmailMarketingProvider implements MarketingMessagingProvider 
       throw new Error("Email marketing requires a subject.");
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(20000),
       headers: {
         authorization: `Bearer ${this.config.apiKey}`,
+        "Idempotency-Key": `${message.campaignId}-${recipient.customerId}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({
         from: this.config.from,
+        ...(this.config.replyTo ? { reply_to: this.config.replyTo } : {}),
         to: [recipient.address],
         subject: message.subject,
-        html: message.body,
+        text:
+          message.body +
+          (message.unsubscribeUrl
+            ? `\n\nUnsubscribe from TLC offers: ${message.unsubscribeUrl}`
+            : "\n\nReply UNSUBSCRIBE to stop TLC offers."),
+        ...(message.unsubscribeUrl
+          ? {
+              headers: {
+                "List-Unsubscribe": `<${message.unsubscribeUrl.replace("/unsubscribe?", "/api/unsubscribe?")}>`,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+            }
+          : {}),
       }),
     });
     const payload = (await response.json()) as {

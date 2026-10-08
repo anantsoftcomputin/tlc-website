@@ -1,4 +1,5 @@
 import "server-only";
+import { getSessionUser } from "@/lib/auth/session";
 import {
   createHash,
   randomBytes,
@@ -39,13 +40,37 @@ export async function conversationSession(request: Request, id: string) {
     Date.parse(String(data.expiresAt)) <= Date.now()
   )
     throw new Error("Conversation access denied.");
+  if (data.clientUid) {
+    const user = await getSessionUser();
+    if (!user || user.uid !== data.clientUid || user.orgId !== orgId)
+      throw new Error("Sign in to continue this conversation.");
+  }
   return data;
 }
 export async function createConversationSession(request: Request) {
+  const user = await getSessionUser();
+  const clientUid =
+    user?.role === "customer" && user.emailVerified && user.orgId === orgId
+      ? user.uid
+      : undefined;
   const current = sessionCookie(request);
   if (current) {
     try {
       const data = await conversationSession(request, current.split(".")[0]);
+      if (
+        clientUid &&
+        isFirebaseAdminConfigured &&
+        !("clientUid" in data && data.clientUid)
+      ) {
+        const ref = getAdminFirestore()
+          .collection("conversations")
+          .doc(String(data.id));
+        await getAdminFirestore().runTransaction(async (tx) => {
+          const prior = (await tx.get(ref)).data();
+          if (prior?.orgId === orgId && !prior.clientUid)
+            tx.update(ref, { clientUid });
+        });
+      }
       return { id: String(data.id), cookie: current };
     } catch {
       /* Start a new, private conversation. */
@@ -65,6 +90,7 @@ export async function createConversationSession(request: Request) {
         channel: "web",
         mode: "text",
         sessionHash: hash(cookie),
+        ...(clientUid ? { clientUid } : {}),
         createdAt: now,
         updatedAt: now,
         createdBy: "public-concierge",

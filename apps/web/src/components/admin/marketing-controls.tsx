@@ -287,6 +287,8 @@ export function CampaignBuilder({
           subject: String(form.get("subject") || "") || undefined,
           body: form.get("body"),
           templateName: String(form.get("templateName") || "") || undefined,
+          templateLanguage: String(form.get("templateLanguage") || "en"),
+          templateParameters: String(form.get("templateParameters") || "").split("\n").map(item => item.trim()).filter(Boolean),
         },
       });
       event.currentTarget.reset();
@@ -401,8 +403,11 @@ export function CampaignBuilder({
             placeholder="Required for WhatsApp"
           />
         </label>
+        <label><span>WhatsApp template language</span><input name="templateLanguage" defaultValue="en" placeholder="en or en_US" /></label>
+        <label><span>Template body parameters, in order</span><textarea name="templateParameters" rows={3} placeholder={"{{firstName}}\n{{offerTitle}}"} /></label>
         <label className="span-2">
-          <span>Message</span>
+          <span>Message · plain text</span>
+          <small>Personalise with {"{{firstName}}"}, {"{{destination}}"}, {"{{offerTitle}}"} and {"{{travelStyle}}"}. Email includes an unsubscribe link.</small>
           <textarea name="body" rows={5} required maxLength={5000} />
         </label>
       </div>

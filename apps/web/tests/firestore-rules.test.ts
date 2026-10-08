@@ -362,6 +362,11 @@ describe("CRM and audit rules", () => {
       .firestore();
     await assertFails(getDoc(doc(database, "inventoryOffers", "one")));
     await assertFails(getDoc(doc(database, "vacationSearches", "one")));
+    for (const collection of ["journeyPlans", "journeyShares"]) {
+      await assertFails(getDoc(doc(database, collection, "one")));
+      await assertFails(setDoc(doc(database, collection, "forged"), { orgId: "tlc-vacations" }));
+      await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), collection, "one")));
+    }
     await assertFails(setDoc(doc(database, "vacationSearches", "forged"), { orgId: "tlc-vacations" }));
     await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), "vacationSearches", "one")));
     await assertFails(
@@ -484,7 +489,7 @@ describe("hardened role boundaries",()=>{
   });
   it("keeps client access on the verified server projection",async()=>{
     const db=environment.authenticatedContext("client",{role:"customer",orgId:"tlc-vacations",email_verified:true}).firestore();
-    for(const collection of ["customers","quotes","bookings","payments","financeJournals","supportRequests","publicRateLimits","financeLocks"])
+    for(const collection of ["customers","quotes","bookings","payments","financeJournals","supportRequests","publicRateLimits","financeLocks","conversationBotJobs","communicationOutbox","communicationReceipts","communicationStatusEvents","marketingUnsubscribes","integrationHealth"])
       await assertFails(getDoc(doc(db,collection,"one")));
   });
 });

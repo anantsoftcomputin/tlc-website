@@ -137,6 +137,7 @@ export type VacationSearchResponse = {
   brief: VacationBrief;
   options: VacationOption[];
   notices: string[];
+  recommendation?: { method: "tlc-model" | "rules"; model?: string };
 };
 
 /** Clients send only opaque references; all selected content is resolved by the server. */

@@ -85,3 +85,7 @@ Desktop.ini
 
 # TBO certification log exports
 tbo-logs/
+
+# Local AI environments, supplier datasets and trained weights
+/.local-ai/
+**/__pycache__/

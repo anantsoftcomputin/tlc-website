@@ -46,6 +46,14 @@ export async function findVacationOptions(input: {
   flightProvider?: Pick<FlightProvider, "search">;
   environment: "staging" | "production";
   now?: number;
+  rankHotels?: (
+    brief: VacationBrief,
+    hotels: HotelContent[],
+  ) => Promise<{
+    ids: string[];
+    method: "tlc-model" | "rules";
+    model?: string;
+  }>;
 }) {
   const { brief } = input;
   const now = input.now ?? Date.now();
@@ -60,6 +68,32 @@ export async function findVacationOptions(input: {
     ),
     brief,
   ).slice(0, 40);
+  let recommendation: { method: "tlc-model" | "rules"; model?: string } = {
+    method: "rules",
+  };
+  if (input.rankHotels && ranked.length > 1) {
+    try {
+      const result = await input.rankHotels(
+        brief,
+        ranked.map((item) => item.property),
+      );
+      if (
+        result.method === "tlc-model" &&
+        result.ids.length === ranked.length &&
+        new Set(result.ids).size === ranked.length &&
+        result.ids.every((id) => ranked.some((item) => item.property.id === id))
+      ) {
+        ranked.sort(
+          (a, b) =>
+            result.ids.indexOf(a.property.id) -
+            result.ids.indexOf(b.property.id),
+        );
+        recommendation = { method: result.method, model: result.model };
+      }
+    } catch {
+      /* Supplier search still works when model inference is unavailable. */
+    }
+  }
   const properties = ranked.filter(({ property }) =>
     /^tbo:\d+$/.test(property.supplierRef),
   );
@@ -125,8 +159,7 @@ export async function findVacationOptions(input: {
     ranked.sort(
       (a, b) =>
         Number(withinBudget(b.property.supplierRef.slice(4))) -
-          Number(withinBudget(a.property.supplierRef.slice(4))) ||
-        b.score - a.score,
+        Number(withinBudget(a.property.supplierRef.slice(4))),
     );
   }
 
@@ -314,5 +347,5 @@ export async function findVacationOptions(input: {
     notices.unshift(
       "Preview: availability comes from TBO’s test environment. TLC must confirm real availability before quoting.",
     );
-  return { options, evidence, notices };
+  return { options, evidence, notices, recommendation };
 }

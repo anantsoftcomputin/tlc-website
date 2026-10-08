@@ -1,3 +1,4 @@
+import { JourneyPlanPanel } from "@/components/admin/journey-plan-panel";
 import {
   ArrowLeft,
   CalendarClock,
@@ -81,6 +82,7 @@ export default async function LeadDetailPage({
       </header>
       <div className="lead-detail-grid">
         <main>
+          {lead.requirement.journey && <JourneyPlanPanel journey={lead.requirement.journey} />}
           {lead.requirement.vacationShortlist && <VacationShortlistPanel shortlist={lead.requirement.vacationShortlist} leadId={lead.id} />}
           <section className="profile-panel">
             <header>

@@ -16,7 +16,11 @@ import {
   vacationAmenities,
   vacationBriefSchema,
   vacationInterests,
+  journeyStops,
+  journeyVacationMismatch,
+  type JourneyBrief,
   type VacationBrief,
+  type JourneySelection,
   type VacationOption,
   type VacationSearchResponse,
 } from "@tlc/shared";
@@ -45,8 +49,14 @@ const dateAfter = (days: number) =>
 
 export function VacationDesigner({
   destinations,
+  initialBrief,
+  journeySelection,
+  journeyBrief,
 }: {
   destinations: { slug: string; name: string }[];
+  initialBrief?: Partial<VacationBrief>;
+  journeySelection?: JourneySelection;
+  journeyBrief?: JourneyBrief;
 }) {
   const [simple, setSimple] = useState(false);
   const [result, setResult] = useState<VacationSearchResponse>();
@@ -55,13 +65,32 @@ export function VacationDesigner({
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [rooms, setRooms] = useState([{ adults: 2, ages: "" }]);
-  const [interests, setInterests] = useState<VacationBrief["interests"]>([]);
-  const [amenities, setAmenities] = useState<VacationBrief["amenities"]>([]);
+  const [rooms, setRooms] = useState(() =>
+    (initialBrief?.rooms || [{ adults: 2, childrenAges: [] }]).map((room) => ({
+      adults: room.adults,
+      ages: room.childrenAges.join(", "),
+    })),
+  );
+  const [interests, setInterests] = useState<VacationBrief["interests"]>(
+    initialBrief?.interests || [],
+  );
+  const [amenities, setAmenities] = useState<VacationBrief["amenities"]>(
+    initialBrief?.amenities || [],
+  );
   const [includeFlights, setIncludeFlights] = useState(false);
   const [initialDates] = useState(() => ({
-    start: dateAfter(30),
-    end: dateAfter(35),
+    start: initialBrief?.checkIn || dateAfter(30),
+    end:
+      initialBrief?.checkOut ||
+      dateAfter(
+        30 +
+          (journeyBrief
+            ? journeyStops(journeyBrief).find(
+                (stop) =>
+                  stop.destinationSlug === initialBrief?.destinationSlug,
+              )?.nights || 5
+            : 5),
+      ),
     min: dateAfter(1),
   }));
   const chosen =
@@ -103,6 +132,12 @@ export function VacationDesigner({
     });
     if (!value.success) {
       setError(value.error.issues[0]?.message || "Check your trip details.");
+      return;
+    }
+    const mismatch =
+      journeyBrief && journeyVacationMismatch(journeyBrief, value.data);
+    if (mismatch) {
+      setError(mismatch);
       return;
     }
     setBusy(true);
@@ -199,6 +234,7 @@ export function VacationDesigner({
               destinationIds: [result.brief.destinationSlug],
               interests: result.brief.interests,
               travelMonth: result.brief.checkIn,
+              journeySelection,
               vacationSelection: {
                 searchId: result.searchId,
                 optionIds: selected,
@@ -222,9 +258,18 @@ export function VacationDesigner({
           Tell us what matters, explore suitable stays and flights, and choose
           the options you’d like TLC to turn into a personal quote.
         </p>
-        <button onClick={() => setSimple(true)}>
-          Still exploring? Send a simple travel brief <ArrowRight size={16} />
-        </button>
+        {!journeyBrief && (
+          <button onClick={() => setSimple(true)}>
+            Still exploring? Send a simple travel brief <ArrowRight size={16} />
+          </button>
+        )}
+        {journeyBrief && (
+          <p>
+            Stay dates and travellers follow your itinerary. Use Trip details to
+            change them before searching. You can still adjust hotel preferences
+            here.
+          </p>
+        )}
       </header>
       <form className="vacation-search" onSubmit={search}>
         <fieldset disabled={busy}>
@@ -232,7 +277,11 @@ export function VacationDesigner({
           <div className="vacation-fields">
             <label>
               Destination
-              <select name="destination" required defaultValue="">
+              <select
+                name="destination"
+                required
+                defaultValue={initialBrief?.destinationSlug || ""}
+              >
                 <option value="" disabled>
                   Choose a destination
                 </option>
@@ -268,6 +317,7 @@ export function VacationDesigner({
               <input
                 type="number"
                 name="budget"
+                defaultValue={initialBrief?.budget}
                 min={1}
                 max={10000000}
                 placeholder="Optional, for the whole party"
@@ -275,7 +325,10 @@ export function VacationDesigner({
             </label>
             <label>
               Guest nationality
-              <select name="nationality" defaultValue="IN">
+              <select
+                name="nationality"
+                defaultValue={initialBrief?.nationality || "IN"}
+              >
                 <option value="IN">India</option>
                 <option value="AE">United Arab Emirates</option>
                 <option value="GB">United Kingdom</option>
@@ -290,7 +343,7 @@ export function VacationDesigner({
             </label>
             <label>
               Minimum hotel rating
-              <select name="stars" defaultValue="3">
+              <select name="stars" defaultValue={initialBrief?.minStars || 3}>
                 <option value="1">Any rating</option>
                 <option value="3">3 stars and up</option>
                 <option value="4">4 stars and up</option>
@@ -507,6 +560,11 @@ export function VacationDesigner({
             </div>
             <span>{selected.length} / 8 shortlisted</span>
           </header>
+          <p className="vacation-notice">
+            {result.recommendation?.method === "tlc-model"
+              ? "Ordered for your preferences by TLC’s travel model. TLC will confirm suitability and availability."
+              : "Matched using your selected preferences. AI ranking is not active for these results."}
+          </p>
           {result.notices.map((notice) => (
             <p className="vacation-notice" key={notice}>
               {notice}

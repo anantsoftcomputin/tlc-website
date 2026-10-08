@@ -1,6 +1,7 @@
 import { ArrowLeft, Bot, CheckCircle2, MessageCircleMore, UserRound } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { InboxRefresh } from "@/components/dashboard/client-messages";
 import { ConversationControls } from "@/components/admin/conversation-controls";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreConversationRepository } from "@/repositories/firebase/firestore-conversation-repository";
@@ -23,6 +24,7 @@ export default async function ConversationDetailPage({ params }: { params: Promi
       <Link className="admin-back" href="/admin/conversations"><ArrowLeft />Conversation inbox</Link>
       <header className="admin-page-head">
         <div><p className="eyebrow">{conversation.channel} · {conversation.turnCount} turns</p><h1>{conversation.summary}</h1><p>Persona snapshot: {conversation.personaName} · Last activity {date(conversation.lastMessageAt)}</p></div>
+        <InboxRefresh />
         <span className={`status-pill status-${conversation.status}`}>{conversation.status}</span>
       </header>
       <div className="conversation-detail-grid">

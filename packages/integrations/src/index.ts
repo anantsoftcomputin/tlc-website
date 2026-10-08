@@ -139,3 +139,5 @@ export class SocialInboundAdapter implements InboundLeadAdapter<
     ];
   }
 }
+
+export * from "./tlc-model.js";

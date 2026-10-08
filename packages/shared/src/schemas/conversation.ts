@@ -61,7 +61,17 @@ export const conversationMessageSchema = z
       )
       .default([]),
     templateName: z.string().trim().optional(),
-    deliveryStatus: z.enum(["queued", "sent", "delivered", "read", "failed"]),
+    deliveryStatus: z.enum([
+      "queued",
+      "pending_configuration",
+      "sending",
+      "unknown",
+      "cancelled",
+      "sent",
+      "delivered",
+      "read",
+      "failed",
+    ]),
     aiGenerated: z.boolean().default(false),
     reasoning: z.string().trim().min(1).optional(),
     sentiment: z

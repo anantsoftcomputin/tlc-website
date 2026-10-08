@@ -106,6 +106,14 @@ service cloud.firestore {
     match /usage/{id} { allow read: if hasRole(['super_admin', 'owner', 'manager', 'accounts']) && sameOrg(resource.data); allow write: if false; }
     match /paymentEvents/{id} { allow read, write: if false; }
     match /vacationSearches/{id} { allow read, write: if false; }
+    match /journeyPlans/{id} { allow read, write: if false; }
+    match /journeyShares/{id} { allow read, write: if false; }
+    match /conversationBotJobs/{id} { allow read, write: if false; }
+    match /communicationOutbox/{id} { allow read, write: if false; }
+    match /communicationReceipts/{id} { allow read, write: if false; }
+    match /communicationStatusEvents/{id} { allow read, write: if false; }
+    match /marketingUnsubscribes/{id} { allow read, write: if false; }
+    match /integrationHealth/{id} { allow read, write: if false; }
     match /providerRateLimits/{id} { allow read, write: if false; }
 
     match /users/{uid} {

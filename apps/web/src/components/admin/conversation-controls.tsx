@@ -13,6 +13,7 @@ export function ConversationControls({
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
+  const [requestId, setRequestId] = useState<string>();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -20,14 +21,16 @@ export function ConversationControls({
     setBusy(name);
     setError("");
     try {
+      const replyId = requestId || crypto.randomUUID();
+      if (name === "reply") setRequestId(replyId);
       const response = await fetch("/api/admin/conversations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, action: name, ...(name === "reply" ? { body } : {}) }),
+        body: JSON.stringify({ id, action: name, ...(name === "reply" ? { body, requestId: replyId } : {}) }),
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(result.error || "Action failed.");
-      if (name === "reply") setBody("");
+      if (name === "reply") { setBody(""); setRequestId(undefined); }
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Action failed.");
@@ -62,7 +65,7 @@ export function ConversationControls({
       </div>
       {status === "human" && (
         <form onSubmit={reply}>
-          <textarea required value={body} onChange={(event) => setBody(event.target.value)} placeholder="Reply as a TLC travel consultant…" />
+          <textarea required maxLength={4000} aria-label="Reply as a TLC travel consultant" value={body} onChange={(event) => setBody(event.target.value)} placeholder="Reply as a TLC travel consultant…" />
           <button className="button primary" disabled={Boolean(busy) || !body.trim()}>
             {busy === "reply" ? <LoaderCircle className="spin" /> : <Send />}Send reply
           </button>

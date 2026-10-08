@@ -77,6 +77,7 @@ export function MobileBottomNav() {
   );
 
   if (
+    pathname === "/plan-my-trip" ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/client") ||
     pathname.startsWith("/i/") ||

@@ -102,6 +102,7 @@ function mapLead(
         ? { sharedPreferences: data.requirement.sharedPreferences }
         : {}),
       ...(data.requirement?.vacationShortlist ? { vacationShortlist: data.requirement.vacationShortlist } : {}),
+      ...(data.requirement?.journey ? { journey: data.requirement.journey } : {}),
       notes: String(data.requirement?.notes || ""),
     },
     valueEstimate: Number(

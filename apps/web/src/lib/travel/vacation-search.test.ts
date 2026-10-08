@@ -51,6 +51,57 @@ const base = {
   now,
 };
 describe("tailored vacation options", () => {
+  it("uses a valid TLC model ranking after enforcing destination and rating filters", async () => {
+    const alternative = {
+      ...property,
+      id: "alternative",
+      name: "Other Hotel",
+      supplierRef: "tbo:456",
+    };
+    const rankHotels = vi
+      .fn()
+      .mockResolvedValue({
+        ids: ["alternative", "property"],
+        method: "tlc-model",
+        model: "tlc-v1",
+      });
+    const result = await findVacationOptions({
+      ...base,
+      hotels: [
+        property,
+        alternative,
+        { ...property, id: "wrong-destination", destinationSlug: "bali" },
+        { ...property, id: "below-rating", starRating: 1 },
+      ],
+      rankHotels,
+    });
+    expect(
+      rankHotels.mock.calls[0][1].map((hotel: HotelContent) => hotel.id).sort(),
+    ).toEqual(["alternative", "property"]);
+    expect(result.options[0].title).toBe("Other Hotel");
+    expect(result.recommendation).toEqual({
+      method: "tlc-model",
+      model: "tlc-v1",
+    });
+    expect(
+      result.options.every((option) => option.availability === "on_request"),
+    ).toBe(true);
+  });
+  it("falls back to factual matching when the model returns invented options", async () => {
+    const result = await findVacationOptions({
+      ...base,
+      hotels: [
+        property,
+        { ...property, id: "other", name: "Z Hotel", supplierRef: "tbo:456" },
+      ],
+      rankHotels: async () => ({
+        ids: ["forged", "other"],
+        method: "tlc-model",
+      }),
+    });
+    expect(result.recommendation.method).toBe("rules");
+    expect(result.options[0].title).toBe("Palm Hotel");
+  });
   it("ranks costs against the whole-party budget and surfaces pay-at-property charges", async () => {
     const expensive = {
       ...property,

@@ -1,28 +1,59 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { getFirestore } from "firebase-admin/firestore";
+import { queueQuoteReadyEmail } from "./client-notifications.js";
+import {
+  onDocumentCreated,
+  onDocumentUpdated,
+} from "firebase-functions/v2/firestore";
 import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
+import {
+  validEmailWebhook,
+  normalizeChannelAddress,
+} from "./communication-policy.js";
+import { receiveCommunication, processBotJob } from "./conversation-service.js";
+import {
+  queueCommunication,
+  deliverCommunication,
+  recordCommunicationStatus,
+} from "./communication-delivery.js";
 
-const app = getApps()[0] ?? initializeApp();
-const database = getFirestore(app);
+const database = getFirestore(getApps()[0] ?? initializeApp());
 const region = "asia-south1";
 const orgId = process.env.TLC_ORG_ID || "tlc-vacations";
 const verifyToken = defineSecret("WHATSAPP_VERIFY_TOKEN");
 const appSecret = defineSecret("WHATSAPP_APP_SECRET");
 const accessToken = defineSecret("WHATSAPP_ACCESS_TOKEN");
 const phoneNumberId = defineSecret("WHATSAPP_PHONE_NUMBER_ID");
-// WhatsApp stays off (no secrets bound or required at deploy) until WHATSAPP_ENABLED=true
-// is set in apps/functions/.env and the four WHATSAPP_* secrets exist in Secret Manager.
+const emailKey = defineSecret("RESEND_API_KEY");
+const emailSecret = defineSecret("RESEND_WEBHOOK_SECRET");
 const whatsappEnabled = process.env.WHATSAPP_ENABLED === "true";
-
-type MetaMessage = {
-  id?: string;
-  from?: string;
-  timestamp?: string;
-  text?: { body?: string };
-};
+const emailEnabled = process.env.EMAIL_ENABLED === "true";
+const modelSecrets =
+  process.env.TLC_AI_AUTH_REQUIRED === "true"
+    ? [defineSecret("TLC_AI_API_KEY")]
+    : [];
+const deliverySecrets = [
+  ...(whatsappEnabled ? [accessToken, phoneNumberId] : []),
+  ...(emailEnabled ? [emailKey] : []),
+];
+const credentials = () => ({
+  ...(whatsappEnabled
+    ? {
+        whatsappToken: accessToken.value(),
+        whatsappPhoneId: phoneNumberId.value(),
+      }
+    : {}),
+  ...(emailEnabled
+    ? {
+        emailKey: emailKey.value(),
+        emailFrom: process.env.MARKETING_EMAIL_FROM,
+        emailReplyTo: process.env.EMAIL_REPLY_TO,
+      }
+    : {}),
+});
 
 export function validWhatsAppSignature(
   raw: Buffer,
@@ -38,103 +69,11 @@ export function validWhatsAppSignature(
   );
 }
 
-function messagesFromPayload(payload: Record<string, unknown>) {
-  const entries = Array.isArray(payload.entry) ? payload.entry : [];
-  return entries.flatMap((entry) => {
-    const changes =
-      entry && typeof entry === "object" && Array.isArray((entry as { changes?: unknown[] }).changes)
-        ? (entry as { changes: Array<Record<string, unknown>> }).changes
-        : [];
-    return changes.flatMap((change) => {
-      const value = change.value as { messages?: MetaMessage[] } | undefined;
-      return Array.isArray(value?.messages) ? value.messages : [];
-    });
-  });
-}
-
-async function receiveWhatsAppMessage(message: MetaMessage) {
-  const from = String(message.from || "").replace(/\D/g, "");
-  const body = String(message.text?.body || "").trim();
-  if (!from || !body || !message.id) return;
-  const conversationRef = database.collection("conversations").doc(`wa-${from}`);
-  const inboundRef = conversationRef.collection("messages").doc(message.id.replace(/[^a-zA-Z0-9_-]/g, "_"));
-  await database.runTransaction(async (transaction) => {
-    const [existingMessage, conversation] = await Promise.all([
-      transaction.get(inboundRef),
-      transaction.get(conversationRef),
-    ]);
-    if (existingMessage.exists) return;
-    const now = new Date().toISOString();
-    const existing = conversation.data();
-    const requestsHuman = /\b(human|agent|person|expert|complaint|refund|emergency)\b/i.test(body);
-    const status = requestsHuman ? "human" : String(existing?.status || "bot");
-    const audit = {
-      orgId,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: "whatsapp-webhook",
-      updatedBy: "whatsapp-webhook",
-    };
-    transaction.set(
-      conversationRef,
-      {
-        id: conversationRef.id,
-        ...audit,
-        channel: "whatsapp",
-        mode: "text",
-        participants: existing?.participants || [
-          { id: from, type: "customer", displayName: "WhatsApp traveller" },
-          { id: "tara", type: "bot", displayName: "Tara" },
-        ],
-        status,
-        personaSnapshot: existing?.personaSnapshot || { name: "Tara", version: 1 },
-        summary: body.slice(0, 1000),
-        lastMessageAt: now,
-        whatsappAddress: from,
-        whatsappWindowExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        turnCount: FieldValue.increment(1),
-        ...(requestsHuman ? { handoverAt: now, handoverReason: "WhatsApp traveller requested a person." } : {}),
-      },
-      { merge: true },
-    );
-    transaction.create(inboundRef, {
-      id: inboundRef.id,
-      ...audit,
-      conversationId: conversationRef.id,
-      direction: "inbound",
-      from: { id: from, type: "customer" },
-      body,
-      inputMode: "text",
-      media: [],
-      deliveryStatus: "read",
-      aiGenerated: false,
-      toolCalls: [],
-      sentAt: now,
-      externalId: message.id,
-    });
-    if (status === "bot") {
-      const replyRef = conversationRef.collection("messages").doc();
-      transaction.create(replyRef, {
-        id: replyRef.id,
-        ...audit,
-        conversationId: conversationRef.id,
-        direction: "outbound",
-        from: { id: "tara", type: "bot" },
-        body: "Thanks for messaging TLC Holidays. Please share your destination, travel dates, number of adults and children, and approximate budget. I’ll keep the brief precise, and you can ask for a TLC expert at any time.",
-        inputMode: "text",
-        media: [],
-        deliveryStatus: "queued",
-        aiGenerated: true,
-        reasoning: "Safe WhatsApp intake response that makes no inventory, price or availability claim.",
-        toolCalls: [],
-        sentAt: now,
-      });
-    }
-  });
-}
-
 export const whatsappConversationWebhook = onRequest(
-  { region, secrets: whatsappEnabled ? [verifyToken, appSecret] : [] },
+  {
+    region,
+    secrets: whatsappEnabled ? [verifyToken, appSecret, phoneNumberId] : [],
+  },
   async (request, response) => {
     if (!whatsappEnabled) {
       response.status(503).send("WhatsApp is not enabled.");
@@ -144,74 +83,317 @@ export const whatsappConversationWebhook = onRequest(
       const valid =
         request.query["hub.mode"] === "subscribe" &&
         request.query["hub.verify_token"] === verifyToken.value();
-      response.status(valid ? 200 : 403).send(valid ? String(request.query["hub.challenge"] || "") : "Forbidden");
+      response
+        .status(valid ? 200 : 403)
+        .send(
+          valid ? String(request.query["hub.challenge"] || "") : "Forbidden",
+        );
       return;
     }
-    const raw = request.rawBody;
-    if (!validWhatsAppSignature(raw, request.header("x-hub-signature-256"), appSecret.value())) {
+    if (request.method !== "POST") {
+      response.sendStatus(405);
+      return;
+    }
+    if (
+      !validWhatsAppSignature(
+        request.rawBody,
+        request.header("x-hub-signature-256"),
+        appSecret.value(),
+      )
+    ) {
       response.status(401).send("Invalid signature");
       return;
     }
-    const payload = request.body as Record<string, unknown>;
-    await Promise.all(messagesFromPayload(payload).map(receiveWhatsAppMessage));
-    response.status(200).send("EVENT_RECEIVED");
+    try {
+      for (const entry of request.body.entry || [])
+        for (const change of entry.changes || []) {
+          const value = change.value;
+          if (value?.metadata?.phone_number_id !== phoneNumberId.value())
+            continue;
+          for (const message of value.messages || []) {
+            if (!message.id || !message.from) continue;
+            const body =
+              message.text?.body ||
+              message.button?.text ||
+              message.interactive?.button_reply?.title ||
+              message.interactive?.list_reply?.title ||
+              "Please ask a human to review my attachment or voice message.";
+            await receiveCommunication(database, {
+              orgId,
+              channel: "whatsapp",
+              address: message.from,
+              externalId: message.id,
+              body,
+              receivedAt: new Date(
+                Number(message.timestamp) * 1000,
+              ).toISOString(),
+            });
+          }
+          for (const status of value.statuses || [])
+            if (
+              status.id &&
+              ["sent", "delivered", "read", "failed"].includes(status.status)
+            )
+              await recordCommunicationStatus(
+                database,
+                "whatsapp",
+                status.id,
+                status.status,
+                orgId,
+              );
+        }
+      response.status(200).send("EVENT_RECEIVED");
+    } catch {
+      response.status(500).send("Could not persist event; retry required.");
+    }
   },
 );
 
-export const deliverWhatsAppConversationMessage = onDocumentCreated(
-  {
-    region,
-    document: "conversations/{conversationId}/messages/{messageId}",
-    secrets: whatsappEnabled ? [accessToken, phoneNumberId] : [],
-  },
-  async (event) => {
-    if (!whatsappEnabled) return;
-    const message = event.data?.data();
-    if (
-      !message ||
-      message.direction !== "outbound" ||
-      message.deliveryStatus !== "queued"
-    )
-      return;
-    const conversation = await event.data!.ref.parent.parent!.get();
-    const data = conversation.data();
-    if (data?.channel !== "whatsapp") return;
-    if (
-      !data.whatsappWindowExpiresAt ||
-      new Date(data.whatsappWindowExpiresAt).getTime() < Date.now()
-    ) {
-      await event.data!.ref.update({
-        deliveryStatus: "failed",
-        deliveryError: "The 24-hour WhatsApp service window has expired; use an approved template.",
-        updatedAt: new Date().toISOString(),
-      });
+export const emailConversationWebhook = onRequest(
+  { region, secrets: emailEnabled ? [emailSecret, emailKey] : [] },
+  async (request, response) => {
+    if (!emailEnabled) {
+      response.sendStatus(503);
       return;
     }
-    const result = await fetch(
-      `https://graph.facebook.com/v23.0/${phoneNumberId.value()}/messages`,
-      {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${accessToken.value()}`,
-          "content-type": "application/json",
+    if (request.method !== "POST") {
+      response.sendStatus(405);
+      return;
+    }
+    if (
+      !validEmailWebhook(
+        request.rawBody,
+        {
+          id: request.header("svix-id"),
+          timestamp: request.header("svix-timestamp"),
+          signature: request.header("svix-signature"),
         },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: data.whatsappAddress,
-          type: "text",
-          text: { body: message.body },
-        }),
-      },
+        emailSecret.value(),
+      )
+    ) {
+      response.sendStatus(401);
+      return;
+    }
+    try {
+      const event = request.body;
+      const id = event.data?.email_id;
+      if (typeof id !== "string" || !/^[\w-]{1,100}$/.test(id)) {
+        response.sendStatus(400);
+        return;
+      }
+      if (event.type === "email.received") {
+        const result = await fetch(
+          `https://api.resend.com/emails/receiving/${encodeURIComponent(id)}`,
+          {
+            headers: { authorization: `Bearer ${emailKey.value()}` },
+            signal: AbortSignal.timeout(15000),
+            redirect: "error",
+          },
+        );
+        if (!result.ok) throw new Error("Email retrieval failed");
+        const email = (await result.json()) as {
+          to?: string[];
+          from: string;
+          headers?: Record<string, string>;
+          authentication?: { dmarc?: string };
+          text?: string;
+          subject?: string;
+          created_at?: string;
+        };
+        const inbox = process.env.EMAIL_REPLY_TO;
+        if (
+          !inbox ||
+          !(email.to || []).some(
+            (address: string) =>
+              normalizeChannelAddress("email", address) ===
+              normalizeChannelAddress("email", inbox),
+          )
+        ) {
+          response.status(200).send("Ignored recipient");
+          return;
+        }
+        // Automatic mail must not create autoresponder loops. Never expose customer history based on From alone.
+        const headers = Object.fromEntries(
+          Object.entries(email.headers || {}).map(([key, value]) => [
+            key.toLowerCase(),
+            String(value),
+          ]),
+        );
+        if (
+          (headers["auto-submitted"] &&
+            headers["auto-submitted"].toLowerCase() !== "no") ||
+          /bulk|list|junk/i.test(headers.precedence || "") ||
+          email.authentication?.dmarc === "fail"
+        ) {
+          response
+            .status(200)
+            .send("Ignored automated or unauthenticated mail");
+          return;
+        }
+        if (
+          normalizeChannelAddress("email", email.from) ===
+          normalizeChannelAddress("email", inbox)
+        ) {
+          response.sendStatus(200);
+          return;
+        }
+        await receiveCommunication(database, {
+          orgId,
+          channel: "email",
+          address: email.from,
+          externalId: id,
+          body:
+            email.text?.trim() ||
+            "Please ask a human to review my email attachment or formatted message.",
+          subject: email.subject,
+          forceHuman: email.authentication?.dmarc !== "pass",
+          receivedAt: email.created_at || event.created_at,
+        });
+      } else {
+        const status: Record<string, string> = {
+          "email.sent": "sent",
+          "email.delivered": "delivered",
+          "email.bounced": "failed",
+          "email.failed": "failed",
+          "email.complained": "failed",
+        };
+        if (status[event.type])
+          await recordCommunicationStatus(
+            database,
+            "email",
+            id,
+            status[event.type],
+            orgId,
+          );
+        if (["email.bounced", "email.complained"].includes(event.type))
+          for (const address of event.data.to || []) {
+            const customers = await database
+              .collection("customers")
+              .where("orgId", "==", orgId)
+              .where(
+                "emails",
+                "array-contains",
+                normalizeChannelAddress("email", address),
+              )
+              .get();
+            const batch = database.batch();
+            for (const customer of customers.docs)
+              batch.update(customer.ref, {
+                "consent.email": false,
+                "marketingOptOuts.email": true,
+                updatedAt: new Date().toISOString(),
+              });
+            await batch.commit();
+          }
+      }
+      response.status(200).send("EVENT_RECEIVED");
+    } catch {
+      response.status(500).send("Could not persist event; retry required.");
+    }
+  },
+);
+
+// Preserve the deployed trigger name; both external channels now use the durable outbox.
+export const deliverWhatsAppConversationMessage = onDocumentCreated(
+  { region, document: "conversations/{conversationId}/messages/{messageId}", retry: true },
+  async (event) => {
+    await queueCommunication(
+      database,
+      event.params.conversationId,
+      event.params.messageId,
     );
-    const payload = (await result.json()) as {
-      messages?: Array<{ id: string }>;
-      error?: { message?: string };
-    };
-    await event.data!.ref.update({
-      deliveryStatus: result.ok ? "sent" : "failed",
-      ...(payload.messages?.[0]?.id ? { externalId: payload.messages[0].id } : {}),
-      ...(payload.error?.message ? { deliveryError: payload.error.message } : {}),
-      updatedAt: new Date().toISOString(),
-    });
+  },
+);
+export const deliverConversationOutbox = onDocumentCreated(
+  { region, document: "communicationOutbox/{id}", secrets: deliverySecrets },
+  async (event) => {
+    await deliverCommunication(database, event.params.id, credentials());
+  },
+);
+export const answerConversationMessage = onDocumentCreated(
+  { region, document: "conversationBotJobs/{id}", timeoutSeconds: 120, secrets: modelSecrets },
+  async (event) => {
+    await processBotJob(database, event.params.id);
+  },
+);
+export const recoverCommunicationJobs = onSchedule(
+  {
+    region,
+    schedule: "every 5 minutes",
+    secrets: [...deliverySecrets, ...modelSecrets],
+    timeoutSeconds: 300,
+  },
+  async () => {
+    const bots = await database
+      .collection("conversationBotJobs")
+      .where("status", "in", ["queued", "processing"])
+      .where("leaseUntil", "<=", new Date().toISOString())
+      .orderBy("leaseUntil")
+      .limit(8)
+      .get();
+    for (const job of bots.docs) {
+      try {
+        await processBotJob(database, job.id);
+      } catch {
+        /* Lease expiry allows the next scheduled attempt. */
+      }
+    }
+    const outbox = await database
+      .collection("communicationOutbox")
+      .where("status", "in", ["queued", "pending_configuration", "sending"])
+      .where("nextAttemptAt", "<=", new Date().toISOString())
+      .orderBy("nextAttemptAt")
+      .limit(100)
+      .get();
+    for (const job of outbox.docs) {
+      if (job.data().status === "sending") {
+        if (Date.parse(job.data().startedAt) < Date.now() - 300000)
+          await database.runTransaction(async (tx) => {
+            const current = (await tx.get(job.ref)).data();
+            if (current?.status !== "sending") return;
+            tx.update(job.ref, { status: "unknown" });
+            tx.update(
+              database.doc(
+                `conversations/${current.conversationId}/messages/${current.messageId}`,
+              ),
+              {
+                deliveryStatus: "unknown",
+                deliveryError:
+                  "Delivery worker interrupted. Check provider status before resending.",
+              },
+            );
+          });
+      } else await deliverCommunication(database, job.id, credentials());
+    }
+    await database.doc(`integrationHealth/${orgId}`).set(
+      {
+        orgId,
+        checkedAt: new Date().toISOString(),
+        whatsapp: Boolean(
+          credentials().whatsappToken && credentials().whatsappPhoneId,
+        ),
+        email: Boolean(
+          credentials().emailKey &&
+          credentials().emailFrom &&
+          credentials().emailReplyTo,
+        ),
+      },
+      { merge: true },
+    );
+  },
+);
+
+export const notifyClientQuoteReady = onDocumentUpdated(
+  { region, document: "quotes/{id}", retry: true },
+  async (event) => {
+    if (
+      event.data?.before.data().status === "draft" &&
+      event.data.after.data().status === "sent"
+    )
+      await queueQuoteReadyEmail(
+        database,
+        event.params.id,
+        process.env.TLC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL,
+      );
   },
 );

@@ -15,6 +15,7 @@ import {
 } from "@tlc/shared";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { getPublicContent } from "@/lib/public-content";
+import { rankWithTlcModel } from "@/lib/ai/tlc-ranking";
 import {
   findVacationOptions,
   type VacationEvidence,
@@ -34,7 +35,9 @@ export async function searchVacations(
   const config = tboConfigFromEnv();
   // No deterministic mock provider is ever presented as client availability.
   const registry = config
-    ? (providerRegistry ??= new CommerceProviderRegistry({ tboRequestTimeoutMs: 25_000 }))
+    ? (providerRegistry ??= new CommerceProviderRegistry({
+        tboRequestTimeoutMs: 25_000,
+      }))
     : undefined;
   const hotelProvider =
     registry &&
@@ -64,6 +67,26 @@ export async function searchVacations(
     hotelProvider,
     flightProvider,
     environment: config?.environment || "staging",
+    rankHotels: (requested, hotels) =>
+      rankWithTlcModel(
+        JSON.stringify({
+          destination: requested.destinationSlug,
+          minStars: requested.minStars,
+          interests: requested.interests,
+          amenities: requested.amenities,
+          adults: requested.rooms.reduce((sum, room) => sum + room.adults, 0),
+          children: requested.rooms.flatMap((room) => room.childrenAges).length,
+        }),
+        hotels.map((hotel) => ({
+          id: hotel.id,
+          title: hotel.name,
+          facts: [
+            `${hotel.starRating}-star`,
+            hotel.destinationSlug,
+            ...hotel.amenities.slice(0, 16),
+          ],
+        })),
+      ),
   });
   const searchId = randomBytes(24).toString("hex");
   // Shortlists outlive ephemeral fares. Staff re-search/reprice before quoting/booking.
@@ -94,6 +117,7 @@ export async function searchVacations(
         brief,
         options: result.options,
         evidence: result.evidence,
+        recommendation: result.recommendation,
         expiresAt,
         createdAt: new Date().toISOString(),
       }),
@@ -121,6 +145,7 @@ export async function searchVacations(
     brief,
     options: result.options,
     notices: result.notices,
+    recommendation: result.recommendation,
   };
 }
 

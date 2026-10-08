@@ -79,6 +79,11 @@ export const campaignSchema = z
         subject: z.string().trim().max(200).optional(),
         body: z.string().trim().min(1).max(5000),
         templateName: z.string().trim().max(160).optional(),
+        templateLanguage: z
+          .string()
+          .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/)
+          .default("en"),
+        templateParameters: z.array(z.string().max(500)).max(10).default([]),
       })
       .optional(),
     audienceSnapshot: z
@@ -176,6 +181,11 @@ export const campaignDraftInputSchema = z
       subject: z.string().trim().max(200).optional(),
       body: z.string().trim().min(1).max(5000),
       templateName: z.string().trim().max(160).optional(),
+      templateLanguage: z
+        .string()
+        .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/)
+        .default("en"),
+      templateParameters: z.array(z.string().max(500)).max(10).default([]),
     }),
   })
   .superRefine((campaign, context) => {

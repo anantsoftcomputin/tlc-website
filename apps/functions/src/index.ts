@@ -119,6 +119,11 @@ export {
 export {
   deliverWhatsAppConversationMessage,
   whatsappConversationWebhook,
+  emailConversationWebhook,
+  notifyClientQuoteReady,
+  deliverConversationOutbox,
+  answerConversationMessage,
+  recoverCommunicationJobs,
 } from "./conversation-workflow.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 20 });

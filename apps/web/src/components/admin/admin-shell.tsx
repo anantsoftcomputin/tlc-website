@@ -74,6 +74,7 @@ const navGroups = [
         icon: Inbox,
         permission: "crm:read" as const,
       },
+      { label: "Communications", href: "/admin/communications", icon: Send, permission: "crm:read" as const },
       {
         label: "Conversations",
         href: "/admin/conversations",

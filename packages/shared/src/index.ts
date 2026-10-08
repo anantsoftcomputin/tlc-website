@@ -23,4 +23,6 @@ export * from "./schemas/travel-intelligence.js";
 export * from "./schemas/user.js";
 export * from "./crm/customer-search.js";
 export * from "./schemas/vacation.js";
+export * from "./schemas/journey.js";
 export * from "./travel/vacation-ranking.js";
+export * from "./schemas/communication-preferences.js";

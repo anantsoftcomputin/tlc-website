@@ -14,7 +14,7 @@ export function channelEligibility(
     consent,
     optedOut,
     address,
-    ok: consent && !optedOut && Boolean(address),
+    ok: consent && !optedOut && Boolean(address) && customer.communicationPreferences?.frequency !== "never",
   };
 }
 

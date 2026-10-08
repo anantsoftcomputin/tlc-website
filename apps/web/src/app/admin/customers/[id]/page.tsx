@@ -91,6 +91,46 @@ export default async function CustomerDetailPage({
       </header>
       <div className="customer-360-grid">
         <div className="customer-360-main">
+          {customer.communicationPreferences && (
+            <section className="profile-panel profile-facts">
+              <header>
+                <div>
+                  <span>
+                    <Heart />
+                  </span>
+                  <div>
+                    <h2>Client travel preferences</h2>
+                    <p>Choices saved by the traveller in their TLC account</p>
+                  </div>
+                </div>
+              </header>
+              <dl>
+                <div>
+                  <dt>Wish list</dt>
+                  <dd>
+                    {customer.communicationPreferences.destinations.join(
+                      ", ",
+                    ) || "Open to ideas"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Interests</dt>
+                  <dd>
+                    {customer.communicationPreferences.interests.join(", ") ||
+                      "Not specified"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Travel style</dt>
+                  <dd>{customer.communicationPreferences.budget}</dd>
+                </div>
+                <div>
+                  <dt>Promotional frequency</dt>
+                  <dd>{customer.communicationPreferences.frequency}</dd>
+                </div>
+              </dl>
+            </section>
+          )}
           <section className="profile-panel">
             <header>
               <div>
@@ -122,7 +162,11 @@ export default async function CustomerDetailPage({
               <div>
                 <MessageCircle />
                 <span>Preferred channel</span>
-                <b>{customer.profile?.preferredChannel || "Not learned yet"}</b>
+                <b>
+                  {customer.communicationPreferences?.preferredChannel ||
+                    customer.profile?.preferredChannel ||
+                    "Not learned yet"}
+                </b>
               </div>
             </div>
             <div className="consent-row">
