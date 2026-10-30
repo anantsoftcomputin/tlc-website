@@ -46,4 +46,6 @@ pnpm test:rules
 pnpm build
 ```
 
-Architecture and delivery status are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/PLAN.md`](docs/PLAN.md).
+Current fixes and activation requirements are tracked in [`docs/REMAINING_GAPS.md`](docs/REMAINING_GAPS.md). Architecture and delivery status are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/PLAN.md`](docs/PLAN.md).
+
+The verified, consented personal advisor and its activation steps are documented in [`docs/PERSONAL_TRAVEL_ADVISOR.md`](docs/PERSONAL_TRAVEL_ADVISOR.md).

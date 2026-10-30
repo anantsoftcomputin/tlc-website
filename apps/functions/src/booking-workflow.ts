@@ -239,6 +239,7 @@ export const updateBookingItem = onCall(
           "failed-precondition",
           "Approve the booking before confirming suppliers.",
         );
+      if (booking.status === "completed") throw new HttpsError("failed-precondition", "Completed trips cannot change supplier status.");
       const index = booking.items.findIndex(
         (item) => item.id === parsed.data.itemId,
       );

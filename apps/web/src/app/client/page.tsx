@@ -1,3 +1,4 @@
+import { TripFeedback } from "@/components/dashboard/trip-feedback";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -154,6 +155,7 @@ export default async function ClientDashboard() {
                     ))}
                   </details>
                 )}
+                {booking.status === "completed" && <TripFeedback bookingId={booking.id} />}
               </article>
             ))}
           </div>

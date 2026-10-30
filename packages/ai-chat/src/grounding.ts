@@ -12,7 +12,7 @@ export type ToolEvidence = {
 };
 
 const currencyClaim =
-  /(?:₹|Rs\.?|INR|USD|AED|EUR|GBP|\$|€|£)\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  /(?:₹|\bRs\.?|\b(?:INR|USD|AED|EUR|GBP)\b|\$|€|£)\s*(\d[\d,]*(?:\.\d{1,2})?)/gi;
 
 function numericClaims(text: string) {
   return [...text.matchAll(currencyClaim)].map((match) =>

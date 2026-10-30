@@ -2,10 +2,20 @@ import { communicationPreferencesSchema } from "@tlc/shared";
 import { requireClientUser } from "@/lib/auth/session";
 import { clientCustomers } from "@/repositories/firebase/client-portal-repository";
 import { PreferencesForm } from "@/components/dashboard/preferences-form";
-export default async function PreferencesPage() {
+export default async function PreferencesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customerId?: string }>;
+}) {
+  const params = await searchParams;
   const user = await requireClientUser();
   const customers = await clientCustomers(user);
-  const customer = customers[0]?.data();
+  const selected = params.customerId
+    ? customers.find((customer) => customer.id === params.customerId)
+    : customers.length === 1
+      ? customers[0]
+      : undefined;
+  const customer = selected?.data();
   const initial = communicationPreferencesSchema.parse({
     ...customer?.communicationPreferences,
     emailOffers: Boolean(
@@ -28,10 +38,36 @@ export default async function PreferencesPage() {
             </p>
           </div>
         </header>
-        <PreferencesForm
-          initial={initial}
-          hasPhone={customers.some((doc) => doc.data().phones?.length)}
-        />
+        {customers.length > 1 && (
+          <form action="/client/preferences" className="workspace-form">
+            <label>
+              Traveller
+              <select
+                name="customerId"
+                defaultValue={selected?.id || ""}
+                required
+              >
+                <option value="">Choose a traveller</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {String(customer.data().name || "Traveller")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="button button-gold">
+              Edit this traveller’s preferences
+            </button>
+          </form>
+        )}
+        {(selected || !customers.length) && (
+          <PreferencesForm
+            key={selected?.id || "new"}
+            initial={initial}
+            customerId={selected?.id}
+            hasPhone={Boolean(selected?.data().phones?.length)}
+          />
+        )}
       </section>
     </div>
   );

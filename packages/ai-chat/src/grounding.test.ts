@@ -42,4 +42,22 @@ describe("assistant grounding", () => {
       ),
     ).toEqual(expect.objectContaining({ success: false }));
   });
+  it("does not misread travellers followed by punctuation as a zero-rupee price", () => {
+    const result = validateGroundedAssistantResponse(
+      {
+        ...base,
+        message: "Confirm dates, travellers, inclusions and your budget.",
+      },
+      [
+        {
+          id: "result-1",
+          source: "cms",
+          fetchedAt: new Date().toISOString(),
+          entityIds: [],
+          prices: [],
+        },
+      ],
+    );
+    expect(result.success).toBe(true);
+  });
 });

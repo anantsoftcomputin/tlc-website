@@ -42,7 +42,15 @@ export default async function CommunicationsPage() {
           <h1>Communications centre</h1>
           <p>Conversations, personalised campaigns and channel readiness.</p>
         </div>
-        <InboxRefresh />
+        <div>
+          <Link
+            className="button button-outline"
+            href="/admin/communications/emails"
+          >
+            Email design library
+          </Link>
+          <InboxRefresh />
+        </div>
       </header>
       <div className="workspace-stat-grid">
         {[

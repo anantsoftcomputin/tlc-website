@@ -23,6 +23,7 @@ export const spendBands = ["budget", "mid", "premium", "luxury"] as const;
 const affinityMapSchema = z.record(z.string(), probabilitySchema);
 
 export const customerProfileSchema = z.object({
+  spendCurrency: z.literal("INR").optional(),
   totalTrips: z.number().int().nonnegative(),
   tripsLast12m: z.number().int().nonnegative(),
   daysSinceLastTrip: z.number().int().nonnegative().nullable(),
@@ -106,6 +107,34 @@ export const customerSchema = z
     householdId: documentIdSchema.optional(),
     declaredPreferences: sharedTravelPreferenceSchema.optional(),
     communicationPreferences: communicationPreferencesSchema.optional(),
+    verifiedClientUid: documentIdSchema.optional(),
+    verifiedEmail: z.email().optional(),
+    identityVerifiedAt: isoDateTimeSchema.optional(),
+    communicationPreferencesConfirmedAt: isoDateTimeSchema.optional(),
+    lastFeedbackAt: isoDateTimeSchema.optional(),
+    feedbackAffinities: z
+      .record(z.string(), z.number().min(-1).max(1))
+      .optional(),
+    feedbackInterestCounts: z
+      .record(
+        z.string(),
+        z.object({
+          positive: z.number().int().nonnegative(),
+          negative: z.number().int().nonnegative(),
+        }),
+      )
+      .optional(),
+    confirmedTravelPreferences: z
+      .record(
+        z.string(),
+        z.object({
+          value: z.json(),
+          confirmedAt: isoDateTimeSchema,
+          source: z.literal("explicit_chat"),
+          evidenceMessageId: documentIdSchema,
+        }),
+      )
+      .optional(),
     preferenceCompleteness: z.number().min(0).max(100).optional(),
     profile: customerProfileSchema.optional(),
     segments: z.array(customerSegmentSchema).default([]),
@@ -146,9 +175,12 @@ export const travelHistorySchema = z
     hotelCategory: z.enum(["3", "4", "5", "luxury"]).optional(),
     roomType: z.string().trim().optional(),
     spend: z.number().nonnegative(),
+    bookedAmount: z.number().nonnegative().optional(),
+    refundedAmount: z.number().nonnegative().optional(),
     currency: currencySchema,
     bookingWindowDays: z.number().int().nonnegative(),
     source: z.enum(["imported", "booking"]),
+    bookingId: documentIdSchema.optional(),
   })
   .and(auditFieldsSchema);
 
@@ -157,6 +189,8 @@ export const customerEventSchema = z
     id: documentIdSchema,
     orgId: orgIdSchema,
     type: z.enum([
+      "tripCompleted",
+      "tripFeedback",
       "enquiry",
       "quoteViewed",
       "replied",

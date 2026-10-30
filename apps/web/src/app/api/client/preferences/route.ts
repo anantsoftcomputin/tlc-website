@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { communicationPreferencesSchema } from "@tlc/shared";
@@ -19,15 +20,33 @@ export async function PUT(request: Request) {
       { error: "Verified client account required." },
       { status: 401 },
     );
-  const parsed = communicationPreferencesSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const parsed = communicationPreferencesSchema
+    .extend({ customerId: z.string().min(1).max(160).optional() })
+    .safeParse(await request.json().catch(() => null));
   if (!parsed.success)
     return NextResponse.json(
       { error: "Please check your preferences." },
       { status: 400 },
     );
-  const customers = await clientCustomers(user);
+  const owned = await clientCustomers(user);
+  if (owned.length > 1 && !parsed.data.customerId)
+    return NextResponse.json(
+      { error: "Choose the traveller whose preferences you want to update." },
+      { status: 400 },
+    );
+  if (
+    parsed.data.customerId &&
+    !owned.some((customer) => customer.id === parsed.data.customerId)
+  )
+    return NextResponse.json(
+      { error: "Traveller record not found for this account." },
+      { status: 403 },
+    );
+  const customers = parsed.data.customerId
+    ? owned.filter((customer) => customer.id === parsed.data.customerId)
+    : owned;
+  const { customerId: _selected, ...preferences } = parsed.data;
+  void _selected;
   const db = getAdminFirestore();
   const refs = customers.length
     ? customers.map((doc) => doc.ref)
@@ -48,7 +67,7 @@ export async function PUT(request: Request) {
           !row.data()?.emails?.includes(user.email!.toLowerCase()))
       )
         throw new Error("Client record changed. Please reload.");
-      const data = parsed.data;
+      const data = preferences;
       const whatsapp =
         data.whatsappOffers &&
         Boolean(row.data()?.phones?.length) &&
@@ -75,6 +94,10 @@ export async function PUT(request: Request) {
                 createdBy: user.uid,
               }
             : {}),
+          verifiedClientUid: user.uid,
+          verifiedEmail: user.email!.toLowerCase(),
+          identityVerifiedAt: now,
+          communicationPreferencesConfirmedAt: now,
           communicationPreferences: {
             ...data,
             emailOffers: email,

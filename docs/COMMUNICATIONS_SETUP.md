@@ -8,7 +8,8 @@
 - `/client/preferences`: destinations, interests, budget style, preferred channel, promotional opt-in and maximum cross-channel frequency. CRM consent and opt-outs are updated transactionally.
 - Website planner/chat: existing Tara experience uses the same TLC model endpoint. Supplier facts and quote handoff remain server-controlled. The local neural candidate is not production-approved; see the owned-AI report.
 - Quote notifications: a consultant’s explicit send action queues a transactional email linking to the authenticated client portal. Notification messages are deduplicated and do not expose quote share tokens. Promotional opt-out does not block requested quote correspondence.
-- Campaigns: history-based audience scoring, client preference substitutions, manager approval, scheduled/manual sends, WhatsApp template body parameters/language, plain-text email, unsubscribe links and email delivery callbacks. Promotional frequency defaults to weekly; clients can choose monthly or none.
+- Campaigns: history-based audience scoring, client preference substitutions, manager approval, scheduled/manual sends, WhatsApp template body parameters/language, branded HTML and plain-text email, unsubscribe links and email delivery callbacks. Promotional frequency defaults to weekly; clients can choose monthly or none.
+- `/admin/communications/emails`: 43 email designs with desktop/mobile/text previews, sample personalisation and downloads. Quotes, replies and campaigns use the shared renderer. See [EMAIL_DESIGNS.md](./EMAIL_DESIGNS.md) for scenario coverage, offline exports and the remaining lifecycle/authentication event adapters.
 
 No messages are sent as part of development verification. Tests use demo Firebase emulators and intercepted provider calls.
 
@@ -32,7 +33,7 @@ Secrets: `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`.
 
 Verify the sending domain and configure the receiving domain/MX records. Register `emailConversationWebhook` and subscribe to `email.received`, `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, and `email.failed`. Incoming webhook signatures are verified with the raw bytes, Svix headers, and a five-minute timestamp tolerance. The handler retrieves email text from Resend and checks the receiving address; automated/list mail and failed DMARC are ignored. Missing positive DMARC verification routes to a consultant rather than AI. Email addresses are not proof of portal authentication; no booking/account information is returned by the channel bot.
 
-HTML-only mail or attachments route to a consultant; attachments are not downloaded. Plain-text email replies are supported. Replying UNSUBSCRIBE on the first line or using the email's unsubscribe link revokes marketing consent. GET links show confirmation without changing consent; the token-scoped POST supports one-click unsubscribe. Bounces/complaints suppress future email campaigns.
+HTML-only inbound mail or attachments route to a consultant; attachments are not downloaded. Outgoing email replies contain branded HTML and plain text. Replying UNSUBSCRIBE on the first line or using the email's unsubscribe link revokes marketing consent. GET links show confirmation without changing consent; the token-scoped POST supports one-click unsubscribe. Bounces/complaints suppress future email campaigns.
 
 Official references: [Resend receiving API](https://resend.com/docs/api-reference/emails/retrieve-received-email), [webhook verification](https://resend.com/docs/webhooks/verify-webhooks-requests), [Meta webhook payloads](https://www.postman.com/meta/whatsapp-business-platform/folder/tduohwq/webhook-payload-reference).
 
@@ -59,3 +60,11 @@ TLC model configuration must be reachable from both the website host and Functio
 5. Use designated test recipients to verify inbound replies, consultant takeover, quote notification, delivery callbacks, STOP/unsubscribe and a single approved campaign before general activation.
 
 Validation performed locally: 189 unit tests, 19 Firestore rule tests, demo integration suites for commerce/catalogue/messaging/campaigns, and production-build browser checks for client/admin communications, journeys and hotel shortlists. GPU live application tests remain deliberately opt-in and the current local model candidate does not pass them. Screenshots from communication browser checks are written to `/tmp/tlc-communications-smoke`.
+
+## Additional lifecycle events (30 October 2026)
+
+`EMAIL_LIFECYCLE_ENABLED=false` is the default. After provider/domain/callback verification with designated recipients, set it to `true` in the Functions environment and deploy the four new triggers: `notifyClientEnquiryReceived`, `notifyClientPaymentReceived`, `notifyClientBookingConfirmed`, and `notifyClientFinanceDocument`.
+
+The triggers react to new eligible states, not historical backfill: linked enquiry creation, provider/verified-manual payment capture with `paidAt`, approved bookings whose every item is confirmed, and issued invoice/credit-note/receipt documents. Approval or partial supplier fulfilment does not send a booking confirmation. Each source/template pair creates one durable message; retries do not duplicate it. Recipient lookup rechecks organization ownership and linked records. Messages use verified event fields and authenticated portal links. They do not use preview fixtures or include bearer quote tokens. Existing message/outbox workers own transport, configuration blocking and uncertainty handling.
+
+Authentication, calendar greetings, expiry/reminder schedules, refunds and other unlisted lifecycle scenarios remain separate adapters. Enabling these four triggers does not enable all 43 designs. Changing the flag does not resend old records; any future backfill needs an explicit reviewed operation.

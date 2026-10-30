@@ -8,6 +8,20 @@ import {
   probabilitySchema,
 } from "./base.js";
 
+export const marketingEmailDesignSchema = z.enum([
+  "travel-newsletter",
+  "destination-inspiration",
+  "personalised-picks",
+  "seasonal-offer",
+  "family-holidays",
+  "honeymoon-escape",
+  "birthday-wish",
+  "anniversary-wish",
+  "resume-planning",
+  "welcome-back",
+  "post-trip-feedback",
+]);
+
 export const offerSchema = z
   .object({
     id: documentIdSchema,
@@ -61,6 +75,21 @@ export const campaignSchema = z
       sendAt: isoDateTimeSchema.optional(),
       timezone: z.literal("Asia/Kolkata").default("Asia/Kolkata"),
     }),
+    patternRecommendation: z
+      .object({
+        customerId: documentIdSchema,
+        verifiedUid: documentIdSchema,
+        consentFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+        month: z.string().regex(/^\d{4}-\d{2}$/),
+        reasons: z.string().min(1).max(2000),
+        offerIds: z.array(documentIdSchema).min(1).max(3),
+        offerFingerprints: z.record(
+          z.string(),
+          z.string().regex(/^[a-f0-9]{64}$/),
+        ),
+        expiresAt: isoDateTimeSchema,
+      })
+      .optional(),
     trigger: z.enum(["manual", "scheduled", "event"]),
     approvalStatus: z.enum(["draft", "pending", "approved", "rejected"]),
     approvedBy: documentIdSchema.optional(),
@@ -78,6 +107,7 @@ export const campaignSchema = z
       .object({
         subject: z.string().trim().max(200).optional(),
         body: z.string().trim().min(1).max(5000),
+        emailDesign: marketingEmailDesignSchema.default("travel-newsletter"),
         templateName: z.string().trim().max(160).optional(),
         templateLanguage: z
           .string()
@@ -180,6 +210,7 @@ export const campaignDraftInputSchema = z
     message: z.object({
       subject: z.string().trim().max(200).optional(),
       body: z.string().trim().min(1).max(5000),
+      emailDesign: marketingEmailDesignSchema.default("travel-newsletter"),
       templateName: z.string().trim().max(160).optional(),
       templateLanguage: z
         .string()

@@ -1,3 +1,5 @@
+import { patternDeliveryAllowed, verifyPatternIdentity, patternOfferFingerprint } from "./pattern-campaigns.js";
+import { currentPatternOffer } from "@tlc/shared";
 import { recordCommunicationStatus } from "./communication-delivery.js";
 import { readQueryPages } from "./query-pages.js";
 import { createHash, randomBytes } from "node:crypto";
@@ -114,7 +116,11 @@ function audit(
   };
 }
 function bestChannel(customer: FirebaseFirestore.DocumentData) {
-  const preferred = String(customer.communicationPreferences?.preferredChannel || customer.profile?.preferredChannel || "web");
+  const preferred = String(
+    customer.communicationPreferences?.preferredChannel ||
+      customer.profile?.preferredChannel ||
+      "web",
+  );
   for (const channel of [preferred, "whatsapp", "email", "phone", "web"])
     if (channel === "web" || channel === "phone" || customer.consent?.[channel])
       return channel as "whatsapp" | "email" | "phone" | "web";
@@ -772,6 +778,9 @@ function providerFor(channel: MarketingChannel): MarketingMessagingProvider {
       apiKey,
       from,
       replyTo: process.env.EMAIL_REPLY_TO,
+      brand: {
+        siteUrl: process.env.TLC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL,
+      },
     });
   if (process.env.FUNCTIONS_EMULATOR === "true")
     return new MockMarketingMessagingProvider();
@@ -864,6 +873,10 @@ async function deliverCampaign(
         !marketingFrequencyAllows(current.data() || {})
       )
         continue;
+      if (!patternDeliveryAllowed(campaign, customer.id, current.data() || {})) continue;
+      if (campaign.patternRecommendation && !await verifyPatternIdentity(String(current.data()?.verifiedClientUid), String(current.data()?.verifiedEmail))) continue;
+      const patternOffers = campaign.patternRecommendation ? await Promise.all(campaign.patternRecommendation.offerIds.map((id: string) => db.collection("offers").doc(id).get())) : [];
+      if (campaign.patternRecommendation && !patternOffers.some(offer => offer.id === campaign.offerId && campaign.patternRecommendation.offerFingerprints?.[offer.id] === patternOfferFingerprint(offer.data() || {}) && offer.data()?.orgId === orgId && currentPatternOffer({ ...offer.data(), id: offer.id } as never))) throw new HttpsError("failed-precondition", "Personal recommendation inventory has expired; review new recommendations before sending.");
       const capturedAt = new Date().toISOString();
       const profile = current.data()?.profile as ComputedProfile | undefined;
       const offer = offerSnapshot.data();
@@ -891,6 +904,16 @@ async function deliverCampaign(
         .doc(createHash("sha256").update(token).digest("hex"));
       const message = {
         campaignId,
+        emailDesign: campaign.message.emailDesign || "travel-newsletter",
+        emailData: {
+          ...(campaign.patternRecommendation && publicUrl ? { actionUrl: `${publicUrl.replace(/\/$/, "")}/client/advisor`, recommendations: patternOffers.filter(offer => campaign.patternRecommendation.offerFingerprints?.[offer.id] === patternOfferFingerprint(offer.data() || {}) && offer.data()?.orgId === orgId && currentPatternOffer({ ...offer.data(), id: offer.id } as never)).slice(0, 3).map(offer => ({ title: String(offer.data()?.title), description: `Travel idea for ${offer.data()?.destinations?.join(", ")}. Dates, availability and a total quote are checked after you confirm your trip.`, url: `${publicUrl.replace(/\/$/, "")}/client/advisor` })) } : {}),
+          firstName: String(
+            current.data()?.name || current.data()?.fullName || "traveller",
+          ).split(/\s+/)[0],
+          ...(offer?.destinations?.[0]
+            ? { destination: String(offer.destinations[0]) }
+            : {}),
+        },
         body: personalizeMarketing(
           campaign.message.body,
           current.data() || {},
@@ -925,6 +948,7 @@ async function deliverCampaign(
         ]);
         if (
           delivery.exists ||
+          !patternDeliveryAllowed(liveCampaign.data() || {}, customer.id, latest.data() || {}) ||
           latest.data()?.orgId !== orgId ||
           !eligible(latest.data() || {}, campaign.channel).ok ||
           !marketingFrequencyAllows(latest.data() || {}) ||

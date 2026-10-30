@@ -493,3 +493,13 @@ describe("hardened role boundaries",()=>{
       await assertFails(getDoc(doc(db,collection,"one")));
   });
 });
+
+describe("private personal travel records", () => {
+  it("denies direct browser reads and writes to personal plans, rates and advisor sessions", async () => {
+    const db = environment.authenticatedContext("client", { role: "customer", orgId: "tlc-vacations", email_verified: true }).firestore();
+    for (const collection of ["planningRates", "personalTripPlans", "clientAdvisorSessions", "personalChannelLinks"]) {
+      await assertFails(getDoc(doc(db, collection, "private")));
+      await assertFails(setDoc(doc(db, collection, "private"), { orgId: "tlc-vacations", clientUid: "client" }));
+    }
+  });
+});

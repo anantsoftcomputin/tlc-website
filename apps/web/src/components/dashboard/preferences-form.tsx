@@ -5,9 +5,11 @@ import type { CommunicationPreferences } from "@tlc/shared";
 export function PreferencesForm({
   initial,
   hasPhone,
+  customerId,
 }: {
   initial: CommunicationPreferences;
   hasPhone: boolean;
+  customerId?: string;
 }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,6 +27,7 @@ export function PreferencesForm({
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              customerId,
               destinations: String(data.get("destinations") || "")
                 .split(",")
                 .map((item) => item.trim())
@@ -34,6 +37,7 @@ export function PreferencesForm({
               preferredChannel: data.get("preferredChannel"),
               frequency: data.get("frequency"),
               emailOffers: data.has("emailOffers"),
+              personalization: data.has("personalization"),
               whatsappOffers: data.has("whatsappOffers"),
             }),
           });
@@ -110,6 +114,22 @@ export function PreferencesForm({
           </option>
         </select>
       </label>
+      <fieldset>
+        <legend>Your personal travel advisor</legend>
+        <label>
+          <input
+            type="checkbox"
+            name="personalization"
+            defaultChecked={initial.personalization}
+          />{" "}
+          Use my recorded trips, feedback and saved preferences to personalise
+          my conversations and recommendations.
+        </label>
+        <p>
+          You can turn this off at any time. Your current trip choices always
+          take priority. This does not opt you into marketing or model training.
+        </p>
+      </fieldset>
       <fieldset>
         <legend>Holiday inspiration & offers</legend>
         <p>

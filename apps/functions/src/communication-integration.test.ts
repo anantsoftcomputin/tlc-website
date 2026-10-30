@@ -1,3 +1,4 @@
+import { queueLifecycleEmail } from "./lifecycle-notifications.js";
 import { queueQuoteReadyEmail } from "./client-notifications.js";
 import { randomUUID } from "node:crypto";
 import { getApps, initializeApp } from "firebase-admin/app";
@@ -51,6 +52,88 @@ describe.skipIf(!enabled)("durable multichannel conversations", () => {
       job: await queueCommunication(getFirestore(), threadId, ref.id),
     };
   };
+  it("queues lifecycle mail once from verified records and never from another organization", async () => {
+    const db = getFirestore();
+    const customerId = `${orgId}-lifecycle`;
+    await db
+      .doc(`customers/${customerId}`)
+      .set({
+        orgId,
+        name: "Lifecycle Traveller",
+        emails: ["lifecycle@example.test"],
+      });
+    const id = `${orgId}-payment`;
+    await db.doc(`bookings/${id}`).set({ orgId, customerId });
+    await db
+      .doc(`payments/${id}`)
+      .set({
+        orgId,
+        bookingId: id,
+        status: "captured",
+        paidAt: new Date().toISOString(),
+        amount: 1234,
+        currency: "INR",
+      });
+    await Promise.all([
+      queueLifecycleEmail(db, "payments", id, "https://tlc.example"),
+      queueLifecycleEmail(db, "payments", id, "https://tlc.example"),
+    ]);
+    const threads = await db
+      .collection("conversations")
+      .where("orgId", "==", orgId)
+      .get();
+    expect(threads.size).toBe(1);
+    const messages = await threads.docs[0].ref.collection("messages").get();
+    expect(messages.size).toBe(1);
+    expect(messages.docs[0].data().emailTemplateId).toBe("payment-received");
+    expect(messages.docs[0].data().emailData.amount).toContain("1,234");
+    expect(messages.docs[0].data().emailData.actionUrl).toBe(
+      "https://tlc.example/client",
+    );
+    const job = await queueCommunication(
+      db,
+      threads.docs[0].id,
+      messages.docs[0].id,
+    );
+    const sender = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ id: "lifecycle-provider" }), {
+          status: 200,
+        }),
+    );
+    await deliverCommunication(
+      db,
+      job,
+      {
+        emailKey: "test",
+        emailFrom: "TLC <hello@example.test>",
+        siteUrl: "https://tlc.example",
+      },
+      sender,
+    );
+    expect(sender).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(sender.mock.calls[0][1]!.body as string);
+    expect(body.html).toContain("PAYMENT RECEIVED");
+    expect(body.text).toContain("1,234");
+    await db
+      .doc(`payments/${id}-foreign`)
+      .set({
+        orgId: "foreign",
+        bookingId: id,
+        status: "captured",
+        paidAt: new Date().toISOString(),
+        amount: 1234,
+        currency: "INR",
+      });
+    expect(
+      await queueLifecycleEmail(
+        db,
+        "payments",
+        `${id}-foreign`,
+        "https://tlc.example",
+      ),
+    ).toBe(false);
+  });
   it("deduplicates provider retries, preserves creation time and isolates organizations", async () => {
     const db = getFirestore();
     const event = input();
@@ -109,14 +192,12 @@ describe.skipIf(!enabled)("durable multichannel conversations", () => {
     await db
       .doc(`customers/${customerId}`)
       .set({ orgId, name: "Traveller", emails: ["client@example.test"] });
-    await db
-      .doc(`quotes/${quoteId}`)
-      .set({
-        orgId,
-        customerId,
-        status: "draft",
-        shareToken: "secret-share-token",
-      });
+    await db.doc(`quotes/${quoteId}`).set({
+      orgId,
+      customerId,
+      status: "draft",
+      shareToken: "secret-share-token",
+    });
     expect(
       await queueQuoteReadyEmail(db, quoteId, "https://tlc.example.test"),
     ).toBe(false);
@@ -135,6 +216,34 @@ describe.skipIf(!enabled)("durable multichannel conversations", () => {
     );
     expect(messages.docs[0].data().body).not.toContain("secret-share-token");
     expect(messages.docs[0].data().deliveryStatus).toBe("queued");
+    expect(messages.docs[0].data().emailTemplateId).toBe("quote-ready");
+    const messageId = messages.docs[0].id;
+    const job = await queueCommunication(
+      db,
+      quote.notificationConversationId,
+      messageId,
+    );
+    const sender = vi.fn(async (_url: unknown, options: any) => {
+      const body = JSON.parse(options.body);
+      expect(body.html).toContain("Your next chapter,");
+      expect(body.html).toContain("https://tlc.example.test/client");
+      expect(body.html).not.toContain("secret-share-token");
+      expect(body.text).toContain("holiday proposal");
+      return new Response(JSON.stringify({ id: `quote-email-${orgId}` }), {
+        status: 200,
+      });
+    });
+    await deliverCommunication(
+      db,
+      job,
+      {
+        emailKey: "test",
+        emailFrom: "TLC <team@example.test>",
+        siteUrl: "https://tlc.example.test",
+      },
+      sender,
+    );
+    expect(sender).toHaveBeenCalledTimes(1);
     await db
       .doc(`quotes/${quoteId}-foreign`)
       .set({ orgId: `${orgId}-other`, customerId, status: "sent" });
@@ -261,7 +370,7 @@ describe.skipIf(!enabled)("durable multichannel conversations", () => {
     expect(sender).toHaveBeenCalledTimes(1);
     expect((await expired.ref.get()).data()!.deliveryStatus).toBe("failed");
   });
-  it("sends email as plain text with idempotency and reconciles an early callback", async () => {
+  it("sends branded HTML and plain text with idempotency and reconciles an early callback", async () => {
     const db = getFirestore();
     const result = await receiveCommunication(
       db,
@@ -279,6 +388,10 @@ describe.skipIf(!enabled)("durable multichannel conversations", () => {
     const sender = vi.fn(async (_url: any, options: any) => {
       expect(options.headers["Idempotency-Key"]).toBeTruthy();
       expect(JSON.parse(options.body).text).toContain("consultant");
+      expect(JSON.parse(options.body).html).toContain(
+        "Your consultant is reviewing your brief.",
+      );
+      expect(JSON.parse(options.body).html).toContain("<!doctype html>");
       return new Response(JSON.stringify({ id: externalId }), { status: 200 });
     });
     await deliverCommunication(

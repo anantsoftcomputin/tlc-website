@@ -27,22 +27,99 @@ function manager(request: {
   return { uid: request.auth.uid, orgId, role };
 }
 
-export async function buildMarketingDataset(orgId: string): Promise<TrainingExample[]> {
-  const db=getFirestore();
-  const [deliveries,events,bookings,customers]=await Promise.all([
-    readQueryPages(db.collection("campaignDeliveries").where("orgId","==",orgId).orderBy("__name__")),
-    readQueryPages(db.collectionGroup("events").where("orgId","==",orgId).orderBy("__name__")),
-    readQueryPages(db.collection("bookings").where("orgId","==",orgId).orderBy("__name__")),
-    readQueryPages(db.collection("customers").where("orgId","==",orgId).orderBy("__name__")),
+export async function buildMarketingDataset(
+  orgId: string,
+): Promise<TrainingExample[]> {
+  const db = getFirestore();
+  const [deliveries, events, bookings, customers] = await Promise.all([
+    readQueryPages(
+      db
+        .collection("campaignDeliveries")
+        .where("orgId", "==", orgId)
+        .orderBy("__name__"),
+    ),
+    readQueryPages(
+      db
+        .collectionGroup("events")
+        .where("orgId", "==", orgId)
+        .orderBy("__name__"),
+    ),
+    readQueryPages(
+      db.collection("bookings").where("orgId", "==", orgId).orderBy("__name__"),
+    ),
+    readQueryPages(
+      db
+        .collection("customers")
+        .where("orgId", "==", orgId)
+        .orderBy("__name__"),
+    ),
   ]);
-  const consent=new Map(customers.docs.map(doc=>[doc.id,doc.data().modelTrainingAllowed===true]));
-  const now=new Date().toISOString();const rows:TrainingExample[]=[];
-  for(const doc of deliveries.docs){const delivery=doc.data();if(!delivery.trainingSnapshot)continue;
-    const conversions=events.docs.filter(event=>event.data().type==="campaignConverted"&&event.data().payload?.campaignId===delivery.campaignId&&event.ref.parent.parent?.id===delivery.customerId).map(event=>String(event.data().ts)).sort();
-    const observed=bookings.docs.filter(booking=>booking.data().customerId===delivery.customerId&&booking.data().approvedAt&&booking.data().totals?.currency==="INR"&&booking.data().status!=="cancelled").map(booking=>({approvedAt:String(booking.data().approvedAt),amount:Number(booking.data().totals?.sell||0)}));
-    const row=historicalTrainingExample({snapshot:delivery.trainingSnapshot,sentAt:String(delivery.createdAt),conversionAt:conversions[0],bookings:observed,now,consent:consent.get(String(delivery.customerId))===true});if(row)rows.push(row);
+  const consent = new Map(
+    customers.docs.map((doc) => [
+      doc.id,
+      doc.data().modelTrainingAllowed === true,
+    ]),
+  );
+  const conversionsByCustomer = new Map<string, Map<string, string[]>>();
+  for (const event of events.docs) {
+    const data = event.data();
+    if (
+      data.type !== "campaignConverted" ||
+      !data.payload?.campaignId ||
+      !event.ref.parent.parent
+    )
+      continue;
+    const customerId = event.ref.parent.parent.id;
+    const campaigns =
+      conversionsByCustomer.get(customerId) || new Map<string, string[]>();
+    const key = String(data.payload.campaignId);
+    const timestamps = campaigns.get(key) || [];
+    timestamps.push(String(data.ts));
+    campaigns.set(key, timestamps);
+    conversionsByCustomer.set(customerId, campaigns);
   }
-  return rows.sort((a,b)=>a.occurredAt.localeCompare(b.occurredAt));
+  for (const campaigns of conversionsByCustomer.values())
+    for (const timestamps of campaigns.values()) timestamps.sort();
+  const bookingsByCustomer = new Map<
+    string,
+    { approvedAt: string; amount: number }[]
+  >();
+  for (const booking of bookings.docs) {
+    const data = booking.data();
+    if (
+      !data.approvedAt ||
+      data.totals?.currency !== "INR" ||
+      data.status === "cancelled"
+    )
+      continue;
+    const key = String(data.customerId);
+    const observed = bookingsByCustomer.get(key) || [];
+    observed.push({
+      approvedAt: String(data.approvedAt),
+      amount: Number(data.totals.sell || 0),
+    });
+    bookingsByCustomer.set(key, observed);
+  }
+  const now = new Date().toISOString();
+  const rows: TrainingExample[] = [];
+  for (const doc of deliveries.docs) {
+    const delivery = doc.data();
+    if (!delivery.trainingSnapshot) continue;
+    const customerId = String(delivery.customerId);
+    const conversions =
+      conversionsByCustomer.get(customerId)?.get(String(delivery.campaignId)) ||
+      [];
+    const row = historicalTrainingExample({
+      snapshot: delivery.trainingSnapshot,
+      sentAt: String(delivery.createdAt),
+      conversionAt: conversions[0],
+      bookings: bookingsByCustomer.get(customerId) || [],
+      now,
+      consent: consent.get(customerId) === true,
+    });
+    if (row) rows.push(row);
+  }
+  return rows.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
 }
 
 export async function createMarketingModelCandidate(
@@ -67,7 +144,7 @@ export async function createMarketingModelCandidate(
       id: ref.id,
       orgId,
       version,
-    datasetVersion: "event-time-v2",
+      datasetVersion: "event-time-v2",
       kind: "two-tower-multitask",
       status: "rejected",
       activationEligible: false,
@@ -206,7 +283,11 @@ export const activateMarketingModel = onCall(
     const snapshot = await target.get();
     if (!snapshot.exists || snapshot.data()?.orgId !== identity.orgId)
       throw new HttpsError("not-found", "Model was not found.");
-    if (snapshot.data()?.datasetVersion !== "event-time-v2" || !snapshot.data()?.activationEligible || !snapshot.data()?.storagePath)
+    if (
+      snapshot.data()?.datasetVersion !== "event-time-v2" ||
+      !snapshot.data()?.activationEligible ||
+      !snapshot.data()?.storagePath
+    )
       throw new HttpsError(
         "failed-precondition",
         "This model has not passed activation gates.",

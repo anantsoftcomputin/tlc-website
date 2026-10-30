@@ -53,6 +53,12 @@ export async function getSessionUser(): Promise<AdminUser | null> {
       .get();
     if (profile.data()?.active === false || profile.data()?.disabled === true)
       return null;
+    if (
+      profile.exists &&
+      ((profile.data()?.role && profile.data()?.role !== role) ||
+        (profile.data()?.orgId && profile.data()?.orgId !== orgId))
+    )
+      return null;
     return {
       uid: decoded.uid,
       email: decoded.email,

@@ -118,3 +118,19 @@ Functions and scheduled workloads use `asia-south1`. The existing Firestore data
 ## Evolution strategy
 
 The public site and current admin pages are migrated into the workspace first. Canonical schemas and rules are introduced before feature screens. Old lead fields are mapped at repository boundaries during the transition; new writes use the canonical schema. Each later phase adds modules behind stable interfaces rather than rewriting the foundation.
+
+## October 30 gap fixes
+
+Tour discovery combines destination, travel style, duration and sorting through URL parameters. Unsupported departure-date and party-size catalogue controls have been replaced by duration/style; dates and traveller details belong to custom planning. Mobile filters expand inline and all filters survive submission.
+
+Customer directory search scans indexed candidates in document order, at most 1,000 per request, and returns a continuation cursor even when that scan has no matches. Search URLs retain the query when paging. Long email addresses are compared in full. Client dashboard identity is resolved once; related customer records and booking payments are fetched in batches of up to 30 identifiers. Full client history is still returned; this is a query-efficiency improvement, not an archival policy.
+
+Finance period close reads only records in the selected date range, using an exclusive next-day bound while retaining the organization transaction lock. The accompanying Firestore indexes must be deployed with the code. Marketing dataset construction builds customer/campaign lookup maps before processing deliveries rather than repeatedly scanning historical arrays.
+
+Server sessions now reject profile/token role and organization mismatches, matching the callable boundary. Additional transactional email triggers cover linked enquiries, captured payments, fully supplier-confirmed bookings and issued finance documents. They require `EMAIL_LIFECYCLE_ENABLED=true`; they reuse the existing outbox/delivery pipeline. See [REMAINING_GAPS.md](./REMAINING_GAPS.md) for verification and external activation requirements.
+
+## Verified personal travel advisor
+
+The website, private channel context, confirmed-trip budget planner, campaign drafts and completed-trip feedback now share a verified/consented CRM identity. `/client/advisor` requires current trip confirmation before inventory search, and `/admin/settings/personalization` supplies actual sourced retail extras and pricing policy. Unknown or stale components cannot be called within budget. Pattern jobs create reviewable campaigns, never approval. Completed bookings and structured feedback refresh historical profiles.
+
+See [PERSONAL_TRAVEL_ADVISOR.md](./PERSONAL_TRAVEL_ADVISOR.md) for contracts, proof-of-identity channel links, consent/expiry handling, deployment requirements and verification.

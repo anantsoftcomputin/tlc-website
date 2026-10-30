@@ -1,3 +1,11 @@
+export { draftPersonalTravelCampaigns, refreshPersonalRecommendations } from "./pattern-campaigns.js";
+export { completeBooking, refreshProfileFromTravelHistory, updateCompletedTripRefunds } from "./trip-completion.js";
+export {
+  notifyClientEnquiryReceived,
+  notifyClientPaymentReceived,
+  notifyClientBookingConfirmed,
+  notifyClientFinanceDocument,
+} from "./lifecycle-notifications.js";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";

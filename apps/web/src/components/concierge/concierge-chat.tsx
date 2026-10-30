@@ -31,9 +31,12 @@ const starterPrompts = [
   "Suggest an international trip for a couple",
 ];
 
-export function ConciergeChat() {
+export function ConciergeChat({
+  embedded = false,
+  customerId,
+}: { embedded?: boolean; customerId?: string } = {}) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(embedded);
   const [sessionId, setSessionId] = useState("");
   const [messages, setMessages] = useState<DisplayMessage[]>([greeting]);
   const [suggestions, setSuggestions] = useState(starterPrompts);
@@ -46,17 +49,80 @@ export function ConciergeChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const reset = () => {
+      setMessages([greeting]);
+      setSessionId("");
+      setFeedback(null);
+      setConfirmedMessages([]);
+      setHandover(false);
+      setOpen(embedded);
+    };
+    window.addEventListener("tlc-session-ended", reset);
+    return () => window.removeEventListener("tlc-session-ended", reset);
+  }, [embedded]);
+  useEffect(() => {
     if (!open || sessionId) return;
     let active = true;
-    void publicRequestHeaders().then(headers=>fetch("/api/concierge/session",{method:"POST",headers})).then(async response=>{if(!response.ok)throw new Error("Unable to start chat.");return response.json();}).then(data=>{if(active)setSessionId(data.sessionId);}).catch(()=>{if(active)setError("Unable to start chat. Please try again.");});
-    return ()=>{active=false;};
+    void publicRequestHeaders()
+      .then((headers) =>
+        fetch("/api/concierge/session", { method: "POST", headers }),
+      )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to start chat.");
+        return response.json();
+      })
+      .then((data) => {
+        if (active) setSessionId(data.sessionId);
+      })
+      .catch(() => {
+        if (active) setError("Unable to start chat. Please try again.");
+      });
+    return () => {
+      active = false;
+    };
   }, [open, sessionId]);
-  useEffect(()=>{
-    if(!open || !sessionId)return;
-    let active=true;
-    const poll=async()=>{try{const response=await fetch(`/api/concierge/messages?sessionId=${encodeURIComponent(sessionId)}`);if(!response.ok)return;const data=await response.json();if(active)setMessages(current=>[...current,...data.messages.filter((item:{id:string})=>!current.some(existing=>existing.id===item.id)).map((item:{id:string;body:string})=>({id:item.id,role:"assistant" as const,content:`TLC team: ${item.body}`}))]);}catch{/* Retry on the next poll. */}};
-    void poll();const timer=setInterval(poll,5000);return()=>{active=false;clearInterval(timer);};
-  },[open,sessionId]);
+  useEffect(() => {
+    if (!open || !sessionId) return;
+    let active = true;
+    const poll = async () => {
+      try {
+        const response = await fetch(
+          `/api/concierge/messages?sessionId=${encodeURIComponent(sessionId)}`,
+        );
+        if (!response.ok) {
+          if (response.status === 403 && active) {
+            setMessages([greeting]);
+            setSessionId("");
+            setFeedback(null);
+          }
+          return;
+        }
+        const data = await response.json();
+        if (active)
+          setMessages((current) => [
+            ...current,
+            ...data.messages
+              .filter(
+                (item: { id: string }) =>
+                  !current.some((existing) => existing.id === item.id),
+              )
+              .map((item: { id: string; body: string }) => ({
+                id: item.id,
+                role: "assistant" as const,
+                content: `TLC team: ${item.body}`,
+              })),
+          ]);
+      } catch {
+        /* Retry on the next poll. */
+      }
+    };
+    void poll();
+    const timer = setInterval(poll, 5000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [open, sessionId]);
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -74,13 +140,13 @@ export function ConciergeChat() {
   if (
     pathname === "/plan-my-trip" ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/client") ||
+    (pathname.startsWith("/client") && !embedded) ||
     pathname.startsWith("/i/") ||
     pathname === "/login"
   )
     return null;
 
-  async function send(value: string) {
+  async function send(value: string, refreshInventory = false) {
     const message = value.trim();
     if (!message || busy || !sessionId) return;
     const prior = messages;
@@ -98,6 +164,8 @@ export function ConciergeChat() {
         headers: await publicRequestHeaders(),
         body: JSON.stringify({
           sessionId,
+          customerId,
+          refreshInventory,
           message,
           page: pathname,
           history: prior
@@ -141,6 +209,8 @@ export function ConciergeChat() {
         headers: await publicRequestHeaders(),
         body: JSON.stringify({
           sessionId,
+          customerId,
+          rememberProfile: embedded,
           updates: message.preferenceUpdates.map(
             ({ path, value, confidence, evidenceMessageId }) => ({
               path,
@@ -152,7 +222,8 @@ export function ConciergeChat() {
         }),
       });
       const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Preferences could not be saved.");
+      if (!response.ok)
+        throw new Error(payload.error || "Preferences could not be saved.");
       setConfirmedMessages((current) => [...current, message.id]);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Please try again.");
@@ -187,7 +258,9 @@ export function ConciergeChat() {
   ].slice(0, 10);
 
   return (
-    <div className={`concierge-widget ${open ? "is-open" : ""}`}>
+    <div
+      className={`concierge-widget ${embedded ? "is-embedded" : ""} ${open ? "is-open" : ""}`}
+    >
       {!open && (
         <button
           className="concierge-launcher"
@@ -225,6 +298,7 @@ export function ConciergeChat() {
             </div>
             <button
               onClick={() => setOpen(false)}
+              disabled={embedded}
               aria-label="Close travel assistant"
             >
               <X />
@@ -253,14 +327,21 @@ export function ConciergeChat() {
                       </b>
                       <p>
                         {message.preferenceUpdates
-                          .map((item) => `${item.path.split(".").at(-1)?.replaceAll("_", " ")}: ${Array.isArray(item.value) ? item.value.join(", ") : String(item.value)}`)
+                          .map(
+                            (item) =>
+                              `${item.path.split(".").at(-1)?.replaceAll("_", " ")}: ${Array.isArray(item.value) ? item.value.join(", ") : String(item.value)}`,
+                          )
                           .join(" · ")}
                       </p>
                       {confirmedMessages.includes(message.id) ? (
                         <span>Confirmed for this conversation</span>
                       ) : (
-                        <button onClick={() => void confirmPreferences(message)}>
-                          Yes, remember this
+                        <button
+                          onClick={() => void confirmPreferences(message)}
+                        >
+                          {embedded
+                            ? "Confirm and save shared preferences"
+                            : "Confirm for this conversation"}
                         </button>
                       )}
                     </div>
@@ -321,13 +402,38 @@ export function ConciergeChat() {
             </button>
           </form>
           <footer>
+            {embedded && (
+              <button
+                disabled={busy || !sessionId}
+                onClick={() =>
+                  void send(
+                    "Please refresh availability for my confirmed trip.",
+                    true,
+                  )
+                }
+              >
+                Refresh my confirmed trip
+              </button>
+            )}
             <button onClick={() => setHandover(true)}>
               <MessageCircle /> Talk to a TLC expert
             </button>
             {messages.length > 1 && (
               <div className="concierge-feedback">
                 <small>{feedback ? "Thank you" : "Helpful?"}</small>
-                {!feedback && <><button aria-label="Helpful" onClick={() => void rate(5)}><ThumbsUp /></button><button aria-label="Not helpful" onClick={() => void rate(2)}><ThumbsDown /></button></>}
+                {!feedback && (
+                  <>
+                    <button aria-label="Helpful" onClick={() => void rate(5)}>
+                      <ThumbsUp />
+                    </button>
+                    <button
+                      aria-label="Not helpful"
+                      onClick={() => void rate(2)}
+                    >
+                      <ThumbsDown />
+                    </button>
+                  </>
+                )}
               </div>
             )}
             <span>

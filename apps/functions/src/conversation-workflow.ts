@@ -51,6 +51,7 @@ const credentials = () => ({
         emailKey: emailKey.value(),
         emailFrom: process.env.MARKETING_EMAIL_FROM,
         emailReplyTo: process.env.EMAIL_REPLY_TO,
+        siteUrl: process.env.TLC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL,
       }
     : {}),
 });
@@ -295,7 +296,11 @@ export const emailConversationWebhook = onRequest(
 
 // Preserve the deployed trigger name; both external channels now use the durable outbox.
 export const deliverWhatsAppConversationMessage = onDocumentCreated(
-  { region, document: "conversations/{conversationId}/messages/{messageId}", retry: true },
+  {
+    region,
+    document: "conversations/{conversationId}/messages/{messageId}",
+    retry: true,
+  },
   async (event) => {
     await queueCommunication(
       database,
@@ -311,7 +316,12 @@ export const deliverConversationOutbox = onDocumentCreated(
   },
 );
 export const answerConversationMessage = onDocumentCreated(
-  { region, document: "conversationBotJobs/{id}", timeoutSeconds: 120, secrets: modelSecrets },
+  {
+    region,
+    document: "conversationBotJobs/{id}",
+    timeoutSeconds: 120,
+    secrets: modelSecrets,
+  },
   async (event) => {
     await processBotJob(database, event.params.id);
   },

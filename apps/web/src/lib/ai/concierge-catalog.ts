@@ -49,7 +49,12 @@ function score(queryTokens: string[], text: string) {
   );
 }
 
-export async function searchConciergeCatalog(query: string, sessionId: string) {
+export async function searchConciergeCatalog(
+  query: string,
+  sessionId: string,
+  preferences: string[] = [],
+) {
+  const preferenceTokens = tokens(preferences.join(" "));
   const content = await getPublicContent();
   const queryTokens = tokens(query);
   const now = new Date().toISOString();
@@ -101,6 +106,7 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
     candidates.push({
       score:
         score(queryTokens, haystack) +
+        score(preferenceTokens, haystack) * 0.5 +
         (normalizedQuery.includes(destination.name.toLowerCase()) ? 20 : 0),
       card: {
         kind: "destination",
@@ -151,6 +157,7 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
     candidates.push({
       score:
         score(queryTokens, haystack) +
+        score(preferenceTokens, haystack) * 0.5 +
         (normalizedQuery.includes(trip.destination.toLowerCase()) ? 12 : 0) +
         (queryTokens.includes(String(trip.days)) ? 2 : 0),
       card: {
@@ -210,6 +217,7 @@ export async function searchConciergeCatalog(query: string, sessionId: string) {
     candidates.push({
       score:
         score(queryTokens, haystack) +
+        score(preferenceTokens, haystack) * 0.5 +
         (normalizedQuery.includes(hotel.destinationSlug.toLowerCase())
           ? 10
           : 0),

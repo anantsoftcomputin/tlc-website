@@ -285,10 +285,14 @@ export function CampaignBuilder({
         },
         message: {
           subject: String(form.get("subject") || "") || undefined,
+          emailDesign: String(form.get("emailDesign") || "travel-newsletter"),
           body: form.get("body"),
           templateName: String(form.get("templateName") || "") || undefined,
           templateLanguage: String(form.get("templateLanguage") || "en"),
-          templateParameters: String(form.get("templateParameters") || "").split("\n").map(item => item.trim()).filter(Boolean),
+          templateParameters: String(form.get("templateParameters") || "")
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
         },
       });
       event.currentTarget.reset();
@@ -387,6 +391,37 @@ export function CampaignBuilder({
             required={campaignTrigger === "scheduled"}
           />
         </label>
+        {channel === "email" && (
+          <label className="span-2">
+            <span>Email design</span>
+            <select name="emailDesign" defaultValue="travel-newsletter">
+              {[
+                ["travel-newsletter", "Travel journal"],
+                ["destination-inspiration", "Destination spotlight"],
+                ["personalised-picks", "Personalised picks"],
+                ["seasonal-offer", "Seasonal offer"],
+                ["family-holidays", "Family holiday"],
+                ["honeymoon-escape", "Honeymoon / couples"],
+                ["birthday-wish", "Birthday"],
+                ["anniversary-wish", "Anniversary"],
+                ["resume-planning", "Resume a holiday plan"],
+                ["welcome-back", "Returning traveller"],
+                ["post-trip-feedback", "Post-trip feedback"],
+              ].map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <a
+              href="/admin/communications/emails"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Preview all email designs ↗
+            </a>
+          </label>
+        )}
         <label>
           <span>Email subject</span>
           <input
@@ -403,11 +438,29 @@ export function CampaignBuilder({
             placeholder="Required for WhatsApp"
           />
         </label>
-        <label><span>WhatsApp template language</span><input name="templateLanguage" defaultValue="en" placeholder="en or en_US" /></label>
-        <label><span>Template body parameters, in order</span><textarea name="templateParameters" rows={3} placeholder={"{{firstName}}\n{{offerTitle}}"} /></label>
+        <label>
+          <span>WhatsApp template language</span>
+          <input
+            name="templateLanguage"
+            defaultValue="en"
+            placeholder="en or en_US"
+          />
+        </label>
+        <label>
+          <span>Template body parameters, in order</span>
+          <textarea
+            name="templateParameters"
+            rows={3}
+            placeholder={"{{firstName}}\n{{offerTitle}}"}
+          />
+        </label>
         <label className="span-2">
-          <span>Message · plain text</span>
-          <small>Personalise with {"{{firstName}}"}, {"{{destination}}"}, {"{{offerTitle}}"} and {"{{travelStyle}}"}. Email includes an unsubscribe link.</small>
+          <span>Message · personal note</span>
+          <small>
+            Personalise with {"{{firstName}}"}, {"{{destination}}"},{" "}
+            {"{{offerTitle}}"} and {"{{travelStyle}}"}. Email includes an
+            unsubscribe link.
+          </small>
           <textarea name="body" rows={5} required maxLength={5000} />
         </label>
       </div>

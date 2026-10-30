@@ -1455,3 +1455,8 @@
     bottom: calc(80px + env(safe-area-inset-bottom));
   }
 }
+
+.trip-filter-panel { min-width: 0; }
+.trip-filter-form { display: grid; gap: 14px; padding: 17px; }
+.trip-filter-form select { display: block; width: 100%; margin-top: 8px; padding: 9px; border: 1px solid var(--border); border-radius: 5px; background: white; color: var(--ink); }
+@media (max-width: 1000px) { .trip-filter-panel .market-filters.is-open { display: block; margin-bottom: 20px; } }

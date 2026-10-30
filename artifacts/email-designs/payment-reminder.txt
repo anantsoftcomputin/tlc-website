@@ -1,0 +1,26 @@
+TLC HOLIDAYS · TRAVEL LIVING COMFORT
+
+A HELPFUL PAYMENT REMINDER
+
+A quick note about your payment.
+
+Hello Aarav,
+
+Our records show an outstanding payment for your booking. If you have already paid, please check your account or contact your consultant before making another payment.
+
+PAYMENT AMOUNT: ₹62,000
+
+Reference: TLC-DEMO-PAY-1042
+
+Due date: 20 October 2026
+
+Check payment status: https://preview.tlc.example/client
+
+With care,
+Your TLC team
+
+Contact: info@tlcholidays.in · +91 89488 88873
+
+TLC Holidays · 11/26, 1-B, Ground Floor, Karmin Apartments, Suter Ganj, Kanpur, Uttar Pradesh, India
+
+This is a service message about your TLC account, enquiry or travel arrangements.

@@ -79,6 +79,33 @@ export async function queueQuoteReadyEmail(
       deliveryStatus: "queued",
       aiGenerated: false,
       purpose: "quote-ready",
+      emailTemplateId:
+        Number(quote.version || 1) > 1 ? "quote-revised" : "quote-ready",
+      emailData: {
+        firstName: String(customer.name || customer.fullName || "traveller")
+          .trim()
+          .split(/\s+/)[0],
+        ...(quote.quoteNumber ? { reference: String(quote.quoteNumber) } : {}),
+        ...(quote.validUntil && Number.isFinite(Date.parse(quote.validUntil))
+          ? {
+              validUntil: new Intl.DateTimeFormat("en-IN", {
+                dateStyle: "medium",
+                timeZone: "Asia/Kolkata",
+              }).format(new Date(quote.validUntil)),
+            }
+          : {}),
+        ...(quote.totals?.sell != null &&
+        Number.isFinite(Number(quote.totals.sell)) &&
+        /^[A-Z]{3}$/.test(String(quote.totals.currency || "INR"))
+          ? {
+              amount: new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: String(quote.totals.currency || "INR"),
+                maximumFractionDigits: 2,
+              }).format(Number(quote.totals.sell)),
+            }
+          : {}),
+      },
       quoteId,
       toolCalls: [],
       sentAt: now,

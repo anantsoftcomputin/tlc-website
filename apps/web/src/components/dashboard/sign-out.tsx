@@ -10,6 +10,7 @@ export function SignOutButton() {
       onClick={async () => {
         await fetch("/api/auth/session", { method: "DELETE" });
         await signOut(getFirebaseAuth());
+        window.dispatchEvent(new Event("tlc-session-ended"));
         router.replace("/login");
         router.refresh();
       }}

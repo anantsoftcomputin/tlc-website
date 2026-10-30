@@ -34,6 +34,7 @@ export type MarketingCampaignRow = RecentCampaign & {
   trigger: string;
   sendAt?: string;
   body: string;
+  patternReason?: string;
   audience: {
     segmentLabels: string[];
     customerIds: string[];
@@ -223,6 +224,7 @@ export class FirestoreMarketingRepository {
             ? String(data.schedule.sendAt)
             : undefined,
           body: String(data.message?.body || ""),
+          patternReason: data.patternRecommendation?.reasons ? String(data.patternRecommendation.reasons) : undefined,
           audience: {
             segmentLabels: Array.isArray(data.audience?.segmentQuery?.labels)
               ? data.audience.segmentQuery.labels.map(String)

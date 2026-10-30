@@ -6,6 +6,8 @@ const chatMessageSchema = z.object({
 });
 
 export const conciergeChatRequestSchema = z.object({
+  customerId: z.string().min(1).max(160).optional(),
+  refreshInventory: z.boolean().default(false),
   sessionId: z.string().uuid(),
   message: z.string().trim().min(1).max(2000),
   history: z.array(chatMessageSchema).max(12).default([]),
@@ -26,6 +28,8 @@ export const conciergeHandoverSchema = z.object({
 });
 
 export const conciergePreferenceConfirmationSchema = z.object({
+  customerId: z.string().min(1).max(160).optional(),
+  rememberProfile: z.boolean().default(false),
   sessionId: z.string().uuid(),
   updates: z
     .array(

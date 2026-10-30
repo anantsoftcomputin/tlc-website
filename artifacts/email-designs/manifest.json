@@ -1,0 +1,998 @@
+[
+  {
+    "id": "welcome",
+    "name": "Welcome to TLC",
+    "category": "Account",
+    "layout": "journey",
+    "eyebrow": "A WORLD OF POSSIBILITIES",
+    "subject": "Welcome to your next chapter with TLC",
+    "preheader": "Your ideas. Our care. A holiday that feels like you.",
+    "heading": "A little curiosity.\nA wonderful beginning.",
+    "intro": "Welcome to TLC, {{firstName}}. This is your space to collect ideas, shape a holiday and talk to people who care about the details.",
+    "action": "Explore your travel space",
+    "path": "/client",
+    "image": "hero-braies.jpg",
+    "trigger": "Account successfully created and verified",
+    "integration": "event-ready",
+    "files": {
+      "html": "welcome.html",
+      "text": "welcome.txt",
+      "payload": "welcome.json"
+    }
+  },
+  {
+    "id": "verify-email",
+    "name": "Verify email address",
+    "category": "Account",
+    "layout": "security",
+    "eyebrow": "YOUR TLC ACCOUNT",
+    "subject": "Verify your email for TLC Holidays",
+    "preheader": "One small step to open your personal travel space.",
+    "heading": "Let’s make it official.",
+    "intro": "Please verify this email address to finish setting up your TLC account.",
+    "action": "Verify my email",
+    "note": "If you did not create a TLC account, you can ignore this email. We will never ask for your password by email.",
+    "required": [
+      "actionUrl"
+    ],
+    "trigger": "Firebase Authentication verification action link",
+    "integration": "auth-provider",
+    "files": {
+      "html": "verify-email.html",
+      "text": "verify-email.txt",
+      "payload": "verify-email.json"
+    }
+  },
+  {
+    "id": "password-reset",
+    "name": "Reset password",
+    "category": "Account",
+    "layout": "security",
+    "eyebrow": "SECURE ACCOUNT ACCESS",
+    "subject": "Reset your TLC account password",
+    "preheader": "Use your secure link to choose a new password.",
+    "heading": "A fresh start,\njust for your password.",
+    "intro": "We received a request to reset the password for your TLC account. Use the secure link below to choose a new one.",
+    "action": "Reset my password",
+    "note": "If this was not you, ignore this email. Your password will remain unchanged. This link follows the expiry shown by your authentication provider.",
+    "required": [
+      "actionUrl"
+    ],
+    "trigger": "Firebase Authentication password-reset action link",
+    "integration": "auth-provider",
+    "files": {
+      "html": "password-reset.html",
+      "text": "password-reset.txt",
+      "payload": "password-reset.json"
+    }
+  },
+  {
+    "id": "email-changed",
+    "name": "Email address changed",
+    "category": "Account",
+    "layout": "security",
+    "eyebrow": "ACCOUNT UPDATE",
+    "subject": "Your TLC account email was changed",
+    "preheader": "Review this account change if you did not request it.",
+    "heading": "An update to\nyour account.",
+    "intro": "The email address associated with your TLC account has changed. If you made this change, no further action is needed.",
+    "action": "Review account change",
+    "required": [
+      "actionUrl"
+    ],
+    "note": "If you did not request this change, use the secure recovery link above or contact TLC.",
+    "trigger": "Firebase Authentication email-change recovery action",
+    "integration": "auth-provider",
+    "files": {
+      "html": "email-changed.html",
+      "text": "email-changed.txt",
+      "payload": "email-changed.json"
+    }
+  },
+  {
+    "id": "staff-invitation",
+    "name": "Team invitation",
+    "category": "Account",
+    "layout": "security",
+    "eyebrow": "TLC TEAM ACCESS",
+    "subject": "Your invitation to the TLC workspace",
+    "preheader": "Set up your account to join the TLC team.",
+    "heading": "Great journeys\nstart with great people.",
+    "intro": "You have been invited to the TLC team workspace. Set up your account using your personal invitation link.",
+    "action": "Set up my account",
+    "required": [
+      "actionUrl"
+    ],
+    "note": "This invitation is intended for its recipient. Please do not forward the link.",
+    "trigger": "Administrator-created staff account setup link",
+    "integration": "auth-provider",
+    "files": {
+      "html": "staff-invitation.html",
+      "text": "staff-invitation.txt",
+      "payload": "staff-invitation.json"
+    }
+  },
+  {
+    "id": "enquiry-received",
+    "name": "Travel enquiry received",
+    "category": "Planning",
+    "layout": "letter",
+    "eyebrow": "YOUR IDEAS ARE WITH US",
+    "subject": "We have your holiday brief, {{firstName}}",
+    "preheader": "Your next adventure is starting to take shape.",
+    "heading": "Consider the first\nstep taken.",
+    "intro": "Thank you for sharing your holiday ideas. Your brief is with the TLC team, and a consultant will help turn those ideas into a plan that suits you.",
+    "action": "View my enquiries",
+    "path": "/client",
+    "note": "This acknowledges your enquiry. No rooms, flights or other services have been reserved.",
+    "trigger": "New travel enquiry or quote request captured",
+    "integration": "connected",
+    "files": {
+      "html": "enquiry-received.html",
+      "text": "enquiry-received.txt",
+      "payload": "enquiry-received.json"
+    }
+  },
+  {
+    "id": "shortlist-saved",
+    "name": "Shortlist saved",
+    "category": "Planning",
+    "layout": "journey",
+    "eyebrow": "YOUR HOLIDAY, TAKING SHAPE",
+    "subject": "Your holiday shortlist is saved",
+    "preheader": "Return to your favourites whenever inspiration strikes.",
+    "heading": "Good ideas\nare worth keeping.",
+    "intro": "Your selected holiday ideas are saved. Review them, refine the details, or ask TLC to prepare a tailored quote.",
+    "action": "Return to my shortlist",
+    "required": [
+      "actionUrl"
+    ],
+    "note": "A shortlist is not a reservation. Rates and availability are checked when your consultant prepares a quote.",
+    "image": "destinations/bali.jpg",
+    "trigger": "Client explicitly asks to email a saved shortlist",
+    "integration": "event-ready",
+    "files": {
+      "html": "shortlist-saved.html",
+      "text": "shortlist-saved.txt",
+      "payload": "shortlist-saved.json"
+    }
+  },
+  {
+    "id": "quote-ready",
+    "name": "Personalised quote ready",
+    "category": "Planning",
+    "layout": "journey",
+    "eyebrow": "THOUGHTFULLY PLANNED FOR YOU",
+    "subject": "Your TLC holiday proposal is ready",
+    "preheader": "A holiday built around your ideas, ready for your review.",
+    "heading": "Your next chapter,\nbeautifully planned.",
+    "intro": "Your TLC holiday proposal is ready to review. Take a look at the itinerary and the details, then tell your consultant what you think.",
+    "action": "View my holiday proposal",
+    "path": "/client",
+    "image": "destinations/alpine-lake.jpg",
+    "note": "Your quote is subject to its stated validity, terms and availability. Reviewing or accepting a quote does not by itself confirm a supplier booking.",
+    "trigger": "Consultant sends an approved quote",
+    "integration": "connected",
+    "files": {
+      "html": "quote-ready.html",
+      "text": "quote-ready.txt",
+      "payload": "quote-ready.json"
+    }
+  },
+  {
+    "id": "quote-revised",
+    "name": "Revised quote",
+    "category": "Planning",
+    "layout": "journey",
+    "eyebrow": "A LITTLE CLOSER TO PERFECT",
+    "subject": "Your updated TLC proposal is ready",
+    "preheader": "We have refined your holiday plan. Review the latest version.",
+    "heading": "A few changes.\nA better fit for you.",
+    "intro": "Your consultant has prepared an updated proposal. Please review this latest version, including the price, inclusions and terms, before deciding.",
+    "action": "Review updated proposal",
+    "path": "/client",
+    "image": "destinations/alpine-lake.jpg",
+    "note": "The latest proposal replaces earlier versions. Supplier availability remains subject to confirmation.",
+    "trigger": "Consultant sends a revised quote version",
+    "integration": "connected",
+    "files": {
+      "html": "quote-revised.html",
+      "text": "quote-revised.txt",
+      "payload": "quote-revised.json"
+    }
+  },
+  {
+    "id": "quote-accepted",
+    "name": "Quote acceptance received",
+    "category": "Planning",
+    "layout": "letter",
+    "eyebrow": "YOUR DECISION IS WITH US",
+    "subject": "We have received your quote acceptance",
+    "preheader": "Your consultant will guide you through the booking steps.",
+    "heading": "Let’s take\nthe next step.",
+    "intro": "Thank you for accepting your proposal. Your TLC consultant will guide you through the next steps and confirm the status of each travel service.",
+    "action": "View my travel space",
+    "path": "/client",
+    "note": "Acceptance is not a booking confirmation. Payment and supplier confirmation may still be required.",
+    "trigger": "Client accepts a shared quote",
+    "integration": "event-ready",
+    "files": {
+      "html": "quote-accepted.html",
+      "text": "quote-accepted.txt",
+      "payload": "quote-accepted.json"
+    }
+  },
+  {
+    "id": "quote-declined",
+    "name": "Quote declined or changes needed",
+    "category": "Planning",
+    "layout": "letter",
+    "eyebrow": "THERE IS ALWAYS ANOTHER WAY",
+    "subject": "Let’s find a better fit for your holiday",
+    "preheader": "Your consultant can help you explore a different direction.",
+    "heading": "Your holiday.\nYour kind of perfect.",
+    "intro": "We have received your decision on the proposal. If you would like to change the destination, dates or budget, tell us what would feel right and we can work from there.",
+    "action": "Talk to my consultant",
+    "path": "/client/messages",
+    "trigger": "Client declines a shared quote",
+    "integration": "event-ready",
+    "files": {
+      "html": "quote-declined.html",
+      "text": "quote-declined.txt",
+      "payload": "quote-declined.json"
+    }
+  },
+  {
+    "id": "quote-expiring",
+    "name": "Quote validity reminder",
+    "category": "Planning",
+    "layout": "letter",
+    "eyebrow": "A NOTE ABOUT YOUR PROPOSAL",
+    "subject": "Your TLC quote is valid until {{validUntil}}",
+    "preheader": "Review your proposal before its stated validity ends.",
+    "heading": "A little reminder\nabout your plans.",
+    "intro": "Your proposal has a stated validity date. If you would like to proceed or need more time, speak with your consultant before it expires.",
+    "action": "Review my proposal",
+    "path": "/client",
+    "required": [
+      "validUntil"
+    ],
+    "note": "This is a quote-validity reminder, not a guarantee that rooms or fares are held.",
+    "trigger": "Scheduled reminder before the quote validity ends",
+    "integration": "event-ready",
+    "files": {
+      "html": "quote-expiring.html",
+      "text": "quote-expiring.txt",
+      "payload": "quote-expiring.json"
+    }
+  },
+  {
+    "id": "quote-expired",
+    "name": "Quote expired",
+    "category": "Planning",
+    "layout": "letter",
+    "eyebrow": "WE CAN PICK THIS UP AGAIN",
+    "subject": "Your TLC quote needs a fresh availability check",
+    "preheader": "Your ideas are still here. Let us refresh the details.",
+    "heading": "The idea can stay.\nLet’s refresh the details.",
+    "intro": "The validity period for your proposal has ended. Your consultant can check current availability and prepare an updated quote when you are ready.",
+    "action": "Request an updated quote",
+    "path": "/client/messages",
+    "trigger": "Quote becomes expired",
+    "integration": "event-ready",
+    "files": {
+      "html": "quote-expired.html",
+      "text": "quote-expired.txt",
+      "payload": "quote-expired.json"
+    }
+  },
+  {
+    "id": "booking-requested",
+    "name": "Booking being arranged",
+    "category": "Booking",
+    "layout": "letter",
+    "eyebrow": "YOUR TRAVEL ARRANGEMENTS",
+    "subject": "We are working on your booking",
+    "preheader": "Follow each service’s confirmation status in your TLC account.",
+    "heading": "The details\nare in good hands.",
+    "intro": "The TLC team is processing your booking request. We will update you as your suppliers confirm the individual services.",
+    "action": "Track my booking",
+    "path": "/client",
+    "required": [
+      "reference"
+    ],
+    "note": "Your booking is being processed. Only services explicitly marked confirmed are confirmed.",
+    "trigger": "Approved booking enters processing",
+    "integration": "event-ready",
+    "files": {
+      "html": "booking-requested.html",
+      "text": "booking-requested.txt",
+      "payload": "booking-requested.json"
+    }
+  },
+  {
+    "id": "booking-confirmed",
+    "name": "Booking confirmed",
+    "category": "Booking",
+    "layout": "journey",
+    "eyebrow": "SOMETHING WONDERFUL TO LOOK FORWARD TO",
+    "subject": "Your TLC booking is confirmed · {{reference}}",
+    "preheader": "Your confirmed arrangements and next steps, all in one place.",
+    "heading": "It’s happening.\nYour journey awaits.",
+    "intro": "Your booking is confirmed. Review your confirmed services and travel details in your TLC account, and keep your booking reference handy.",
+    "action": "View confirmed arrangements",
+    "path": "/client",
+    "image": "destinations/alpine-lake.jpg",
+    "required": [
+      "reference"
+    ],
+    "note": "Refer to your confirmation documents for the exact services, dates, inclusions and supplier terms.",
+    "trigger": "Booking and all required supplier services reach confirmed state",
+    "integration": "connected",
+    "files": {
+      "html": "booking-confirmed.html",
+      "text": "booking-confirmed.txt",
+      "payload": "booking-confirmed.json"
+    }
+  },
+  {
+    "id": "booking-updated",
+    "name": "Booking changes",
+    "category": "Booking",
+    "layout": "letter",
+    "eyebrow": "PLEASE REVIEW YOUR ARRANGEMENTS",
+    "subject": "An update to your TLC booking · {{reference}}",
+    "preheader": "Please review the latest details before you travel.",
+    "heading": "A change\nto your travel plans.",
+    "intro": "There is an update to your booking. Please review the change below and the latest arrangements in your account. Your consultant can help with any questions.",
+    "action": "Review booking update",
+    "path": "/client",
+    "required": [
+      "reference",
+      "message"
+    ],
+    "trigger": "Consultant or supplier changes a confirmed travel arrangement",
+    "integration": "event-ready",
+    "files": {
+      "html": "booking-updated.html",
+      "text": "booking-updated.txt",
+      "payload": "booking-updated.json"
+    }
+  },
+  {
+    "id": "documents-requested",
+    "name": "Travel documents required",
+    "category": "Booking",
+    "layout": "letter",
+    "eyebrow": "LET’S GET THE DETAILS READY",
+    "subject": "Documents needed for your TLC booking",
+    "preheader": "Review your document checklist in your secure travel space.",
+    "heading": "A few details\nbefore the adventure.",
+    "intro": "We need additional information or documents to continue your travel arrangements. Your current checklist is available in your TLC account.",
+    "action": "Review my checklist",
+    "path": "/client",
+    "note": "Please use the secure process provided by your consultant. Do not send payment card details or passwords by email.",
+    "trigger": "Booking document checklist requires client action",
+    "integration": "event-ready",
+    "files": {
+      "html": "documents-requested.html",
+      "text": "documents-requested.txt",
+      "payload": "documents-requested.json"
+    }
+  },
+  {
+    "id": "documents-ready",
+    "name": "Tickets and vouchers ready",
+    "category": "Booking",
+    "layout": "letter",
+    "eyebrow": "YOUR JOURNEY, ORGANISED",
+    "subject": "Your travel documents are ready",
+    "preheader": "Review your issued tickets, vouchers and travel documents.",
+    "heading": "All those details.\nOne place to find them.",
+    "intro": "New travel documents are ready in your TLC account. Please check traveller names, dates and service details, and let your consultant know promptly if anything needs attention.",
+    "action": "View travel documents",
+    "path": "/client",
+    "trigger": "Tickets, vouchers or other confirmed travel documents issued",
+    "integration": "event-ready",
+    "files": {
+      "html": "documents-ready.html",
+      "text": "documents-ready.txt",
+      "payload": "documents-ready.json"
+    }
+  },
+  {
+    "id": "pre-departure",
+    "name": "Before you travel",
+    "category": "Booking",
+    "layout": "journey",
+    "eyebrow": "THE COUNTDOWN IS ON",
+    "subject": "A few things before your journey, {{firstName}}",
+    "preheader": "Your final travel details and consultant support, close at hand.",
+    "heading": "Almost time\nto make memories.",
+    "intro": "Your journey is getting closer. Review your final itinerary, issued documents and the latest instructions from your consultant before you set off.",
+    "action": "Open my travel details",
+    "path": "/client",
+    "image": "destinations/flight.jpg",
+    "note": "Check current entry, baggage and check-in requirements with the relevant authorities and carriers. Your confirmed documents contain your specific arrangements.",
+    "trigger": "Scheduled pre-departure reminder for a confirmed booking",
+    "integration": "event-ready",
+    "files": {
+      "html": "pre-departure.html",
+      "text": "pre-departure.txt",
+      "payload": "pre-departure.json"
+    }
+  },
+  {
+    "id": "cancellation-received",
+    "name": "Cancellation request received",
+    "category": "Booking",
+    "layout": "letter",
+    "eyebrow": "WE ARE HERE TO HELP",
+    "subject": "We have your cancellation request",
+    "preheader": "Your consultant will review the applicable terms and next steps.",
+    "heading": "Plans change.\nWe’ll help you through it.",
+    "intro": "Your cancellation request has been received. The team will review the applicable supplier terms, charges and any refund eligibility before completing the process.",
+    "action": "View my booking",
+    "path": "/client",
+    "note": "This acknowledges your request. It does not confirm cancellation or a refund.",
+    "trigger": "New cancellation request recorded",
+    "integration": "event-ready",
+    "files": {
+      "html": "cancellation-received.html",
+      "text": "cancellation-received.txt",
+      "payload": "cancellation-received.json"
+    }
+  },
+  {
+    "id": "booking-cancelled",
+    "name": "Cancellation confirmed",
+    "category": "Booking",
+    "layout": "letter",
+    "eyebrow": "YOUR CANCELLATION UPDATE",
+    "subject": "Cancellation confirmed · {{reference}}",
+    "preheader": "Review the confirmed cancellation details and any next steps.",
+    "heading": "Your cancellation\nhas been confirmed.",
+    "intro": "The cancellation shown below has been confirmed. Please review the scope and details in your TLC account. Any refund will be communicated separately when its status is confirmed.",
+    "action": "Review cancellation details",
+    "path": "/client",
+    "required": [
+      "reference",
+      "message"
+    ],
+    "trigger": "Supplier cancellation completes for the stated services",
+    "integration": "event-ready",
+    "files": {
+      "html": "booking-cancelled.html",
+      "text": "booking-cancelled.txt",
+      "payload": "booking-cancelled.json"
+    }
+  },
+  {
+    "id": "payment-request",
+    "name": "Payment request",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "YOUR BOOKING · NEXT STEP",
+    "subject": "Payment requested for your TLC booking",
+    "preheader": "Review the amount and pay securely through your TLC account.",
+    "heading": "One step closer\nto your holiday.",
+    "intro": "A payment request is ready for your booking. Please review the details in your account and use the secure payment link provided there.",
+    "action": "Review and pay securely",
+    "path": "/client",
+    "required": [
+      "reference",
+      "amount"
+    ],
+    "note": "TLC will never ask you to share a card PIN, CVV or one-time password by email.",
+    "trigger": "New payment link or scheduled instalment is issued",
+    "integration": "event-ready",
+    "files": {
+      "html": "payment-request.html",
+      "text": "payment-request.txt",
+      "payload": "payment-request.json"
+    }
+  },
+  {
+    "id": "payment-reminder",
+    "name": "Payment due reminder",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "A HELPFUL PAYMENT REMINDER",
+    "subject": "A reminder about your TLC payment",
+    "preheader": "Your payment details are available in your secure account.",
+    "heading": "A quick note\nabout your payment.",
+    "intro": "Our records show an outstanding payment for your booking. If you have already paid, please check your account or contact your consultant before making another payment.",
+    "action": "Check payment status",
+    "path": "/client",
+    "required": [
+      "reference",
+      "amount",
+      "dueDate"
+    ],
+    "trigger": "Existing payment-reminder schedule finds an unpaid due payment",
+    "integration": "event-ready",
+    "files": {
+      "html": "payment-reminder.html",
+      "text": "payment-reminder.txt",
+      "payload": "payment-reminder.json"
+    }
+  },
+  {
+    "id": "payment-received",
+    "name": "Payment received",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "PAYMENT RECEIVED",
+    "subject": "Thank you. Your TLC payment is recorded",
+    "preheader": "Your payment details and receipt are available in your account.",
+    "heading": "Received,\nwith thanks.",
+    "intro": "Your payment has been recorded against your booking. You can review the payment details and any issued receipt in your account.",
+    "action": "View payment details",
+    "path": "/client",
+    "required": [
+      "reference",
+      "amount"
+    ],
+    "note": "A payment confirmation is separate from supplier booking confirmation. Check your booking status for confirmed arrangements.",
+    "trigger": "Provider-confirmed capture or verified manual payment recorded",
+    "integration": "connected",
+    "files": {
+      "html": "payment-received.html",
+      "text": "payment-received.txt",
+      "payload": "payment-received.json"
+    }
+  },
+  {
+    "id": "payment-failed",
+    "name": "Payment unsuccessful",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "PAYMENT NEEDS ATTENTION",
+    "subject": "Your TLC payment could not be completed",
+    "preheader": "Check the status before trying again. We are here to help.",
+    "heading": "Let’s get this\nsorted for you.",
+    "intro": "Your payment attempt was unsuccessful. Please check your bank and TLC account before retrying. If an amount was debited, contact your consultant so we can help reconcile it.",
+    "action": "Review payment status",
+    "path": "/client",
+    "required": [
+      "reference"
+    ],
+    "trigger": "Payment provider confirms a failed attempt",
+    "integration": "event-ready",
+    "files": {
+      "html": "payment-failed.html",
+      "text": "payment-failed.txt",
+      "payload": "payment-failed.json"
+    }
+  },
+  {
+    "id": "refund-processing",
+    "name": "Refund processing",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "YOUR REFUND UPDATE",
+    "subject": "Your TLC refund is being processed",
+    "preheader": "We will update you when the payment provider confirms completion.",
+    "heading": "Your refund\nis on its way through.",
+    "intro": "Your refund has entered processing. This does not yet confirm that funds have reached your account; timing depends on the payment provider and your bank.",
+    "action": "View refund status",
+    "path": "/client",
+    "required": [
+      "reference",
+      "amount"
+    ],
+    "trigger": "Payment provider accepts refund for processing",
+    "integration": "event-ready",
+    "files": {
+      "html": "refund-processing.html",
+      "text": "refund-processing.txt",
+      "payload": "refund-processing.json"
+    }
+  },
+  {
+    "id": "refund-completed",
+    "name": "Refund processed",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "REFUND PROCESSED",
+    "subject": "Your TLC refund has been processed",
+    "preheader": "The provider has confirmed processing. Your bank controls the posting time.",
+    "heading": "Your refund\nhas been processed.",
+    "intro": "The payment provider has confirmed that your refund was processed. Your bank or card issuer may take additional time to show the credit.",
+    "action": "View refund details",
+    "path": "/client",
+    "required": [
+      "reference",
+      "amount"
+    ],
+    "trigger": "Payment provider confirms refund processed",
+    "integration": "event-ready",
+    "files": {
+      "html": "refund-completed.html",
+      "text": "refund-completed.txt",
+      "payload": "refund-completed.json"
+    }
+  },
+  {
+    "id": "invoice-ready",
+    "name": "Invoice or credit note ready",
+    "category": "Payments",
+    "layout": "receipt",
+    "eyebrow": "YOUR FINANCIAL DOCUMENT",
+    "subject": "A TLC financial document is ready",
+    "preheader": "View your issued document securely in your account.",
+    "heading": "The paperwork,\ntaken care of.",
+    "intro": "A new invoice, credit note or receipt has been issued. Your document is available in your secure TLC account.",
+    "action": "View my document",
+    "path": "/client",
+    "required": [
+      "reference"
+    ],
+    "note": "An invoice or payment request does not confirm that payment has been received. Refer to the document type and payment status.",
+    "trigger": "Finance document reaches issued status",
+    "integration": "connected",
+    "files": {
+      "html": "invoice-ready.html",
+      "text": "invoice-ready.txt",
+      "payload": "invoice-ready.json"
+    }
+  },
+  {
+    "id": "support-received",
+    "name": "Support request received",
+    "category": "Support",
+    "layout": "letter",
+    "eyebrow": "A REAL PERSON, READY TO HELP",
+    "subject": "Your message is with the TLC team",
+    "preheader": "We have received your request and will continue in your travel space.",
+    "heading": "We’re listening.",
+    "intro": "Thank you for getting in touch. Your request is with the TLC team. You can view the conversation and add any helpful details in your account.",
+    "action": "View my request",
+    "path": "/client#support",
+    "trigger": "Client submits a support request",
+    "integration": "event-ready",
+    "files": {
+      "html": "support-received.html",
+      "text": "support-received.txt",
+      "payload": "support-received.json"
+    }
+  },
+  {
+    "id": "support-reply",
+    "name": "Consultant or Tara reply",
+    "category": "Support",
+    "layout": "letter",
+    "eyebrow": "A NOTE FROM YOUR TLC TEAM",
+    "subject": "A reply from TLC Holidays",
+    "preheader": "Continue the conversation with your TLC travel team.",
+    "heading": "A personal note\nabout your plans.",
+    "intro": "There is a new message for you from TLC.",
+    "action": "Open my conversations",
+    "path": "/client/messages",
+    "required": [
+      "message"
+    ],
+    "trigger": "Consultant or Tara queues an email reply",
+    "integration": "connected",
+    "files": {
+      "html": "support-reply.html",
+      "text": "support-reply.txt",
+      "payload": "support-reply.json"
+    }
+  },
+  {
+    "id": "consultant-handover",
+    "name": "Consultant handover",
+    "category": "Support",
+    "layout": "letter",
+    "eyebrow": "PERSONALLY SUPPORTED",
+    "subject": "A TLC consultant will take it from here",
+    "preheader": "Your conversation is now with the travel team.",
+    "heading": "From a good idea\nto a real conversation.",
+    "intro": "Your message is with a TLC consultant. They can review the conversation and help you with the next steps.",
+    "action": "Open my conversations",
+    "path": "/client/messages",
+    "trigger": "Tara or the client requests a consultant",
+    "integration": "event-ready",
+    "files": {
+      "html": "consultant-handover.html",
+      "text": "consultant-handover.txt",
+      "payload": "consultant-handover.json"
+    }
+  },
+  {
+    "id": "preferences-updated",
+    "name": "Preferences updated",
+    "category": "Support",
+    "layout": "letter",
+    "eyebrow": "MORE YOU, IN EVERY DETAIL",
+    "subject": "Your TLC preferences have been updated",
+    "preheader": "Review your travel interests and communication choices at any time.",
+    "heading": "Your choices.\nThoughtfully remembered.",
+    "intro": "Your travel and communication preferences have been updated. You can review your interests, preferred contact channels and promotional subscriptions whenever you like.",
+    "action": "Review my preferences",
+    "path": "/client/preferences",
+    "trigger": "Client saves travel and communication preferences",
+    "integration": "event-ready",
+    "files": {
+      "html": "preferences-updated.html",
+      "text": "preferences-updated.txt",
+      "payload": "preferences-updated.json"
+    }
+  },
+  {
+    "id": "travel-newsletter",
+    "name": "Travel journal / newsletter",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "THE TLC TRAVEL JOURNAL",
+    "subject": "A little inspiration for your next chapter",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "Some places\nstay with you.",
+    "intro": "A new perspective, a slower morning, a place you have always wanted to see. Here is a little inspiration for wherever you go next.",
+    "image": "hero-braies.jpg",
+    "action": "Explore the collection",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved editorial newsletter campaign",
+    "integration": "connected",
+    "files": {
+      "html": "travel-newsletter.html",
+      "text": "travel-newsletter.txt",
+      "payload": "travel-newsletter.json"
+    }
+  },
+  {
+    "id": "destination-inspiration",
+    "name": "Destination spotlight",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "A PLACE TO FALL IN LOVE WITH",
+    "subject": "A closer look at {{destination}}",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "Somewhere new.\nSomething unforgettable.",
+    "intro": "Let your curiosity lead the way. Explore a destination that could be the setting for your next remarkable holiday.",
+    "image": "destinations/japan.jpg",
+    "action": "Explore this destination",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved destination spotlight campaign",
+    "integration": "connected",
+    "files": {
+      "html": "destination-inspiration.html",
+      "text": "destination-inspiration.txt",
+      "payload": "destination-inspiration.json"
+    }
+  },
+  {
+    "id": "personalised-picks",
+    "name": "Personalised recommendations",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "SELECTED WITH YOU IN MIND",
+    "subject": "A few holiday ideas for you, {{firstName}}",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "A little more you.\nA little less ordinary.",
+    "intro": "Your travel interests help us find ideas worth sharing. Take a look, save what speaks to you, and let us shape the details together.",
+    "image": "destinations/bali.jpg",
+    "action": "Find my next holiday",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved campaign selected using declared preferences and travel history",
+    "integration": "connected",
+    "files": {
+      "html": "personalised-picks.html",
+      "text": "personalised-picks.txt",
+      "payload": "personalised-picks.json"
+    }
+  },
+  {
+    "id": "seasonal-offer",
+    "name": "Seasonal offer",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "YOUR NEXT GREAT ESCAPE",
+    "subject": "A new season. A new reason to explore.",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "Make room\nfor a little wonder.",
+    "intro": "A change of season can be a wonderful reason to plan a change of scene. Discover the latest holiday ideas from TLC.",
+    "image": "destinations/switzerland.jpg",
+    "action": "Explore this offer",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved offer campaign; only supplied valid offer terms and prices are shown",
+    "integration": "connected",
+    "files": {
+      "html": "seasonal-offer.html",
+      "text": "seasonal-offer.txt",
+      "payload": "seasonal-offer.json"
+    }
+  },
+  {
+    "id": "family-holidays",
+    "name": "Family holiday inspiration",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "MEMORIES FOR EVERY GENERATION",
+    "subject": "Make time for a family adventure",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "The best stories\nstart with all of you.",
+    "intro": "A little discovery, a little downtime, and plenty of moments together. Let us help you shape a holiday around your family.",
+    "image": "destinations/thailand.jpg",
+    "action": "Plan our family holiday",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved family-interest campaign",
+    "integration": "connected",
+    "files": {
+      "html": "family-holidays.html",
+      "text": "family-holidays.txt",
+      "payload": "family-holidays.json"
+    }
+  },
+  {
+    "id": "honeymoon-escape",
+    "name": "Honeymoon / couples escape",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "JUST THE TWO OF YOU",
+    "subject": "A beautiful beginning deserves a beautiful escape",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "Time for two.\nMemories for a lifetime.",
+    "intro": "Quiet mornings, extraordinary settings and a holiday at your own pace. Explore ideas for a getaway that feels personal from the very first day.",
+    "image": "destinations/maldives.jpg",
+    "action": "Plan a special escape",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved couples or honeymoon-interest campaign",
+    "integration": "connected",
+    "files": {
+      "html": "honeymoon-escape.html",
+      "text": "honeymoon-escape.txt",
+      "payload": "honeymoon-escape.json"
+    }
+  },
+  {
+    "id": "birthday-wish",
+    "name": "Birthday greeting",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "A LITTLE CELEBRATION",
+    "subject": "Happy birthday, {{firstName}}",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "Here’s to you.\nAnd all that lies ahead.",
+    "intro": "Wishing you a wonderful birthday from all of us at TLC. May the year ahead bring good company, new discoveries and plenty of moments worth keeping.",
+    "image": "destinations/santorini.jpg",
+    "action": "Find a little inspiration",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Consented birthday campaign using a client-provided date",
+    "integration": "connected",
+    "files": {
+      "html": "birthday-wish.html",
+      "text": "birthday-wish.txt",
+      "payload": "birthday-wish.json"
+    }
+  },
+  {
+    "id": "anniversary-wish",
+    "name": "Anniversary greeting",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "ANOTHER CHAPTER TOGETHER",
+    "subject": "Wishing you a wonderful anniversary",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "More moments.\nMore memories. Together.",
+    "intro": "Here is to the places you have been together, and the ones still waiting. Wishing you a wonderful anniversary from your TLC team.",
+    "image": "destinations/maldives.jpg",
+    "action": "Dream up your next escape",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Consented anniversary campaign using a client-provided date",
+    "integration": "connected",
+    "files": {
+      "html": "anniversary-wish.html",
+      "text": "anniversary-wish.txt",
+      "payload": "anniversary-wish.json"
+    }
+  },
+  {
+    "id": "resume-planning",
+    "name": "Resume a saved holiday",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "YOUR IDEAS ARE STILL HERE",
+    "subject": "Shall we pick up your holiday plans?",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "A good idea\nis worth coming back to.",
+    "intro": "If your holiday is still on your mind, we would love to help you take the next step. Revisit your ideas or start a conversation with a consultant.",
+    "image": "destinations/bali.jpg",
+    "action": "Continue planning",
+    "path": "/plan-my-trip",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Consented follow-up to an unfinished holiday plan",
+    "integration": "connected",
+    "files": {
+      "html": "resume-planning.html",
+      "text": "resume-planning.txt",
+      "payload": "resume-planning.json"
+    }
+  },
+  {
+    "id": "welcome-back",
+    "name": "Returning traveller / re-engagement",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "THERE IS MORE TO DISCOVER",
+    "subject": "Where would you like to go next?",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "The world still\nhas a few surprises.",
+    "intro": "When you are ready for another change of scene, your TLC team is here. Tell us what you are dreaming of this time.",
+    "image": "destinations/rajasthan.jpg",
+    "action": "Explore what’s next",
+    "path": "/destinations",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Approved returning-traveller campaign",
+    "integration": "connected",
+    "files": {
+      "html": "welcome-back.html",
+      "text": "welcome-back.txt",
+      "payload": "welcome-back.json"
+    }
+  },
+  {
+    "id": "post-trip-feedback",
+    "name": "Welcome home / feedback",
+    "category": "Marketing",
+    "layout": "editorial",
+    "eyebrow": "WELCOME HOME",
+    "subject": "How was your journey, {{firstName}}?",
+    "preheader": "Thoughtfully chosen travel inspiration from your TLC team.",
+    "heading": "The journey ends.\nThe stories stay.",
+    "intro": "We hope your holiday gave you plenty of moments to remember. We would love to hear what worked well and what we could do better next time.",
+    "image": "hero-braies.jpg",
+    "action": "Share my experience",
+    "path": "/client/messages",
+    "required": [
+      "unsubscribeUrl"
+    ],
+    "note": "Holiday ideas are invitations to explore. Prices and availability, where supplied, are subject to the stated terms and confirmation by your consultant.",
+    "trigger": "Consented post-trip feedback campaign after completed travel",
+    "integration": "connected",
+    "files": {
+      "html": "post-trip-feedback.html",
+      "text": "post-trip-feedback.txt",
+      "payload": "post-trip-feedback.json"
+    }
+  }
+]

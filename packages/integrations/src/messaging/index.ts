@@ -1,3 +1,9 @@
+import {
+  renderEmail,
+  emailTemplate,
+  type EmailBrand,
+  type EmailTemplateData,
+} from "../email/index.js";
 export type MarketingChannel = "whatsapp" | "email" | "sms";
 export type MarketingRecipient = {
   customerId: string;
@@ -14,6 +20,8 @@ export type MarketingMessage = {
   templateLanguage?: string;
   templateParameters?: string[];
   unsubscribeUrl?: string;
+  emailDesign?: string;
+  emailData?: EmailTemplateData;
 };
 export type DeliveryReceipt = {
   externalId: string;
@@ -121,7 +129,12 @@ export class MetaWhatsAppMarketingProvider implements MarketingMessagingProvider
 export class ResendEmailMarketingProvider implements MarketingMessagingProvider {
   readonly key = "resend-email";
   constructor(
-    private readonly config: { apiKey: string; from: string; replyTo?: string },
+    private readonly config: {
+      apiKey: string;
+      from: string;
+      replyTo?: string;
+      brand?: EmailBrand;
+    },
     private readonly clock: () => Date = () => new Date(),
   ) {}
   async send(recipient: MarketingRecipient, message: MarketingMessage) {
@@ -129,6 +142,19 @@ export class ResendEmailMarketingProvider implements MarketingMessagingProvider 
       throw new Error("Recipient is not eligible for this channel.");
     if (recipient.channel !== "email" || !message.subject)
       throw new Error("Email marketing requires a subject.");
+    const design = message.emailDesign || "travel-newsletter";
+    if (emailTemplate(design).category !== "Marketing")
+      throw new Error("Campaigns require a marketing email design.");
+    const email = renderEmail(
+      design,
+      {
+        ...message.emailData,
+        subject: message.subject,
+        message: message.body,
+        unsubscribeUrl: message.unsubscribeUrl,
+      },
+      this.config.brand,
+    );
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       redirect: "error",
@@ -142,20 +168,10 @@ export class ResendEmailMarketingProvider implements MarketingMessagingProvider 
         from: this.config.from,
         ...(this.config.replyTo ? { reply_to: this.config.replyTo } : {}),
         to: [recipient.address],
-        subject: message.subject,
-        text:
-          message.body +
-          (message.unsubscribeUrl
-            ? `\n\nUnsubscribe from TLC offers: ${message.unsubscribeUrl}`
-            : "\n\nReply UNSUBSCRIBE to stop TLC offers."),
-        ...(message.unsubscribeUrl
-          ? {
-              headers: {
-                "List-Unsubscribe": `<${message.unsubscribeUrl.replace("/unsubscribe?", "/api/unsubscribe?")}>`,
-                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-              },
-            }
-          : {}),
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+        headers: email.headers,
       }),
     });
     const payload = (await response.json()) as {

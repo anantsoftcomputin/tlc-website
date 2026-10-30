@@ -216,6 +216,7 @@ const navGroups = [
         icon: FileClock,
         permission: "audit:read" as const,
       },
+      { label: "Personal travel pricing", href: "/admin/settings/personalization", icon: Settings2, permission: "settings:manage" as const },
       {
         label: "Lead settings",
         href: "/admin/settings/leads",

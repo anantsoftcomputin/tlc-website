@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client";
 
-export function AdminLoginForm() {
+export function AdminLoginForm({ returnTo }: { returnTo?: string } = {}) {
   const router = useRouter();
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [register, setRegister] = useState(false); const [error, setError] = useState(""); const [notice, setNotice] = useState("");
@@ -30,7 +30,7 @@ export function AdminLoginForm() {
       return;
     }
     if (!response.ok) throw new Error(payload.error || "Unable to sign in.");
-    router.replace(payload.redirect); router.refresh();
+    router.replace(returnTo && payload.role === "customer" ? returnTo : payload.redirect); router.refresh();
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError(""); setNotice(""); setLoading(true);

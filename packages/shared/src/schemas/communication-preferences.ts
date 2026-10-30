@@ -1,5 +1,6 @@
 import { z } from "zod";
 export const communicationPreferencesSchema = z.object({
+  personalization: z.boolean().default(false),
   destinations: z.array(z.string().trim().min(1).max(80)).max(10).default([]),
   interests: z
     .array(

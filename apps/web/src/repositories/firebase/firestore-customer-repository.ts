@@ -1,7 +1,12 @@
 import "server-only";
+import { matchingPage } from "@/lib/pagination/matching-page";
 
 import {
-  canReadCustomer, canReadHousehold, customerSearchQuery, isManagerRole, type AccessIdentity,
+  canReadCustomer,
+  canReadHousehold,
+  customerSearchQuery,
+  isManagerRole,
+  type AccessIdentity,
   findDuplicateCandidates,
   normalizeCustomerImportRow,
   type Customer,
@@ -75,7 +80,9 @@ function mapCustomer(
     ...(Array.isArray(data.vector) ? { vector: data.vector } : {}),
     ...(data.modelVersion ? { modelVersion: String(data.modelVersion) } : {}),
     ...(data.clv ? { clv: data.clv } : {}),
-    ...(data.communicationPreferences ? { communicationPreferences: data.communicationPreferences } : {}),
+    ...(data.communicationPreferences
+      ? { communicationPreferences: data.communicationPreferences }
+      : {}),
     lifecycleStage: data.lifecycleStage || "new",
     ...(data.lastActivityAt
       ? { lastActivityAt: toIso(data.lastActivityAt) }
@@ -104,24 +111,41 @@ function mapNested<T>(document: QueryDocumentSnapshot<DocumentData>): T {
 export class FirestoreCustomerRepository implements CustomerRepository {
   private readonly database = getAdminFirestore();
 
-  constructor(private readonly orgId: string, private readonly viewer: AccessIdentity) {
-    if (!orgId || viewer.orgId !== orgId) throw new Error("An organization-bound identity is required.");
+  constructor(
+    private readonly orgId: string,
+    private readonly viewer: AccessIdentity,
+  ) {
+    if (!orgId || viewer.orgId !== orgId)
+      throw new Error("An organization-bound identity is required.");
   }
   private async accessible(customerId: string, household = false) {
-    const snapshot = await this.database.collection("customers").doc(customerId).get();
-    return snapshot.exists && (household ? canReadHousehold(this.viewer, snapshot.data()!) : canReadCustomer(this.viewer, snapshot.data()!));
+    const snapshot = await this.database
+      .collection("customers")
+      .doc(customerId)
+      .get();
+    return (
+      snapshot.exists &&
+      (household
+        ? canReadHousehold(this.viewer, snapshot.data()!)
+        : canReadCustomer(this.viewer, snapshot.data()!))
+    );
   }
 
   async listCustomers(limit = 50, after?: string): Promise<CustomerSummary[]> {
     let query: FirebaseFirestore.Query = this.database
       .collection("customers")
-      .where("orgId", "==", this.orgId)
-      ;
-    if (!isManagerRole(this.viewer.role) && !["accounts", "marketing", "readonly"].includes(this.viewer.role)) query = query.where("ownerUid", "==", this.viewer.uid);
+      .where("orgId", "==", this.orgId);
+    if (
+      !isManagerRole(this.viewer.role) &&
+      !["accounts", "marketing", "readonly"].includes(this.viewer.role)
+    )
+      query = query.where("ownerUid", "==", this.viewer.uid);
     query = query.orderBy("__name__");
     if (after) query = query.startAfter(after);
     const snapshot = await query.limit(Math.min(limit, 200)).get();
-    return snapshot.docs.filter(doc => canReadCustomer(this.viewer, doc.data())).map(mapCustomer);
+    return snapshot.docs
+      .filter((doc) => canReadCustomer(this.viewer, doc.data()))
+      .map(mapCustomer);
   }
 
   /**
@@ -129,21 +153,44 @@ export class FirestoreCustomerRepository implements CustomerRepository {
    * then confirms every query word against the stored contact fields.
    */
   async searchCustomers(input: string, limit = 50): Promise<CustomerSummary[]> {
+    return (await this.searchCustomersPage(input, limit)).items;
+  }
+
+  async searchCustomersPage(input: string, limit = 50, after?: string) {
     const plan = customerSearchQuery(input);
-    if (!plan) return [];
+    if (!plan)
+      return {
+        items: [] as CustomerSummary[],
+        nextCursor: undefined as string | undefined,
+      };
     let query: FirebaseFirestore.Query = this.database
       .collection("customers")
       .where("orgId", "==", this.orgId);
-    if (!isManagerRole(this.viewer.role) && !["accounts", "marketing", "readonly"].includes(this.viewer.role)) query = query.where("ownerUid", "==", this.viewer.uid);
-    const snapshot = await query.where("searchTerms", "array-contains", plan.term).limit(200).get();
-    return snapshot.docs
-      .filter((doc) => canReadCustomer(this.viewer, doc.data()))
-      .filter((doc) => {
-        const terms = new Set<string>(Array.isArray(doc.data().searchTerms) ? doc.data().searchTerms : []);
-        return plan.words.every((word) => terms.has(word.slice(0, 24)));
-      })
-      .slice(0, limit)
-      .map(mapCustomer);
+    if (
+      !isManagerRole(this.viewer.role) &&
+      !["accounts", "marketing", "readonly"].includes(this.viewer.role)
+    )
+      query = query.where("ownerUid", "==", this.viewer.uid);
+    query = query
+      .where("searchTerms", "array-contains", plan.term)
+      .orderBy("__name__");
+    const page = await matchingPage({
+      after,
+      limit: Math.max(1, Math.min(limit, 200)),
+      fetch: async (cursor, size) =>
+        (await (cursor ? query.startAfter(cursor) : query).limit(size).get())
+          .docs,
+      matches: (doc) => {
+        if (!canReadCustomer(this.viewer, doc.data())) return false;
+        const terms = new Set<string>(
+          Array.isArray(doc.data().searchTerms) ? doc.data().searchTerms : [],
+        );
+        return plan.words.every((word) =>
+          terms.has(word.includes("@") ? word : word.slice(0, 24)),
+        );
+      },
+    });
+    return { ...page, items: page.items.map(mapCustomer) };
   }
 
   async getCustomer(customerId: string) {
@@ -151,14 +198,15 @@ export class FirestoreCustomerRepository implements CustomerRepository {
       .collection("customers")
       .doc(customerId)
       .get();
-    if (!snapshot.exists || !canReadCustomer(this.viewer, snapshot.data()!)) return null;
+    if (!snapshot.exists || !canReadCustomer(this.viewer, snapshot.data()!))
+      return null;
     return mapCustomer(snapshot);
   }
 
   async getHouseholdProfile(
     customerId: string,
   ): Promise<HouseholdTravelProfile | null> {
-    if (!await this.accessible(customerId, true)) return null;
+    if (!(await this.accessible(customerId, true))) return null;
     const snapshot = await this.database
       .collection("households")
       .doc(customerId)
@@ -175,7 +223,7 @@ export class FirestoreCustomerRepository implements CustomerRepository {
   }
 
   async listTravelHistory(customerId: string) {
-    if (!await this.accessible(customerId)) return [];
+    if (!(await this.accessible(customerId))) return [];
     const snapshot = await this.database
       .collection("customers")
       .doc(customerId)
@@ -189,7 +237,7 @@ export class FirestoreCustomerRepository implements CustomerRepository {
   }
 
   async listEvents(customerId: string) {
-    if (!await this.accessible(customerId, true)) return [];
+    if (!(await this.accessible(customerId, true))) return [];
     const snapshot = await this.database
       .collection("customers")
       .doc(customerId)

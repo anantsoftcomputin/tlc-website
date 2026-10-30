@@ -1,4 +1,8 @@
 import "server-only";
+import type {
+  QueryDocumentSnapshot,
+  DocumentData,
+} from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { readAll, isoDate } from "@/lib/firebase/query";
 import type { AdminUser } from "@/lib/auth/session";
@@ -23,56 +27,68 @@ export async function clientCustomers(user: AdminUser) {
       .orderBy("__name__"),
   );
 }
-export async function clientRecords(
+type ClientCollection = "leads" | "quotes" | "bookings" | "financeDocuments";
+async function recordsForCustomers(
   user: AdminUser,
-  collection: "leads" | "quotes" | "bookings" | "financeDocuments",
+  collection: ClientCollection,
+  customers: QueryDocumentSnapshot<DocumentData>[],
 ) {
-  const customers = await clientCustomers(user);
   const db = getAdminFirestore();
-  const rows = await Promise.all(
-    customers.map((customer) =>
-      readAll(
+  const rows = [];
+  for (let offset = 0; offset < customers.length; offset += 30) {
+    rows.push(
+      ...(await readAll(
         db
           .collection(collection)
           .where("orgId", "==", user.orgId)
           .where(
             collection === "financeDocuments" ? "customer.id" : "customerId",
-            "==",
-            customer.id,
+            "in",
+            customers.slice(offset, offset + 30).map((customer) => customer.id),
           )
           .orderBy("__name__"),
-      ),
-    ),
-  );
-  return rows.flat();
+      )),
+    );
+  }
+  return rows;
+}
+export async function clientRecords(
+  user: AdminUser,
+  collection: ClientCollection,
+) {
+  return recordsForCustomers(user, collection, await clientCustomers(user));
 }
 export async function getClientDashboard(user: AdminUser) {
-  const [customers, leads, quotes, bookings, documents, support] =
-    await Promise.all([
-      clientCustomers(user),
-      clientRecords(user, "leads"),
-      clientRecords(user, "quotes"),
-      clientRecords(user, "bookings"),
-      clientRecords(user, "financeDocuments"),
-      readAll(
-        getAdminFirestore()
-          .collection("supportRequests")
-          .where("orgId", "==", user.orgId)
-          .where("clientUid", "==", user.uid)
-          .orderBy("__name__"),
-      ),
-    ]);
-  const paymentGroups = await Promise.all(
-    bookings.map((booking) =>
-      readAll(
+  const customers = await clientCustomers(user);
+  const [leads, quotes, bookings, documents, support] = await Promise.all([
+    recordsForCustomers(user, "leads", customers),
+    recordsForCustomers(user, "quotes", customers),
+    recordsForCustomers(user, "bookings", customers),
+    recordsForCustomers(user, "financeDocuments", customers),
+    readAll(
+      getAdminFirestore()
+        .collection("supportRequests")
+        .where("orgId", "==", user.orgId)
+        .where("clientUid", "==", user.uid)
+        .orderBy("__name__"),
+    ),
+  ]);
+  const paymentGroups: QueryDocumentSnapshot<DocumentData>[][] = [];
+  for (let offset = 0; offset < bookings.length; offset += 30) {
+    paymentGroups.push(
+      await readAll(
         getAdminFirestore()
           .collection("payments")
           .where("orgId", "==", user.orgId)
-          .where("bookingId", "==", booking.id)
+          .where(
+            "bookingId",
+            "in",
+            bookings.slice(offset, offset + 30).map((booking) => booking.id),
+          )
           .orderBy("__name__"),
       ),
-    ),
-  );
+    );
+  }
   const latest = new Map<string, (typeof quotes)[number]>();
   for (const quote of quotes)
     if (

@@ -6,6 +6,7 @@ const appCheckProblem = appCheckDeployProblem();
 if (appCheckProblem) throw new Error(appCheckProblem);
 
 const nextConfig: NextConfig = {
+  distDir: process.env.TLC_NEXT_DIST_DIR || ".next",
   transpilePackages: ["@tlc/shared", "@tlc/ai-chat"],
   outputFileTracingRoot: path.join(process.cwd(), "../.."),
   images: {

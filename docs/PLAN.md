@@ -301,3 +301,32 @@ Phase numbering note: the original master brief's AI marketing phase moves here 
 - [x] Repeat enquiries enrich household profiles; repeat chat handovers update the existing lead.
 - [x] Marketing training uses send-time snapshots with masked long-horizon labels.
 - [ ] Deploy indexes, run `pnpm admin:enable-mfa` and `pnpm customers:backfill-search` in production.
+
+# Gap follow-up — 30 October 2026
+
+- [x] Implement combined tour filters, sorting, mobile filter expansion and URL restoration; replace unsupported date/party catalogue controls with meaningful catalogue fields.
+- [x] Add bounded customer-search scans and query-preserving continuation cursors beyond the former candidate cap.
+- [x] Batch portal record/payment queries and remove repeated identity resolution.
+- [x] Bound finance-close reads to the selected dates and add corresponding indexes.
+- [x] Index marketing outcome lookups before processing historical deliveries.
+- [x] Reject stale role/organization claims in server sessions as well as callables.
+- [x] Implement opt-in enquiry/payment/booking/document email event adapters with durable deduplication.
+- [x] Replace stale root architecture and create a current gap tracker.
+- [ ] Deploy and verify indexes/configuration and provider accounts in production.
+- [ ] Connect remaining email lifecycle/authentication/calendar scenarios.
+- [ ] Improve and independently evaluate the local model candidate before activation.
+- [ ] Add product-level pagination/archive navigation for very large client histories and measure production-scale workloads.
+
+See [REMAINING_GAPS.md](./REMAINING_GAPS.md) for verification results and boundaries.
+
+# Personal travel advisor — 30 October 2026
+
+- [x] Connect verified client identities to same-organization history and separately consented preferences, including explicit selection for shared addresses.
+- [x] Supply personal context to chat while keeping current-trip choices subject to explicit confirmation.
+- [x] Connect confirmed chat/planner briefs to supplier evidence and itemised retail budgets with priced extras, fees, tax, missing-component and expiry handling.
+- [x] Draft season/booking-window recommendations against current offers and route them through existing approval, consent, unsubscribe and delivery controls.
+- [x] Feed staff-confirmed completed trips, processed refunds and client feedback back into historical profiles without enabling model training.
+- [x] Add expiring, one-use verified-portal connections for private WhatsApp/email personalisation and recheck permission before private delivery.
+- [ ] Deploy and validate actual production history, approved rates, supplier/offer inventory, messaging configuration and designated-recipient results.
+
+Implementation and validation: [PERSONAL_TRAVEL_ADVISOR.md](./PERSONAL_TRAVEL_ADVISOR.md).

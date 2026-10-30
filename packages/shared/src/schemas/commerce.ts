@@ -247,6 +247,8 @@ export const bookingSchema = z
     timeline: z.array(bookingTimelineEventSchema).default([]),
     approvedBy: documentIdSchema.optional(),
     approvedAt: isoDateTimeSchema.optional(),
+    completedAt: isoDateTimeSchema.optional(),
+    completedBy: documentIdSchema.optional(),
     totals: quoteTotalsSchema,
     paymentStatus: z.enum([
       "unpaid",

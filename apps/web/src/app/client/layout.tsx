@@ -21,6 +21,7 @@ export default async function ClientLayout({
         </Link>
         <nav aria-label="Client navigation">
           <Link href="/client">My journeys</Link>
+          <Link href="/client/advisor">Personal advisor</Link>
           <Link href="/client/messages">Messages</Link>
           <Link href="/client/preferences">Preferences</Link>
           <Link href="/saved">Saved trips</Link>

@@ -37,6 +37,7 @@ export default async function CampaignsPage() {
           Approval required
         </span>
       </header>
+      <MarketingAction name="refreshPersonalRecommendations" data={{}}>Draft travel-pattern recommendations</MarketingAction>
       <CampaignBuilder
         offers={offers
           .filter((offer) => offer.status === "active")
@@ -73,6 +74,8 @@ export default async function CampaignsPage() {
                     </span>
                   </div>
                   <h3>{campaign.name}</h3>
+                  <p>{campaign.body}</p>
+                  {campaign.patternReason && <p><b>Why this recommendation:</b> {campaign.patternReason}</p>}
                   <p>
                     {campaign.channel} · score ≥{" "}
                     {campaign.audience.propensityMin} · {campaign.trigger}

@@ -26,3 +26,5 @@ export * from "./schemas/vacation.js";
 export * from "./schemas/journey.js";
 export * from "./travel/vacation-ranking.js";
 export * from "./schemas/communication-preferences.js";
+export * from "./personalization/contracts.js";
+export * from "./personalization/patterns.js";

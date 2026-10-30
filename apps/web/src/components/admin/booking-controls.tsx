@@ -113,6 +113,10 @@ export function BookingControls({
           </button>
         </section>
       )}
+      {booking.status === "confirmed" && <section className="admin-panel"><h3>Complete the travelled holiday</h3><p>After all services have ended, confirm the travel facts to update the client’s history.</p><form className="workspace-form" onSubmit={event => {
+        event.preventDefault(); const data = new FormData(event.currentTarget);
+        void call("completeBooking", { bookingId: booking.id, destination: data.get("destination"), country: data.get("country"), domesticIntl: data.get("domesticIntl"), purpose: data.get("purpose"), travellerType: data.get("travellerType") });
+      }}><label>Travel destination<input name="destination" required /></label><label>Country<input name="country" required /></label><label>Travel scope<select name="domesticIntl"><option value="domestic">India</option><option value="international">International</option></select></label><label>Purpose<select name="purpose"><option value="leisure">Leisure</option><option value="business">Business</option></select></label><label>Traveller group<select name="travellerType"><option value="family">Family</option><option value="couple">Couple</option><option value="solo">Solo</option><option value="group">Group</option></select></label><button className="button primary" disabled={Boolean(busy)}>Mark trip completed</button></form></section>}
       <section className="admin-panel">
         <header>
           <div>

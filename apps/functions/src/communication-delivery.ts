@@ -1,3 +1,5 @@
+import { verifiedChannelContext } from "./channel-personalization.js";
+import { renderEmail, type EmailTemplateData } from "@tlc/integrations";
 import { createHash } from "node:crypto";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { deliveryStatusCanAdvance } from "./communication-policy.js";
@@ -8,6 +10,7 @@ export type ChannelCredentials = {
   emailKey?: string;
   emailFrom?: string;
   emailReplyTo?: string;
+  siteUrl?: string;
 };
 export async function queueCommunication(
   db: Firestore,
@@ -54,6 +57,21 @@ export async function deliverCommunication(
   sender: typeof fetch = fetch,
 ) {
   const ref = db.collection("communicationOutbox").doc(id);
+  const pending = (await ref.get()).data();
+  const pendingMessage = pending
+    ? (
+        await db
+          .collection("conversations")
+          .doc(pending.conversationId)
+          .collection("messages")
+          .doc(pending.messageId)
+          .get()
+      ).data()
+    : null;
+  const verified =
+    pendingMessage?.personalized && pending
+      ? await verifiedChannelContext(db, pending.orgId, pending.conversationId)
+      : null;
   const claim = await db.runTransaction(async (tx) => {
     const job = (await tx.get(ref)).data();
     if (!job || !["queued", "pending_configuration"].includes(job.status))
@@ -75,6 +93,34 @@ export async function deliverCommunication(
     ) {
       tx.update(ref, { status: "rejected" });
       return null;
+    }
+    if (row.personalized) {
+      const customer = row.personalizationCustomerId
+        ? (
+            await tx.get(
+              db.collection("customers").doc(row.personalizationCustomerId),
+            )
+          ).data()
+        : null;
+      if (
+        !verified ||
+        verified.customerId !== row.personalizationCustomerId ||
+        verified.verifiedUid !== row.personalizationVerifiedUid ||
+        data.verifiedClientUid !== row.personalizationVerifiedUid ||
+        !(
+          Date.parse(row.personalizationEvidenceExpiresAt || "") > Date.now()
+        ) ||
+        customer?.orgId !== job.orgId ||
+        customer?.communicationPreferences?.personalization !== true
+      ) {
+        tx.update(ref, { status: "cancelled" });
+        tx.update(messageRef, {
+          deliveryStatus: "cancelled",
+          deliveryError:
+            "Personalisation permission, verified connection or price evidence expired. Request a new secure connection or refresh the trip.",
+        });
+        return null;
+      }
     }
     const ready =
       data.channel === "whatsapp"
@@ -122,6 +168,37 @@ export async function deliverCommunication(
   if (!claim) return;
   const { data, row, messageRef } = claim;
   const whatsapp = data.channel === "whatsapp";
+  let email;
+  if (!whatsapp) {
+    try {
+      email = renderEmail(
+        String(row.emailTemplateId || "support-reply"),
+        {
+          ...((row.emailData as EmailTemplateData) || {}),
+          ...(!row.emailTemplateId
+            ? {
+                subject: `Re: ${data.emailSubject || "Your TLC holiday"}`,
+                message: String(row.body || ""),
+              }
+            : {}),
+        },
+        { siteUrl: credentials.siteUrl },
+      );
+    } catch {
+      const batch = db.batch();
+      batch.update(ref, {
+        status: "failed",
+        finishedAt: new Date().toISOString(),
+      });
+      batch.update(messageRef, {
+        deliveryStatus: "failed",
+        deliveryError:
+          "Email template data is invalid. Correct the message before resending.",
+      });
+      await batch.commit();
+      return;
+    }
+  }
   try {
     const response = await sender(
       whatsapp
@@ -147,11 +224,9 @@ export async function deliverCommunication(
             : {
                 from: credentials.emailFrom,
                 to: [data.emailAddress],
-                subject: `Re: ${data.emailSubject || "Your TLC holiday"}`.slice(
-                  0,
-                  200,
-                ),
-                text: row.body,
+                subject: email!.subject,
+                text: email!.text,
+                html: email!.html,
                 ...(credentials.emailReplyTo
                   ? { reply_to: credentials.emailReplyTo }
                   : {}),

@@ -1,10 +1,7 @@
 # Architecture
 
-- Next.js 16 App Router with Server Components by default; interactive search, save and planner islands are client components.
-- Domain types and repository contracts live in `src/types`. The current in-memory repository is demonstrative and replaceable by Firestore without changing page components.
-- Public routes are server rendered and expose static parameters for known destinations and trips.
-- Inquiry API validates at the server boundary with Zod. Production persistence, rate limiting and email are provider concerns to add behind repository/service interfaces.
-- Anonymous saved trips use local storage. A future authenticated repository can synchronise these with Firestore.
-- SEO uses the Metadata API, sitemap, robots, semantic content and legacy permanent redirects.
-- Generated imagery is stored locally in `public/images` and served through Next Image where appropriate.
-- Netlify builds the standard Next output. Firebase Admin credentials remain server-only.
+TLC Travel OS uses Next.js 15 and React 19 for the public website, staff operations console and customer portal. Firebase Auth, Firestore, Storage and Functions provide identity, persistence and privileged workflows.
+
+The canonical architecture is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Domain schemas and permissions live in `packages/shared`; business commands live in `apps/functions`; server repositories and HTTP handlers live in `apps/web`. Production enquiries are persisted atomically with their CRM lead and audit records.
+
+See [the current gap tracker](docs/REMAINING_GAPS.md) for implementation status and activation requirements. Dated project studies describe historical snapshots and should not be read as current defect lists.
