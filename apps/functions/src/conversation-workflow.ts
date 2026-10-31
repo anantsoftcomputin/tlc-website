@@ -23,14 +23,14 @@ import {
 const database = getFirestore(getApps()[0] ?? initializeApp());
 const region = "asia-south1";
 const orgId = process.env.TLC_ORG_ID || "tlc-vacations";
-const verifyToken = defineSecret("WHATSAPP_VERIFY_TOKEN");
-const appSecret = defineSecret("WHATSAPP_APP_SECRET");
-const accessToken = defineSecret("WHATSAPP_ACCESS_TOKEN");
-const phoneNumberId = defineSecret("WHATSAPP_PHONE_NUMBER_ID");
-const emailKey = defineSecret("RESEND_API_KEY");
-const emailSecret = defineSecret("RESEND_WEBHOOK_SECRET");
 const whatsappEnabled = process.env.WHATSAPP_ENABLED === "true";
 const emailEnabled = process.env.EMAIL_ENABLED === "true";
+const verifyToken = whatsappEnabled ? defineSecret("WHATSAPP_VERIFY_TOKEN") : null;
+const appSecret = whatsappEnabled ? defineSecret("WHATSAPP_APP_SECRET") : null;
+const accessToken = whatsappEnabled ? defineSecret("WHATSAPP_ACCESS_TOKEN") : null;
+const phoneNumberId = whatsappEnabled ? defineSecret("WHATSAPP_PHONE_NUMBER_ID") : null;
+const emailKey = emailEnabled ? defineSecret("RESEND_API_KEY") : null;
+const emailSecret = emailEnabled ? defineSecret("RESEND_WEBHOOK_SECRET") : null;
 const modelSecrets =
   process.env.TLC_AI_AUTH_REQUIRED === "true"
     ? [defineSecret("TLC_AI_API_KEY")]
@@ -45,19 +45,19 @@ const supplierSecrets =
       ].map((name) => defineSecret(name))
     : [];
 const deliverySecrets = [
-  ...(whatsappEnabled ? [accessToken, phoneNumberId] : []),
-  ...(emailEnabled ? [emailKey] : []),
+  ...(whatsappEnabled ? [accessToken!, phoneNumberId!] : []),
+  ...(emailEnabled ? [emailKey!] : []),
 ];
 const credentials = () => ({
   ...(whatsappEnabled
     ? {
-        whatsappToken: accessToken.value(),
-        whatsappPhoneId: phoneNumberId.value(),
+        whatsappToken: accessToken!.value(),
+        whatsappPhoneId: phoneNumberId!.value(),
       }
     : {}),
   ...(emailEnabled
     ? {
-        emailKey: emailKey.value(),
+        emailKey: emailKey!.value(),
         emailFrom: process.env.MARKETING_EMAIL_FROM,
         emailReplyTo: process.env.EMAIL_REPLY_TO,
         siteUrl: process.env.TLC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL,
@@ -82,7 +82,7 @@ export function validWhatsAppSignature(
 export const whatsappConversationWebhook = onRequest(
   {
     region,
-    secrets: whatsappEnabled ? [verifyToken, appSecret, phoneNumberId] : [],
+    secrets: whatsappEnabled ? [verifyToken!, appSecret!, phoneNumberId!] : [],
   },
   async (request, response) => {
     if (!whatsappEnabled) {
@@ -92,7 +92,7 @@ export const whatsappConversationWebhook = onRequest(
     if (request.method === "GET") {
       const valid =
         request.query["hub.mode"] === "subscribe" &&
-        request.query["hub.verify_token"] === verifyToken.value();
+        request.query["hub.verify_token"] === verifyToken!.value();
       response
         .status(valid ? 200 : 403)
         .send(
@@ -108,7 +108,7 @@ export const whatsappConversationWebhook = onRequest(
       !validWhatsAppSignature(
         request.rawBody,
         request.header("x-hub-signature-256"),
-        appSecret.value(),
+        appSecret!.value(),
       )
     ) {
       response.status(401).send("Invalid signature");
@@ -118,7 +118,7 @@ export const whatsappConversationWebhook = onRequest(
       for (const entry of request.body.entry || [])
         for (const change of entry.changes || []) {
           const value = change.value;
-          if (value?.metadata?.phone_number_id !== phoneNumberId.value())
+          if (value?.metadata?.phone_number_id !== phoneNumberId!.value())
             continue;
           for (const message of value.messages || []) {
             if (!message.id || !message.from) continue;
@@ -161,7 +161,7 @@ export const whatsappConversationWebhook = onRequest(
 );
 
 export const emailConversationWebhook = onRequest(
-  { region, secrets: emailEnabled ? [emailSecret, emailKey] : [] },
+  { region, secrets: emailEnabled ? [emailSecret!, emailKey!] : [] },
   async (request, response) => {
     if (!emailEnabled) {
       response.sendStatus(503);
@@ -179,7 +179,7 @@ export const emailConversationWebhook = onRequest(
           timestamp: request.header("svix-timestamp"),
           signature: request.header("svix-signature"),
         },
-        emailSecret.value(),
+        emailSecret!.value(),
       )
     ) {
       response.sendStatus(401);
@@ -196,7 +196,7 @@ export const emailConversationWebhook = onRequest(
         const result = await fetch(
           `https://api.resend.com/emails/receiving/${encodeURIComponent(id)}`,
           {
-            headers: { authorization: `Bearer ${emailKey.value()}` },
+            headers: { authorization: `Bearer ${emailKey!.value()}` },
             signal: AbortSignal.timeout(15000),
             redirect: "error",
           },
