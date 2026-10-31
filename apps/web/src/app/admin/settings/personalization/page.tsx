@@ -3,7 +3,7 @@ import { requireAdminUser } from "@/lib/auth/session";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { PersonalizationSettings } from "@/components/admin/personalization-settings";
 export default async function SettingsPage() {
-  const user = await requireAdminUser("settings:manage"); const db = getAdminFirestore();
+  const user = await requireAdminUser("personalization:manage"); const db = getAdminFirestore();
   const [org, docs] = await Promise.all([db.collection("orgs").doc(user.orgId).get(), db.collection("planningRates").where("orgId", "==", user.orgId).get()]);
   const pricing = pricingPolicySchema.safeParse(org.data()?.settings?.personalization?.pricing);
   const rates = docs.docs.flatMap(doc => { const parsed = planningRateSchema.safeParse({ ...doc.data(), id: doc.id }); return parsed.success ? [parsed.data] : []; });

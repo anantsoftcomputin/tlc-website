@@ -10,10 +10,16 @@ const money = (value: number, currency: string) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-export default async function BookingsPage() {
-  const user = await requireAdminUser("crm:read");
-  const bookings = await new FirestoreBookingRepository(user.orgId || "", {
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ after?: string }>;
+}) {
+  const { after } = await searchParams;
+  const user = await requireAdminUser("quotes:read");
+  const page = await new FirestoreBookingRepository(user.orgId || "", {
     uid: user.uid,
+    role: user.role,
     canViewAll: [
       "super_admin",
       "owner",
@@ -22,7 +28,8 @@ export default async function BookingsPage() {
       "accounts",
       "readonly",
     ].includes(user.role),
-  }).list();
+  }).listPage(50, after);
+  const bookings = page.items;
   return (
     <>
       <header className="admin-page-head">
@@ -111,6 +118,19 @@ export default async function BookingsPage() {
           </table>
         </div>
       </section>
+      <nav aria-label="Bookings pages">
+        <Link className="button secondary" href="/admin/bookings">
+          First page
+        </Link>
+        {page.next && (
+          <Link
+            className="button secondary"
+            href={`/admin/bookings?after=${encodeURIComponent(page.next)}`}
+          >
+            Next page
+          </Link>
+        )}
+      </nav>
     </>
   );
 }

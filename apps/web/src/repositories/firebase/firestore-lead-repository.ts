@@ -254,7 +254,7 @@ export class FirestoreLeadRepository implements LeadRepository {
     return snapshot.docs
       .filter(
         (item) =>
-          item.data().active !== false &&
+          item.data().active !== false && item.data().disabled !== true &&
           [
             "super_admin",
             "owner",

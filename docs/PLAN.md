@@ -330,3 +330,26 @@ See [REMAINING_GAPS.md](./REMAINING_GAPS.md) for verification results and bounda
 - [ ] Deploy and validate actual production history, approved rates, supplier/offer inventory, messaging configuration and designated-recipient results.
 
 Implementation and validation: [PERSONAL_TRAVEL_ADVISOR.md](./PERSONAL_TRAVEL_ADVISOR.md).
+
+# WhatsApp advisor — 1 November 2026
+
+- [x] Recognise registered phone numbers through signed Meta messages; register new clients within WhatsApp.
+- [x] Record independent personalisation/marketing choices, handle ambiguous contacts and retain email verification boundaries.
+- [x] Confirm and search trips in chat using shared website inventory and budget engines; support refresh and consultant review.
+- [x] Save preferences and completed-trip feedback, enforce delivery-time revocation, bound searches and deduplicate retries.
+- [ ] Deploy and validate real Meta/TBO delivery and supplier configuration with designated recipients.
+
+Details and validation: [WHATSAPP_ADVISOR.md](./WHATSAPP_ADVISOR.md).
+
+# Dashboard gap closure — 1 November 2026
+
+- [x] Align quote/lead/booking domain guards, Firestore boundaries and per-role action visibility.
+- [x] Separate finance totals and exports by selected currency.
+- [x] Route new channel work to eligible staff and provide manager dispatch/reassignment with employee alerts.
+- [x] Correct active-booking/latest-proposal metrics and scope list queries before cursor pagination.
+- [x] Show pending quote revisions and paginated customer travel/payment/support history.
+- [x] Add explicit verified WhatsApp-to-website linking and shared current-plan continuity.
+- [x] Grant managers a dedicated travel-pricing capability without expanding general settings access.
+- [ ] Deploy the coordinated release and verify actual production indexes, roles/MFA, providers and staff routing with designated accounts.
+
+Details: [DASHBOARD_CONFIGURATION.md](./DASHBOARD_CONFIGURATION.md).

@@ -1,3 +1,4 @@
+export { normalizeCustomerWhatsAppPhones } from "./whatsapp-contacts.js";
 export { draftPersonalTravelCampaigns, refreshPersonalRecommendations } from "./pattern-campaigns.js";
 export { completeBooking, refreshProfileFromTravelHistory, updateCompletedTripRefunds } from "./trip-completion.js";
 export {

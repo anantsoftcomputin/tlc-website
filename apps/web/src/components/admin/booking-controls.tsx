@@ -23,11 +23,13 @@ function message(error: unknown) {
 export function BookingControls({
   booking,
   payments,
+  canWrite,
   canApprove,
   canFinance,
 }: {
   booking: Booking;
   payments: Payment[];
+  canWrite: boolean;
   canApprove: boolean;
   canFinance: boolean;
 }) {
@@ -47,25 +49,61 @@ export function BookingControls({
       ),
     ),
   );
-  type SupplierPrompt = { itemId: string; kind: "price"; currentCost: number; plannedCost: number } | { itemId: string; kind: "check" };
+  type SupplierPrompt =
+    | {
+        itemId: string;
+        kind: "price";
+        currentCost: number;
+        plannedCost: number;
+      }
+    | { itemId: string; kind: "check" };
   const [supplierPrompt, setSupplierPrompt] = useState<SupplierPrompt>();
   const [supplierNotice, setSupplierNotice] = useState<string>();
-  async function bookWithSupplier(itemId: string, extra: Record<string, unknown> = {}) {
+  async function bookWithSupplier(
+    itemId: string,
+    extra: Record<string, unknown> = {},
+  ) {
     setBusy(`supplier${itemId}`);
     setError(undefined);
     setSupplierNotice(undefined);
     setSupplierPrompt(undefined);
     try {
-      const result = await httpsCallable<Record<string, unknown>, { pnr: string; bookingRef: string; supplierCost: number; variance: number }>(
-        getFirebaseFunctions(), "fulfilSupplierItem", { timeout: 300_000 },
-      )({ bookingId: booking.id, itemId, ...extra });
-      setSupplierNotice(`Booked with TBO. Reference ${result.data.pnr || result.data.bookingRef}${result.data.variance > 0 ? `; cost was ${result.data.variance} above plan and finance has been alerted.` : "."}`);
+      const result = await httpsCallable<
+        Record<string, unknown>,
+        {
+          pnr: string;
+          bookingRef: string;
+          supplierCost: number;
+          variance: number;
+        }
+      >(getFirebaseFunctions(), "fulfilSupplierItem", { timeout: 300_000 })({
+        bookingId: booking.id,
+        itemId,
+        ...extra,
+      });
+      setSupplierNotice(
+        `Booked with TBO. Reference ${result.data.pnr || result.data.bookingRef}${result.data.variance > 0 ? `; cost was ${result.data.variance} above plan and finance has been alerted.` : "."}`,
+      );
       router.refresh();
     } catch (caught) {
-      const details = (caught as { details?: { code?: string; currentCost?: number; plannedCost?: number } }).details;
+      const details = (
+        caught as {
+          details?: {
+            code?: string;
+            currentCost?: number;
+            plannedCost?: number;
+          };
+        }
+      ).details;
       if (details?.code === "price-changed" && details.currentCost)
-        setSupplierPrompt({ itemId, kind: "price", currentCost: details.currentCost, plannedCost: details.plannedCost || 0 });
-      else if (details?.code === "check-supplier") setSupplierPrompt({ itemId, kind: "check" });
+        setSupplierPrompt({
+          itemId,
+          kind: "price",
+          currentCost: details.currentCost,
+          plannedCost: details.plannedCost || 0,
+        });
+      else if (details?.code === "check-supplier")
+        setSupplierPrompt({ itemId, kind: "check" });
       setError(message(caught));
       router.refresh();
     } finally {
@@ -92,7 +130,11 @@ export function BookingControls({
   return (
     <div className="booking-controls">
       {error && <p className="form-error">{error}</p>}
-      {supplierNotice && <p className="admin-notice" role="status">{supplierNotice}</p>}
+      {supplierNotice && (
+        <p className="admin-notice" role="status">
+          {supplierNotice}
+        </p>
+      )}
       {booking.status === "pendingApproval" && canApprove && (
         <section className="booking-command-card">
           <div>
@@ -113,183 +155,335 @@ export function BookingControls({
           </button>
         </section>
       )}
-      {booking.status === "confirmed" && <section className="admin-panel"><h3>Complete the travelled holiday</h3><p>After all services have ended, confirm the travel facts to update the client’s history.</p><form className="workspace-form" onSubmit={event => {
-        event.preventDefault(); const data = new FormData(event.currentTarget);
-        void call("completeBooking", { bookingId: booking.id, destination: data.get("destination"), country: data.get("country"), domesticIntl: data.get("domesticIntl"), purpose: data.get("purpose"), travellerType: data.get("travellerType") });
-      }}><label>Travel destination<input name="destination" required /></label><label>Country<input name="country" required /></label><label>Travel scope<select name="domesticIntl"><option value="domestic">India</option><option value="international">International</option></select></label><label>Purpose<select name="purpose"><option value="leisure">Leisure</option><option value="business">Business</option></select></label><label>Traveller group<select name="travellerType"><option value="family">Family</option><option value="couple">Couple</option><option value="solo">Solo</option><option value="group">Group</option></select></label><button className="button primary" disabled={Boolean(busy)}>Mark trip completed</button></form></section>}
-      <section className="admin-panel">
-        <header>
-          <div>
-            <b>Supplier fulfilment</b>
-            <span>
-              Record confirmation, PNR or failure independently for each
-              service.
-            </span>
-          </div>
-        </header>
-        <div className="booking-item-controls">
-          {booking.items.map((item) => (
+      {canWrite &&
+        booking.status === "confirmed" &&
+        booking.items.every(
+          (item) =>
+            item.itemStatus === "cancelled" ||
+            item.dates.end <
+              new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Asia/Kolkata",
+              }).format(new Date()),
+        ) && (
+          <section className="admin-panel">
+            <h3>Complete the travelled holiday</h3>
+            <p>
+              After all services have ended, confirm the travel facts to update
+              the client’s history.
+            </p>
             <form
-              key={item.id}
+              className="workspace-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 const data = new FormData(event.currentTarget);
-                void call("updateBookingItem", {
+                void call("completeBooking", {
                   bookingId: booking.id,
-                  itemId: item.id,
-                  status: data.get("status"),
-                  pnr: data.get("pnr") || undefined,
-                  bookingRef: data.get("bookingRef") || undefined,
-                  failureReason: data.get("failureReason") || undefined,
+                  destination: data.get("destination"),
+                  country: data.get("country"),
+                  domesticIntl: data.get("domesticIntl"),
+                  purpose: data.get("purpose"),
+                  travellerType: data.get("travellerType"),
                 });
               }}
             >
-              <div>
-                <span className={`status-pill status-${item.itemStatus}`}>
-                  {item.itemStatus}
-                </span>
-                <b>{item.description}</b>
-                <small>
-                  {item.kind} · {item.source}
-                </small>
-              </div>
               <label>
-                Status
-                <select
-                  name="status"
-                  defaultValue={item.itemStatus}
-                  disabled={!booking.approvedAt}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="failed">Failed</option>
-                  <option value="cancelled">Cancelled</option>
+                Travel destination
+                <input name="destination" required />
+              </label>
+              <label>
+                Country
+                <input name="country" required />
+              </label>
+              <label>
+                Travel scope
+                <select name="domesticIntl">
+                  <option value="domestic">India</option>
+                  <option value="international">International</option>
                 </select>
               </label>
               <label>
-                PNR
-                <input name="pnr" defaultValue={item.pnr} />
+                Purpose
+                <select name="purpose">
+                  <option value="leisure">Leisure</option>
+                  <option value="business">Business</option>
+                </select>
               </label>
               <label>
-                Supplier ref
-                <input name="bookingRef" defaultValue={item.bookingRef} />
+                Traveller group
+                <select name="travellerType">
+                  <option value="family">Family</option>
+                  <option value="couple">Couple</option>
+                  <option value="solo">Solo</option>
+                  <option value="group">Group</option>
+                </select>
               </label>
-              <label>
-                Failure note
-                <input name="failureReason" defaultValue={item.failureReason} />
-              </label>
-              <button
-                className="button secondary"
-                disabled={!booking.approvedAt || Boolean(busy)}
-              >
-                <RefreshCw />
-                Update
+              <button className="button primary" disabled={Boolean(busy)}>
+                Mark trip completed
               </button>
-              {String((item as { raw?: { provider?: string } }).raw?.provider || "").startsWith("tbo-") && item.itemStatus === "pending" && canApprove && (
-                <div className="supplier-action">
-                  <button type="button" className="button primary" disabled={!booking.approvedAt || Boolean(busy)} onClick={() => bookWithSupplier(item.id)}>
-                    <PlaneTakeoff />
-                    {busy === `supplier${item.id}` ? "Booking with TBO…" : "Book with TBO"}
-                  </button>
-                  <small>Re-checks the exact flight or room and its price, then books it for the travellers on this booking.</small>
-                  {(item as { fulfilment?: { status?: string; error?: string } }).fulfilment?.status === "failed" && (
-                    <small className="form-error">Last attempt: {(item as { fulfilment?: { error?: string } }).fulfilment?.error}</small>
-                  )}
-                  {supplierPrompt?.itemId === item.id && supplierPrompt.kind === "price" && (
-                    <div className="supplier-prompt">
-                      <span>TBO now charges {item.currency} {supplierPrompt.currentCost.toLocaleString("en-IN")} against a planned {supplierPrompt.plannedCost.toLocaleString("en-IN")}.</span>
-                      <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => bookWithSupplier(item.id, { acceptCost: supplierPrompt.currentCost })}>Accept and book</button>
-                    </div>
-                  )}
-                  {(supplierPrompt?.itemId === item.id && supplierPrompt.kind === "check") || (item as { fulfilment?: { status?: string } }).fulfilment?.status === "unknown" ? (
-                    <div className="supplier-prompt">
-                      <span>TBO did not confirm the last attempt. Check the TBO portal first; retry only if no booking exists.</span>
-                      <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => bookWithSupplier(item.id, { confirmNoDuplicate: true })}>I checked TBO: retry</button>
-                    </div>
-                  ) : null}
-                </div>
-              )}
             </form>
-          ))}
-        </div>
-      </section>
-      <section className="admin-panel">
-        <header>
-          <div>
-            <b>Document checklist</b>
-            <span>
-              Track traveller and fulfilment documents without exposing private
-              files publicly.
-            </span>
-          </div>
-        </header>
-        <div className="booking-documents">
-          {booking.documents.map((item) => (
-            <div key={`${item.kind}-${item.label}`}>
-              <FileCheck2 />
-              <span>
-                <b>{item.label}</b>
-                <small>{item.kind}</small>
-              </span>
-              <select
-                value={item.status}
-                onChange={(event) =>
-                  call("updateBookingDocument", {
-                    bookingId: booking.id,
-                    kind: item.kind,
-                    label: item.label,
-                    status: event.target.value,
-                    storageRef: item.storageRef,
-                    note: item.note,
-                  })
-                }
-              >
-                <option value="required">Required</option>
-                <option value="received">Received</option>
-                <option value="verified">Verified</option>
-                <option value="waived">Waived</option>
-              </select>
+          </section>
+        )}
+      {canWrite && !["completed", "cancelled"].includes(booking.status) ? (
+        <>
+          <section className="admin-panel">
+            <header>
+              <div>
+                <b>Supplier fulfilment</b>
+                <span>
+                  Record confirmation, PNR or failure independently for each
+                  service.
+                </span>
+              </div>
+            </header>
+            <div className="booking-item-controls">
+              {booking.items.map((item) => (
+                <form
+                  key={item.id}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const data = new FormData(event.currentTarget);
+                    void call("updateBookingItem", {
+                      bookingId: booking.id,
+                      itemId: item.id,
+                      status: data.get("status"),
+                      pnr: data.get("pnr") || undefined,
+                      bookingRef: data.get("bookingRef") || undefined,
+                      failureReason: data.get("failureReason") || undefined,
+                    });
+                  }}
+                >
+                  <div>
+                    <span className={`status-pill status-${item.itemStatus}`}>
+                      {item.itemStatus}
+                    </span>
+                    <b>{item.description}</b>
+                    <small>
+                      {item.kind} · {item.source}
+                    </small>
+                  </div>
+                  <label>
+                    Status
+                    <select
+                      name="status"
+                      defaultValue={item.itemStatus}
+                      disabled={!booking.approvedAt}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="failed">Failed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </label>
+                  <label>
+                    PNR
+                    <input name="pnr" defaultValue={item.pnr} />
+                  </label>
+                  <label>
+                    Supplier ref
+                    <input name="bookingRef" defaultValue={item.bookingRef} />
+                  </label>
+                  <label>
+                    Failure note
+                    <input
+                      name="failureReason"
+                      defaultValue={item.failureReason}
+                    />
+                  </label>
+                  <button
+                    className="button secondary"
+                    disabled={!booking.approvedAt || Boolean(busy)}
+                  >
+                    <RefreshCw />
+                    Update
+                  </button>
+                  {String(
+                    (item as { raw?: { provider?: string } }).raw?.provider ||
+                      "",
+                  ).startsWith("tbo-") &&
+                    item.itemStatus === "pending" &&
+                    canApprove && (
+                      <div className="supplier-action">
+                        <button
+                          type="button"
+                          className="button primary"
+                          disabled={!booking.approvedAt || Boolean(busy)}
+                          onClick={() => bookWithSupplier(item.id)}
+                        >
+                          <PlaneTakeoff />
+                          {busy === `supplier${item.id}`
+                            ? "Booking with TBO…"
+                            : "Book with TBO"}
+                        </button>
+                        <small>
+                          Re-checks the exact flight or room and its price, then
+                          books it for the travellers on this booking.
+                        </small>
+                        {(
+                          item as {
+                            fulfilment?: { status?: string; error?: string };
+                          }
+                        ).fulfilment?.status === "failed" && (
+                          <small className="form-error">
+                            Last attempt:{" "}
+                            {
+                              (item as { fulfilment?: { error?: string } })
+                                .fulfilment?.error
+                            }
+                          </small>
+                        )}
+                        {supplierPrompt?.itemId === item.id &&
+                          supplierPrompt.kind === "price" && (
+                            <div className="supplier-prompt">
+                              <span>
+                                TBO now charges {item.currency}{" "}
+                                {supplierPrompt.currentCost.toLocaleString(
+                                  "en-IN",
+                                )}{" "}
+                                against a planned{" "}
+                                {supplierPrompt.plannedCost.toLocaleString(
+                                  "en-IN",
+                                )}
+                                .
+                              </span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                disabled={Boolean(busy)}
+                                onClick={() =>
+                                  bookWithSupplier(item.id, {
+                                    acceptCost: supplierPrompt.currentCost,
+                                  })
+                                }
+                              >
+                                Accept and book
+                              </button>
+                            </div>
+                          )}
+                        {(supplierPrompt?.itemId === item.id &&
+                          supplierPrompt.kind === "check") ||
+                        (item as { fulfilment?: { status?: string } })
+                          .fulfilment?.status === "unknown" ? (
+                          <div className="supplier-prompt">
+                            <span>
+                              TBO did not confirm the last attempt. Check the
+                              TBO portal first; retry only if no booking exists.
+                            </span>
+                            <button
+                              type="button"
+                              className="button secondary"
+                              disabled={Boolean(busy)}
+                              onClick={() =>
+                                bookWithSupplier(item.id, {
+                                  confirmNoDuplicate: true,
+                                })
+                              }
+                            >
+                              I checked TBO: retry
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                </form>
+              ))}
             </div>
+          </section>
+          <section className="admin-panel">
+            <header>
+              <div>
+                <b>Document checklist</b>
+                <span>
+                  Track traveller and fulfilment documents without exposing
+                  private files publicly.
+                </span>
+              </div>
+            </header>
+            <div className="booking-documents">
+              {booking.documents.map((item) => (
+                <div key={`${item.kind}-${item.label}`}>
+                  <FileCheck2 />
+                  <span>
+                    <b>{item.label}</b>
+                    <small>{item.kind}</small>
+                  </span>
+                  <select
+                    value={item.status}
+                    onChange={(event) =>
+                      call("updateBookingDocument", {
+                        bookingId: booking.id,
+                        kind: item.kind,
+                        label: item.label,
+                        status: event.target.value,
+                        storageRef: item.storageRef,
+                        note: item.note,
+                      })
+                    }
+                  >
+                    <option value="required">Required</option>
+                    <option value="received">Received</option>
+                    <option value="verified">Verified</option>
+                    <option value="waived">Waived</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+            <form
+              className="booking-add-document"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void call("updateBookingDocument", {
+                  bookingId: booking.id,
+                  kind: documentKind,
+                  label: documentLabel,
+                  status: "required",
+                });
+              }}
+            >
+              <select
+                value={documentKind}
+                onChange={(event) => setDocumentKind(event.target.value)}
+              >
+                {[
+                  "passport",
+                  "visa",
+                  "ticket",
+                  "hotelVoucher",
+                  "insurance",
+                  "invoice",
+                  "other",
+                ].map((kind) => (
+                  <option key={kind} value={kind}>
+                    {kind}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={documentLabel}
+                onChange={(event) => setDocumentLabel(event.target.value)}
+                required
+              />
+              <button className="button secondary">Add document</button>
+            </form>
+          </section>
+        </>
+      ) : (
+        <section className="admin-panel">
+          <h2>Services and documents</h2>
+          <p>You have read access to this booking.</p>
+          {booking.items.map((item) => (
+            <p key={item.id}>
+              <b>{item.description}</b> · {item.itemStatus}
+              {item.pnr ? ` · PNR ${item.pnr}` : ""}
+              {item.bookingRef ? ` · Reference ${item.bookingRef}` : ""}
+            </p>
           ))}
-        </div>
-        <form
-          className="booking-add-document"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void call("updateBookingDocument", {
-              bookingId: booking.id,
-              kind: documentKind,
-              label: documentLabel,
-              status: "required",
-            });
-          }}
-        >
-          <select
-            value={documentKind}
-            onChange={(event) => setDocumentKind(event.target.value)}
-          >
-            {[
-              "passport",
-              "visa",
-              "ticket",
-              "hotelVoucher",
-              "insurance",
-              "invoice",
-              "other",
-            ].map((kind) => (
-              <option key={kind} value={kind}>
-                {kind}
-              </option>
-            ))}
-          </select>
-          <input
-            value={documentLabel}
-            onChange={(event) => setDocumentLabel(event.target.value)}
-            required
-          />
-          <button className="button secondary">Add document</button>
-        </form>
-      </section>
+          {booking.documents.map((item) => (
+            <p key={`${item.kind}-${item.label}`}>
+              {item.label} · {item.status}
+            </p>
+          ))}
+        </section>
+      )}
       {canFinance && booking.approvedAt && (
         <section className="admin-panel">
           <header>

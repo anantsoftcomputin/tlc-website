@@ -9,6 +9,7 @@ const mapping = {
   "content:read": "content:read",
   "content:write": "content:write",
   "crm:read": "customers:read",
+  "leads:read": "leads:read",
   "crm:write": "leads:write",
   "quotes:read": "quotes:read",
   "quotes:write": "quotes:write",
@@ -18,6 +19,7 @@ const mapping = {
   "finance:write": "finance:write",
   "users:manage": "users:manage",
   "settings:manage": "settings:manage",
+  "personalization:manage": "personalization:manage",
   "audit:read": "audit:read",
   "business:read": "business:read",
 } satisfies Record<string, DomainPermission>;

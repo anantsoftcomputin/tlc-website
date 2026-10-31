@@ -19,7 +19,7 @@ export async function PUT(request: Request) {
   if (!hasTrustedOrigin(request))
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   const user = await getSessionUser();
-  if (!user || !hasPermission(user.role, "settings:manage"))
+  if (!user || !hasPermission(user.role, "personalization:manage"))
     return NextResponse.json(
       { error: "Manager access required." },
       { status: 403 },

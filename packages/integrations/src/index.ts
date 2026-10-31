@@ -142,3 +142,6 @@ export class SocialInboundAdapter implements InboundLeadAdapter<
 
 export * from "./tlc-model.js";
 export * from "./email/index.js";
+
+export * from "./travel/vacation-search.js";
+export * from "./travel/personal-budget.js";

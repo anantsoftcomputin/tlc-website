@@ -21,6 +21,7 @@ export default async function NewQuotePage({
     params.revise
       ? new FirestoreQuoteRepository(user.orgId || "", {
           uid: user.uid,
+          role: user.role,
           canViewAll,
         }).get(params.revise)
       : Promise.resolve(null),

@@ -497,9 +497,26 @@ describe("hardened role boundaries",()=>{
 describe("private personal travel records", () => {
   it("denies direct browser reads and writes to personal plans, rates and advisor sessions", async () => {
     const db = environment.authenticatedContext("client", { role: "customer", orgId: "tlc-vacations", email_verified: true }).firestore();
-    for (const collection of ["planningRates", "personalTripPlans", "clientAdvisorSessions", "personalChannelLinks"]) {
+    for (const collection of ["planningRates", "personalTripPlans", "clientAdvisorSessions", "personalChannelLinks", "whatsappSearchLimits", "whatsappAccountLinks"]) {
       await assertFails(getDoc(doc(db, collection, "private")));
       await assertFails(setDoc(doc(db, collection, "private"), { orgId: "tlc-vacations", clientUid: "client" }));
     }
   });
+});
+
+
+describe("dashboard domain permission boundaries",()=>{
+ it("does not turn assigned customer access into lead, quote or booking access",async()=>{
+  await environment.withSecurityRulesDisabled(async context=>{
+   await setDoc(doc(context.firestore(),"leads","domain-owned"),{orgId:"tlc-vacations",assignedUid:"domain-user"});
+   await setDoc(doc(context.firestore(),"inquiries","domain-owned"),{orgId:"tlc-vacations",assignedUid:"domain-user"});
+   for(const collection of ["quotes","bookings"])await setDoc(doc(context.firestore(),collection,"domain-owned"),{orgId:"tlc-vacations",leadId:"domain-owned"});
+  });
+  const marketing=environment.authenticatedContext("domain-user",{role:"marketing",orgId:"tlc-vacations"}).firestore();
+  for(const collection of ["inquiries","leads","quotes","bookings"])await assertFails(getDoc(doc(marketing,collection,"domain-owned")));
+  const accounts=environment.authenticatedContext("domain-user",{role:"accounts",orgId:"tlc-vacations"}).firestore();
+  await assertFails(getDoc(doc(accounts,"leads","domain-owned")));await assertSucceeds(getDoc(doc(accounts,"bookings","domain-owned")));
+  const reader=environment.authenticatedContext("domain-user",{role:"readonly",orgId:"tlc-vacations"}).firestore();
+  await assertSucceeds(getDoc(doc(reader,"leads","domain-owned")));await assertSucceeds(getDoc(doc(reader,"quotes","domain-owned")));
+ });
 });

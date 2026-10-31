@@ -180,6 +180,7 @@ export const updateAlertStatus = onCall(
     if (!request.auth)
       throw new HttpsError("unauthenticated", "Authentication is required.");
     const role = String(request.auth.token.role || "");
+    if (!["super_admin", "owner", "manager", "admin", "sales", "travel_consultant", "accounts", "marketing"].includes(role)) throw new HttpsError("permission-denied", "Alert write access required.");
     const orgId = request.auth.token.orgId;
     if (typeof orgId !== "string")
       throw new HttpsError("failed-precondition", "Organization is missing.");

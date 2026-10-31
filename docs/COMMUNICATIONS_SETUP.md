@@ -24,6 +24,8 @@ Secrets: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECR
 
 Register `whatsappConversationWebhook` as the Meta callback, perform the GET verification using the verify token, and subscribe to message and delivery events. The POST handler validates the raw-body signature and sender phone-number ID. Freeform replies require an active 24-hour service window. Proactive campaigns require an approved template, matching language and body parameter positions. Template headers, media and buttons are not yet configurable by the campaign editor.
 
+Registered numbers can continue with consented profiles; new numbers register in WhatsApp. Guided trip confirmation, supplier searches, budgets, review and feedback use the shared advisor engines. See [WHATSAPP_ADVISOR.md](./WHATSAPP_ADVISOR.md) for commands and the WHATSAPP_LIVE_SEARCH_ENABLED/Functions supplier-secret configuration.
+
 Text, quick reply and list-choice messages are supported. Voice notes, images and attachments cause a consultant handover; media transcription/download is not implemented. STOP updates the linked customer's WhatsApp marketing opt-out. Clients are not subscribed just by contacting the bot.
 
 ### Email (Resend)
@@ -45,7 +47,7 @@ Messages awaiting credentials stay `pending_configuration`; a five-minute worker
 
 Approved campaigns still require an explicit manual send or scheduled trigger. Frequency and consent are checked immediately before a recipient is claimed. Failed/uncertain sends conservatively retain the frequency reservation. Campaigns with uncertain outcomes pause for review. Campaign callbacks update delivery status; click/open tracking is not implemented by these handlers.
 
-Pending jobs are server-only. Portal reads and writes go through authenticated routes, not direct client Firestore access. Shared email addresses can map to multiple CRM records; ambiguous inbound contact matching creates a separate contact for consultant reconciliation. Client self-service phone verification and automatic cross-channel contact merging are not implemented.
+Pending jobs are server-only. Portal reads and writes go through authenticated routes, not direct client Firestore access. Shared email addresses can map to multiple CRM records; ambiguous inbound contact matching creates a separate contact for consultant reconciliation. WhatsApp number possession is verified through signed Meta inbound messages, with registration and consent captured in chat; see [WHATSAPP_ADVISOR.md](./WHATSAPP_ADVISOR.md). Automatic cross-channel contact merging is not implemented.
 
 For a secured model endpoint, set `TLC_AI_AUTH_REQUIRED=true` in Functions and store `TLC_AI_API_KEY` in Secret Manager. The bot and recovery workers bind this secret.
 

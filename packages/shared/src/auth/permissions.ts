@@ -4,7 +4,7 @@ export const permissions = [
   "console:access", "customers:read", "customers:write", "leads:read", "leads:write",
   "quotes:read", "quotes:write", "finance:read", "finance:write", "campaigns:manage",
   "analytics:read", "users:manage", "settings:manage", "audit:read",
-  "content:read", "content:write", "households:read", "business:read", "portal:access",
+  "content:read", "content:write", "households:read", "business:read", "portal:access", "personalization:manage",
 ] as const;
 
 export type Permission = (typeof permissions)[number];

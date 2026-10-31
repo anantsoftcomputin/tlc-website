@@ -98,6 +98,7 @@ export async function WorkspaceDashboard({
   const data = await getWorkspaceDashboard(user);
   const m = data.metrics;
   const tools = [
+    { title: "Dispatch queue", copy: "Assign incoming client conversations and requests", href: "/admin/dispatch", icon: Users, permission: "users:manage" as const },
     {
       title: "Lead pipeline",
       copy: "Enquiries, ownership & follow-ups",
@@ -124,7 +125,7 @@ export async function WorkspaceDashboard({
       copy: "Departures & supplier confirmations",
       href: "/admin/bookings",
       icon: CalendarDays,
-      permission: "customers:read" as const,
+      permission: "quotes:read" as const,
     },
     {
       title: "Finance",

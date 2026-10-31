@@ -1,3 +1,4 @@
+import { trustedWhatsAppThread, whatsappActor } from "./whatsapp-identity.js";
 import { verifiedChannelContext } from "./channel-personalization.js";
 import { renderEmail, type EmailTemplateData } from "@tlc/integrations";
 import { createHash } from "node:crypto";
@@ -106,7 +107,15 @@ export async function deliverCommunication(
         !verified ||
         verified.customerId !== row.personalizationCustomerId ||
         verified.verifiedUid !== row.personalizationVerifiedUid ||
-        data.verifiedClientUid !== row.personalizationVerifiedUid ||
+        (data.channel === "whatsapp" && data.whatsappVerifiedMessageId
+          ? !trustedWhatsAppThread(data, job.orgId) ||
+            whatsappActor(job.orgId, data.customerId) !==
+              row.personalizationVerifiedUid ||
+            !customer?.phones?.some(
+              (phone: string) =>
+                phone.replace(/\D/g, "") === data.whatsappAddress,
+            )
+          : data.verifiedClientUid !== row.personalizationVerifiedUid) ||
         !(
           Date.parse(row.personalizationEvidenceExpiresAt || "") > Date.now()
         ) ||

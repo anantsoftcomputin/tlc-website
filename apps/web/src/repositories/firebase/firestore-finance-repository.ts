@@ -30,6 +30,8 @@ export type BookingProfitability = ReturnType<typeof profitabilitySnapshot> & {
 };
 
 export type FinanceWorkspace = {
+  currency: string;
+  currencies: string[];
   ledger: LedgerEntry[];
   journals: FinanceJournal[];
   settlements: SupplierSettlement[];
@@ -60,7 +62,10 @@ export class FirestoreFinanceRepository {
   private readonly database = getAdminFirestore();
   constructor(private readonly orgId: string) {}
 
-  async workspace(pageSize = 250): Promise<FinanceWorkspace> {
+  async workspace(
+    pageSize = 250,
+    requestedCurrency?: string,
+  ): Promise<FinanceWorkspace> {
     const [
       ledgerResult,
       journalResult,
@@ -73,34 +78,124 @@ export class FirestoreFinanceRepository {
       periodResult,
       orgResult,
     ] = await Promise.all([
-      readSnapshot(this.database.collection("ledger").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("financeJournals").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("supplierSettlements").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("bookings").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("payments").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("cancellationRequests").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("financeDocuments").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("accountingSyncs").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
-      readSnapshot(this.database.collection("financePeriods").where("orgId", "==", this.orgId).orderBy("__name__"), pageSize),
+      readSnapshot(
+        this.database
+          .collection("ledger")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("financeJournals")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("supplierSettlements")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("bookings")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("payments")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("cancellationRequests")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("financeDocuments")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("accountingSyncs")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
+      readSnapshot(
+        this.database
+          .collection("financePeriods")
+          .where("orgId", "==", this.orgId)
+          .orderBy("__name__"),
+        pageSize,
+      ),
       this.database.collection("orgs").doc(this.orgId).get(),
     ]);
-    const ledger = ledgerResult.docs.map((item) => ({
+    const currencies = [
+      ...new Set(
+        [
+          ...ledgerResult.docs.map((doc) => doc.data().currency),
+          ...bookingResult.docs.map((doc) => doc.data().totals?.currency),
+          ...paymentResult.docs.map((doc) => doc.data().currency),
+          ...documentResult.docs.map((doc) => doc.data().currency),
+          ...journalResult.docs.map((doc) => doc.data().currency),
+          ...settlementResult.docs.map((doc) => doc.data().currency),
+          ...cancellationResult.docs.map((doc) => doc.data().currency),
+        ].filter(
+          (value): value is string =>
+            typeof value === "string" && /^[A-Z]{3}$/.test(value),
+        ),
+      ),
+    ].sort();
+    if (!currencies.length) currencies.push("INR");
+    const currency =
+      requestedCurrency && currencies.includes(requestedCurrency)
+        ? requestedCurrency
+        : currencies.includes("INR")
+          ? "INR"
+          : currencies[0];
+    const inCurrency = (
+      docs: FirebaseFirestore.QueryDocumentSnapshot[],
+      booking = false,
+    ) =>
+      docs.filter(
+        (doc) =>
+          (booking ? doc.data().totals?.currency : doc.data().currency) ===
+          currency,
+      );
+    const ledger = inCurrency(ledgerResult.docs).map((item) => ({
       ...(item.data() as LedgerEntry),
       settledAmount: Number(item.data().settledAmount || 0),
       pendingSettlementAmount: Number(item.data().pendingSettlementAmount || 0),
     }));
-    const journals = journalResult.docs
+    const journals = inCurrency(journalResult.docs)
       .map((item) => item.data() as FinanceJournal)
       .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
-    const settlements = settlementResult.docs
+    const settlements = inCurrency(settlementResult.docs)
       .map((item) => item.data() as SupplierSettlement)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const bookings = bookingResult.docs.map((item) => item.data() as Booking);
-    const payments = paymentResult.docs.map((item) => item.data() as Payment);
-    const cancellations = cancellationResult.docs
+    const bookings = inCurrency(bookingResult.docs, true).map(
+      (item) => item.data() as Booking,
+    );
+    const payments = inCurrency(paymentResult.docs).map(
+      (item) => item.data() as Payment,
+    );
+    const cancellations = inCurrency(cancellationResult.docs)
       .map((item) => item.data() as CancellationRequest)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const documents = documentResult.docs
+    const documents = inCurrency(documentResult.docs)
       .map((item) => item.data() as FinanceDocument)
       .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt));
     const accountingSyncs = syncResult.docs
@@ -159,6 +254,8 @@ export class FirestoreFinanceRepository {
     const receivables = ledger.filter((item) => item.type === "receivable");
     const payables = ledger.filter((item) => item.type === "payable");
     return {
+      currency,
+      currencies,
       ledger,
       journals,
       settlements,

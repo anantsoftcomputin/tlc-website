@@ -49,3 +49,7 @@ pnpm build
 Current fixes and activation requirements are tracked in [`docs/REMAINING_GAPS.md`](docs/REMAINING_GAPS.md). Architecture and delivery status are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/PLAN.md`](docs/PLAN.md).
 
 The verified, consented personal advisor and its activation steps are documented in [`docs/PERSONAL_TRAVEL_ADVISOR.md`](docs/PERSONAL_TRAVEL_ADVISOR.md).
+
+WhatsApp registration and personal trip planning: [WhatsApp advisor](docs/WHATSAPP_ADVISOR.md).
+
+Dashboard role configuration, dispatch and client archives: [Dashboard configuration](docs/DASHBOARD_CONFIGURATION.md).

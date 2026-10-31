@@ -52,7 +52,7 @@ export function communicationIntent(body: string) {
   const text = body.trim();
   return {
     optOut: /^(stop|unsubscribe|stop promotions|remove me)[.!\s]*$/i.test(text),
-    human: /\b(human|agent|person|expert|complaint|refund|emergency)\b/i.test(
+    human: /\b(human|agent|person|expert|consultant|complaint|refund|emergency)\b/i.test(
       text,
     ),
   };

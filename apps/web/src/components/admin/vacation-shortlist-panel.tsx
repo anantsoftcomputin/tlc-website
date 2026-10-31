@@ -2,9 +2,11 @@ import Link from "next/link";
 import type { VacationShortlist } from "@tlc/shared";
 
 export function VacationShortlistPanel({
+  canQuote,
   shortlist,
   leadId,
 }: {
+  canQuote: boolean;
   shortlist: VacationShortlist;
   leadId: string;
 }) {
@@ -69,12 +71,14 @@ export function VacationShortlistPanel({
         These are alternatives, not a combined package. Re-search and
         price-check the chosen services before sending a quote.
       </p>
-      <Link
-        className="button primary"
-        href={`/admin/inventory?leadId=${encodeURIComponent(leadId)}`}
-      >
-        Search inventory with this brief
-      </Link>
+      {canQuote && (
+        <Link
+          className="button primary"
+          href={`/admin/inventory?leadId=${encodeURIComponent(leadId)}`}
+        >
+          Search inventory with this brief
+        </Link>
+      )}
     </section>
   );
 }

@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function LeadAssistPanel({
+  canGenerate,
   leadId,
   suggestions,
 }: {
+  canGenerate: boolean;
   leadId: string;
   suggestions?: Lead["aiSuggestions"];
 }) {
@@ -50,8 +52,15 @@ export function LeadAssistPanel({
   return (
     <section className="lead-assist-card">
       <header>
-        <span><Bot /></span>
-        <div><h2>Tara staff assist</h2><p>Grounded ideas for the consultant—nothing is sent automatically.</p></div>
+        <span>
+          <Bot />
+        </span>
+        <div>
+          <h2>Tara staff assist</h2>
+          <p>
+            Grounded ideas for the consultant—nothing is sent automatically.
+          </p>
+        </div>
       </header>
       {suggestions ? (
         <>
@@ -62,22 +71,47 @@ export function LeadAssistPanel({
           <div className="assist-reply">
             <small>Draft reply</small>
             <p>{suggestions.draftReply}</p>
-            <button onClick={() => void copyReply()}><Copy />Copy draft</button>
+            <button onClick={() => void copyReply()}>
+              <Copy />
+              Copy draft
+            </button>
           </div>
           <dl>
-            <div><dt>Upsell</dt><dd>{suggestions.upsell.join(" · ") || "None"}</dd></div>
-            <div><dt>Cross-sell</dt><dd>{suggestions.crossSell.join(" · ") || "None"}</dd></div>
-            <div><dt>Why</dt><dd>{suggestions.reasoning}</dd></div>
+            <div>
+              <dt>Upsell</dt>
+              <dd>{suggestions.upsell.join(" · ") || "None"}</dd>
+            </div>
+            <div>
+              <dt>Cross-sell</dt>
+              <dd>{suggestions.crossSell.join(" · ") || "None"}</dd>
+            </div>
+            <div>
+              <dt>Why</dt>
+              <dd>{suggestions.reasoning}</dd>
+            </div>
           </dl>
         </>
       ) : (
-        <p className="assist-empty">Generate a shortlist and draft reply from this lead’s explicit brief and TLC’s published catalogue.</p>
+        <p className="assist-empty">
+          Generate a shortlist and draft reply from this lead’s explicit brief
+          and TLC’s published catalogue.
+        </p>
       )}
-      <button className="button secondary" onClick={() => void generate()} disabled={busy}>
-        {busy ? <LoaderCircle className="spin" /> : <RefreshCw />}
-        {suggestions ? "Refresh suggestions" : "Generate suggestions"}
-      </button>
-      {notice && <p className="persona-notice" role="status">{notice}</p>}
+      {canGenerate && (
+        <button
+          className="button secondary"
+          onClick={() => void generate()}
+          disabled={busy}
+        >
+          {busy ? <LoaderCircle className="spin" /> : <RefreshCw />}
+          {suggestions ? "Refresh suggestions" : "Generate suggestions"}
+        </button>
+      )}
+      {notice && (
+        <p className="persona-notice" role="status">
+          {notice}
+        </p>
+      )}
     </section>
   );
 }

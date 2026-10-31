@@ -1,9 +1,11 @@
 import "server-only";
+import { scopedCommercePage, commerceBroadRead } from "./scoped-commerce";
+import { hasPermission, type UserRole } from "@tlc/shared";
 
 import type { Quote } from "@tlc/shared";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
-type Viewer = { uid: string; canViewAll: boolean };
+type Viewer = { uid: string; role: UserRole; canViewAll: boolean };
 
 export type QuoteListItem = Quote & { leadTitle: string; customerName: string };
 
@@ -13,14 +15,22 @@ export class FirestoreQuoteRepository {
   constructor(
     private readonly orgId: string,
     private readonly viewer: Viewer,
-  ) {}
+  ) {
+    if (!hasPermission(viewer.role, "quotes:read"))
+      throw new Error("Quote/booking read permission required.");
+  }
 
   async list(limit = 100): Promise<QuoteListItem[]> {
-    const snapshot = await this.database
-      .collection("quotes")
-      .where("orgId", "==", this.orgId)
-      .limit(limit)
-      .get();
+    return (await this.listPage(limit)).items;
+  }
+  async listPage(limit = 50, after?: string) {
+    const snapshot = await scopedCommercePage(
+      this.orgId,
+      "quotes",
+      this.viewer,
+      limit,
+      after,
+    );
     const quotes = snapshot.docs.map((item) => item.data() as Quote);
     const leadIds = [...new Set(quotes.map((item) => item.leadId))];
     const leads = leadIds.length
@@ -34,7 +44,7 @@ export class FirestoreQuoteRepository {
           (lead) =>
             lead.exists &&
             lead.data()?.orgId === this.orgId &&
-            (this.viewer.canViewAll ||
+            (commerceBroadRead(this.viewer) ||
               lead.data()?.assignedUid === this.viewer.uid ||
               lead.data()?.assignedTo === this.viewer.uid),
         )
@@ -59,7 +69,7 @@ export class FirestoreQuoteRepository {
         .filter((item) => item.exists && item.data()?.orgId === this.orgId)
         .map((item) => [item.id, String(item.data()?.name || "Traveller")]),
     );
-    return quotes
+    const items = quotes
       .filter((quote) => accessible.has(quote.leadId))
       .map((quote) => ({
         ...quote,
@@ -67,8 +77,8 @@ export class FirestoreQuoteRepository {
           accessible.get(quote.leadId)?.title || "Travel quote",
         ),
         customerName: customerNames.get(quote.customerId) || "Traveller",
-      }))
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+      }));
+    return { items, next: snapshot.next };
   }
 
   async get(quoteId: string): Promise<QuoteListItem | null> {
@@ -85,7 +95,7 @@ export class FirestoreQuoteRepository {
     if (
       !lead.exists ||
       lead.data()?.orgId !== this.orgId ||
-      (!this.viewer.canViewAll &&
+      (!commerceBroadRead(this.viewer) &&
         lead.data()?.assignedUid !== this.viewer.uid &&
         lead.data()?.assignedTo !== this.viewer.uid)
     )

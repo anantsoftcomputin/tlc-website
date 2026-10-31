@@ -20,9 +20,10 @@ export default async function BookingPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireAdminUser("crm:read");
+  const user = await requireAdminUser("quotes:read");
   const booking = await new FirestoreBookingRepository(user.orgId || "", {
     uid: user.uid,
+    role: user.role,
     canViewAll: finance.has(user.role) || user.role === "readonly",
   }).get((await params).id);
   if (!booking) notFound();
@@ -125,6 +126,9 @@ export default async function BookingPage({
       <BookingControls
         booking={booking}
         payments={booking.payments}
+        canWrite={[...managers, "sales", "travel_consultant"].includes(
+          user.role,
+        )}
         canApprove={managers.has(user.role)}
         canFinance={finance.has(user.role)}
       />

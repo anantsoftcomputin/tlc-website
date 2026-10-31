@@ -1,24 +1,34 @@
 import "server-only";
+import { scopedCommercePage, commerceBroadRead } from "./scoped-commerce";
+import { hasPermission, type UserRole } from "@tlc/shared";
 
 import type { Booking, LedgerEntry, Payment } from "@tlc/shared";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
 export type BookingListItem = Booking & { customerName: string };
-type Viewer = { uid: string; canViewAll: boolean };
+type Viewer = { uid: string; role: UserRole; canViewAll: boolean };
 
 export class FirestoreBookingRepository {
   private readonly database = getAdminFirestore();
   constructor(
     private readonly orgId: string,
     private readonly viewer: Viewer,
-  ) {}
+  ) {
+    if (!hasPermission(viewer.role, "quotes:read"))
+      throw new Error("Quote/booking read permission required.");
+  }
 
   async list(limit = 100): Promise<BookingListItem[]> {
-    const snapshot = await this.database
-      .collection("bookings")
-      .where("orgId", "==", this.orgId)
-      .limit(limit)
-      .get();
+    return (await this.listPage(limit)).items;
+  }
+  async listPage(limit = 50, after?: string) {
+    const snapshot = await scopedCommercePage(
+      this.orgId,
+      "bookings",
+      this.viewer,
+      limit,
+      after,
+    );
     const bookings = snapshot.docs.map((item) => item.data() as Booking);
     const leads = bookings.length
       ? await this.database.getAll(
@@ -33,7 +43,7 @@ export class FirestoreBookingRepository {
           (lead) =>
             lead.exists &&
             lead.data()?.orgId === this.orgId &&
-            (this.viewer.canViewAll ||
+            (commerceBroadRead(this.viewer) ||
               lead.data()?.assignedUid === this.viewer.uid ||
               lead.data()?.assignedTo === this.viewer.uid),
         )
@@ -54,12 +64,11 @@ export class FirestoreBookingRepository {
         .filter((item) => item.exists && item.data()?.orgId === this.orgId)
         .map((item) => [item.id, String(item.data()?.name || "Traveller")]),
     );
-    return accessible
-      .map((booking) => ({
-        ...booking,
-        customerName: names.get(booking.customerId) || "Traveller",
-      }))
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const items = accessible.map((booking) => ({
+      ...booking,
+      customerName: names.get(booking.customerId) || "Traveller",
+    }));
+    return { items, next: snapshot.next };
   }
 
   async get(bookingId: string) {
@@ -84,7 +93,7 @@ export class FirestoreBookingRepository {
     if (
       !lead.exists ||
       lead.data()?.orgId !== this.orgId ||
-      (!this.viewer.canViewAll &&
+      (!commerceBroadRead(this.viewer) &&
         lead.data()?.assignedUid !== this.viewer.uid &&
         lead.data()?.assignedTo !== this.viewer.uid)
     )
@@ -103,6 +112,8 @@ export class FirestoreBookingRepository {
   }
 
   async listPayments(limit = 150) {
+    if (!hasPermission(this.viewer.role, "finance:read"))
+      throw new Error("Finance read permission required.");
     const snapshot = await this.database
       .collection("payments")
       .where("orgId", "==", this.orgId)

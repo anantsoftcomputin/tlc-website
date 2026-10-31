@@ -20,6 +20,7 @@ export default async function TeamPage() {
         </div>
       </header>
       <TeamManager
+        actorUid={user.uid}
         owner={["owner", "super_admin"].includes(user.role)}
         members={rows
           .filter((row) => row.data().role !== "customer")

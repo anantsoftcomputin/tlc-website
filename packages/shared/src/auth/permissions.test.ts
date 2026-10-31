@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canReadCustomer, canReadHousehold, dashboardPath, hasPermission } from "./permissions.js";
 describe("role and customer boundaries",()=>{
+ it("keeps pricing management separate from system settings and quote/lead data",()=>{expect(hasPermission("manager","personalization:manage")).toBe(true);expect(hasPermission("manager","settings:manage")).toBe(false);for(const role of ["sales","accounts","marketing","content_editor","readonly","customer"] as const)expect(hasPermission(role,"personalization:manage")).toBe(false);expect(hasPermission("marketing","quotes:read")).toBe(false);expect(hasPermission("marketing","leads:read")).toBe(false);expect(hasPermission("readonly","leads:write")).toBe(false);});
  const customer={orgId:"tlc",ownerUid:"sales-one"};
  it("only opens business dashboards to management",()=>{expect(dashboardPath("manager")).toBe("/admin/owner");expect(dashboardPath("sales")).toBe("/admin/employee");expect(dashboardPath("customer")).toBe("/client");expect(hasPermission("accounts","quotes:write")).toBe(false);expect(hasPermission("customer","customers:read")).toBe(false);});
  it("limits sales to owned customers and rejects cross-organization reads",()=>{expect(canReadCustomer({uid:"sales-one",orgId:"tlc",role:"sales"},customer)).toBe(true);expect(canReadCustomer({uid:"other",orgId:"tlc",role:"sales"},customer)).toBe(false);expect(canReadCustomer({uid:"owner",orgId:"other",role:"owner"},customer)).toBe(false);});

@@ -15,7 +15,7 @@ function date(value?: string) {
 }
 
 export default async function AdminCRMPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string }> }) {
-  const user = await requireAdminUser("crm:read");
+  const user = await requireAdminUser("leads:read");
   const repository = new FirestoreLeadRepository(user.orgId, { uid: user.uid, canViewAll: managerRoles.has(user.role) });
   const [allLeads, params] = await Promise.all([repository.listLeads(), searchParams]);
   const query = params.q?.trim().toLowerCase() || "";

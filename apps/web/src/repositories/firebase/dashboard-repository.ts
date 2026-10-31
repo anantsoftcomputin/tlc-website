@@ -103,11 +103,11 @@ export async function getWorkspaceDashboard(user: AdminUser) {
       ? []
       : seesAllCommerce
         ? rows(org("bookings").where("status", "in", activeBookingStatuses))
-        : byOwnLeads("bookings"),
+        : byOwnLeads("bookings", query => query.where("status", "in", activeBookingStatuses), 7),
     !commerceVisible || !seesAllCommerce
       ? null
       : Promise.all([
-          count(org("bookings").where("status", "!=", "cancelled")),
+          count(org("bookings").where("status", "in", activeBookingStatuses)),
           sum(org("bookings").where("totals.currency", "==", "INR").where("approvedAt", ">", ""), "totals.sell"),
         ]),
     !canFinance
@@ -146,7 +146,13 @@ export async function getWorkspaceDashboard(user: AdminUser) {
   const open = leads.filter(
     (row) => !["won", "lost"].includes(String(row.status)),
   );
-  const waitingQuotes = quotes.filter((row) =>
+  const proposalLeads = [...new Set(quotes.map(row => String(row.leadId)))];
+  const latestProposals = new Map<string, Row>();
+  for (const group of chunks(proposalLeads)) {
+    const versions = await rows(org("quotes").where("leadId", "in", group).select("leadId", "version", "status", "quoteNumber", "approvals"));
+    for (const row of versions) if (Number(row.version || 0) > Number(latestProposals.get(row.leadId)?.version || 0)) latestProposals.set(row.leadId, row);
+  }
+  const waitingQuotes = [...latestProposals.values()].filter((row) =>
     ["draft", "sent", "viewed"].includes(String(row.status)),
   );
   const followUps: DashboardRow[] = open
@@ -167,7 +173,7 @@ export async function getWorkspaceDashboard(user: AdminUser) {
     .filter((row) => row.date)
     .sort((a, b) => a.date!.localeCompare(b.date!));
   const approvals: DashboardRow[] = [
-    ...quotes
+    ...waitingQuotes
       .filter((row) =>
         (row.approvals || []).some(
           (item: { status: string }) => item.status === "pending",
@@ -224,7 +230,7 @@ export async function getWorkspaceDashboard(user: AdminUser) {
         .reduce((total, row) => total + Number(row.totals?.sell || 0), 0);
   const activeBookings = bookingTotals
     ? bookingTotals[0]
-    : bookings.filter((row) => row.status !== "cancelled").length;
+    : bookings.filter((row) => activeBookingStatuses.includes(String(row.status))).length;
   const [collected, refunded, capturedCount, reconciledCount] = payments || [0, 0, 0, 0];
   const departures: DashboardRow[] = bookings
     .map((row) => ({

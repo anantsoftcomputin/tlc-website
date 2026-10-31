@@ -14,5 +14,5 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const detail = leadId ? await new FirestoreLeadRepository(user.orgId, { uid: user.uid, canViewAll: isManagerRole(user.role) }).getLead(leadId) : null;
   if (leadId && !detail) notFound();
   const shortlist = detail?.lead.requirement.vacationShortlist;
-  return <>{shortlist && <VacationShortlistPanel shortlist={shortlist} leadId={leadId!} />}<InventorySearch initialBrief={shortlist?.brief} initialLeadId={leadId} /></>;
+  return <>{shortlist && <VacationShortlistPanel canQuote={true} shortlist={shortlist} leadId={leadId!} />}<InventorySearch initialBrief={shortlist?.brief} initialLeadId={leadId} /></>;
 }

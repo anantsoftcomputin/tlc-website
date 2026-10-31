@@ -11,9 +11,11 @@ type Member = {
 export function TeamManager({
   members,
   owner,
+  actorUid,
 }: {
   members: Member[];
   owner: boolean;
+  actorUid: string;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -57,7 +59,7 @@ export function TeamManager({
                   {member.active ? "Active" : "Disabled"}
                 </p>
               </div>
-              {!["owner", "super_admin"].includes(member.role) && (
+              {member.id !== actorUid && !["owner", "super_admin"].includes(member.role) && (owner || !["manager", "admin"].includes(member.role)) && (
                 <button
                   disabled={busy}
                   onClick={() =>

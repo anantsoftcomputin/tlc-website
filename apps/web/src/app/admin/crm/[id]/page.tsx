@@ -14,6 +14,7 @@ import { notFound } from "next/navigation";
 import { LeadWorkspace } from "@/components/admin/lead-workspace";
 import { LeadAssistPanel } from "@/components/admin/lead-assist-panel";
 import { VacationShortlistPanel } from "@/components/admin/vacation-shortlist-panel";
+import { hasPermission } from "@/lib/auth/roles";
 import { requireAdminUser } from "@/lib/auth/session";
 import { FirestoreLeadRepository } from "@/repositories/firebase/firestore-lead-repository";
 
@@ -33,7 +34,7 @@ export default async function LeadDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireAdminUser("crm:read");
+  const user = await requireAdminUser("leads:read");
   const { id } = await params;
   const canReassign = managerRoles.has(user.role);
   const repository = new FirestoreLeadRepository(user.orgId, {
@@ -82,8 +83,16 @@ export default async function LeadDetailPage({
       </header>
       <div className="lead-detail-grid">
         <main>
-          {lead.requirement.journey && <JourneyPlanPanel journey={lead.requirement.journey} />}
-          {lead.requirement.vacationShortlist && <VacationShortlistPanel shortlist={lead.requirement.vacationShortlist} leadId={lead.id} />}
+          {lead.requirement.journey && (
+            <JourneyPlanPanel journey={lead.requirement.journey} />
+          )}
+          {lead.requirement.vacationShortlist && (
+            <VacationShortlistPanel
+              canQuote={hasPermission(user.role, "quotes:write")}
+              shortlist={lead.requirement.vacationShortlist}
+              leadId={lead.id}
+            />
+          )}
           <section className="profile-panel">
             <header>
               <div>
@@ -162,7 +171,11 @@ export default async function LeadDetailPage({
           </section>
         </main>
         <aside>
-          <LeadAssistPanel leadId={lead.id} suggestions={lead.aiSuggestions} />
+          <LeadAssistPanel
+            canGenerate={hasPermission(user.role, "crm:write")}
+            leadId={lead.id}
+            suggestions={lead.aiSuggestions}
+          />
           <section className="lead-sla-card">
             <h2>
               <CalendarClock />
@@ -253,11 +266,13 @@ export default async function LeadDetailPage({
           </section>
         </aside>
       </div>
-      <LeadWorkspace
-        lead={lead}
-        assignees={assignees}
-        canReassign={canReassign}
-      />
+      {hasPermission(user.role, "crm:write") && (
+        <LeadWorkspace
+          lead={lead}
+          assignees={assignees}
+          canReassign={canReassign}
+        />
+      )}
     </>
   );
 }

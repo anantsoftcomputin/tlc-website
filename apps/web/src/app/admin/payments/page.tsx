@@ -6,7 +6,7 @@ import { FirestoreBookingRepository } from "@/repositories/firebase/firestore-bo
 export default async function PaymentsPage() {
   const user = await requireAdminUser("finance:read");
   const payments = await new FirestoreBookingRepository(user.orgId || "", {
-    uid: user.uid,
+    uid: user.uid, role: user.role,
     canViewAll: true,
   }).listPayments();
   return (

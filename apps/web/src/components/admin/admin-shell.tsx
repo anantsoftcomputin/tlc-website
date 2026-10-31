@@ -72,9 +72,14 @@ const navGroups = [
         label: "Inquiry inbox",
         href: "/admin/inquiries",
         icon: Inbox,
+        permission: "leads:read" as const,
+      },
+      {
+        label: "Communications",
+        href: "/admin/communications",
+        icon: Send,
         permission: "crm:read" as const,
       },
-      { label: "Communications", href: "/admin/communications", icon: Send, permission: "crm:read" as const },
       {
         label: "Conversations",
         href: "/admin/conversations",
@@ -85,7 +90,7 @@ const navGroups = [
         label: "Lead pipeline",
         href: "/admin/crm",
         icon: BriefcaseBusiness,
-        permission: "crm:read" as const,
+        permission: "leads:read" as const,
       },
       {
         label: "Customers",
@@ -104,12 +109,23 @@ const navGroups = [
   {
     label: "Operations",
     items: [
-      { label: "Client support", href: "/admin/support", icon: MessagesSquare, permission: "crm:write" as const },
+      {
+        label: "Dispatch queue",
+        href: "/admin/dispatch",
+        icon: Inbox,
+        permission: "users:manage" as const,
+      },
+      {
+        label: "Client support",
+        href: "/admin/support",
+        icon: MessagesSquare,
+        permission: "crm:write" as const,
+      },
       {
         label: "Bookings",
         href: "/admin/bookings",
         icon: CalendarCheck2,
-        permission: "crm:read" as const,
+        permission: "quotes:read" as const,
       },
       {
         label: "Live inventory",
@@ -209,14 +225,24 @@ const navGroups = [
   {
     label: "Control",
     items: [
-      { label: "Team & access", href: "/admin/team", icon: ContactRound, permission: "users:manage" as const },
+      {
+        label: "Team & access",
+        href: "/admin/team",
+        icon: ContactRound,
+        permission: "users:manage" as const,
+      },
       {
         label: "Audit trail",
         href: "/admin/audit",
         icon: FileClock,
         permission: "audit:read" as const,
       },
-      { label: "Personal travel pricing", href: "/admin/settings/personalization", icon: Settings2, permission: "settings:manage" as const },
+      {
+        label: "Personal travel pricing",
+        href: "/admin/settings/personalization",
+        icon: Settings2,
+        permission: "personalization:manage" as const,
+      },
       {
         label: "Lead settings",
         href: "/admin/settings/leads",
@@ -239,6 +265,7 @@ const routeNames: Record<string, string> = {
   employee: "My workspace",
   team: "Team & access",
   support: "Client support",
+  dispatch: "Dispatch queue",
   inquiries: "Inquiry inbox",
   conversations: "Conversation inbox",
   crm: "Lead pipeline",
@@ -328,6 +355,7 @@ export function AdminShell({
   }
   async function logout() {
     await fetch("/api/auth/session", { method: "DELETE" });
+    window.dispatchEvent(new Event("tlc-session-ended"));
     if (isFirebaseConfigured) await signOut(getFirebaseAuth());
     router.replace("/login");
     router.refresh();
@@ -423,64 +451,70 @@ export function AdminShell({
             </kbd>
           </button>
           <div className="admin-topbar-actions">
-            <div className="admin-quick">
-              <button
-                className="admin-quick-trigger"
-                onClick={() => setQuickOpen(!quickOpen)}
-                aria-expanded={quickOpen}
+            {(hasPermission(user.role, "crm:write") ||
+              hasPermission(user.role, "quotes:write") ||
+              hasPermission(user.role, "content:write")) && (
+              <div className="admin-quick">
+                <button
+                  className="admin-quick-trigger"
+                  onClick={() => setQuickOpen(!quickOpen)}
+                  aria-expanded={quickOpen}
+                >
+                  <Plus />
+                  <span>Create</span>
+                </button>
+                {quickOpen && (
+                  <div className="admin-quick-menu">
+                    {hasPermission(user.role, "crm:write") && (
+                      <Link href="/admin/crm/new">
+                        <BriefcaseBusiness />
+                        <span>
+                          <b>New lead</b>
+                          <small>Capture an opportunity</small>
+                        </span>
+                      </Link>
+                    )}
+                    {hasPermission(user.role, "quotes:write") && (
+                      <Link href="/admin/quotes/new">
+                        <FileText />
+                        <span>
+                          <b>Build quote</b>
+                          <small>Create an itinerary</small>
+                        </span>
+                      </Link>
+                    )}
+                    {hasPermission(user.role, "quotes:write") && (
+                      <Link href="/admin/inventory">
+                        <PlaneTakeoff />
+                        <span>
+                          <b>Search inventory</b>
+                          <small>Flights and hotels</small>
+                        </span>
+                      </Link>
+                    )}
+                    {hasPermission(user.role, "content:write") && (
+                      <Link href="/admin/content/trips/new">
+                        <LibraryBig />
+                        <span>
+                          <b>New package</b>
+                          <small>Publish a website tour</small>
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {hasPermission(user.role, "crm:read") && (
+              <Link
+                className="admin-alert-shortcut"
+                href="/admin/alerts"
+                aria-label="Open alerts"
               >
-                <Plus />
-                <span>Create</span>
-              </button>
-              {quickOpen && (
-                <div className="admin-quick-menu">
-                  {hasPermission(user.role, "crm:write") && (
-                    <Link href="/admin/crm/new">
-                      <BriefcaseBusiness />
-                      <span>
-                        <b>New lead</b>
-                        <small>Capture an opportunity</small>
-                      </span>
-                    </Link>
-                  )}
-                  {hasPermission(user.role, "quotes:write") && (
-                    <Link href="/admin/quotes/new">
-                      <FileText />
-                      <span>
-                        <b>Build quote</b>
-                        <small>Create an itinerary</small>
-                      </span>
-                    </Link>
-                  )}
-                  {hasPermission(user.role, "quotes:write") && (
-                    <Link href="/admin/inventory">
-                      <PlaneTakeoff />
-                      <span>
-                        <b>Search inventory</b>
-                        <small>Flights and hotels</small>
-                      </span>
-                    </Link>
-                  )}
-                  {hasPermission(user.role, "content:write") && (
-                    <Link href="/admin/content/trips/new">
-                      <LibraryBig />
-                      <span>
-                        <b>New package</b>
-                        <small>Publish a website tour</small>
-                      </span>
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-            <Link
-              className="admin-alert-shortcut"
-              href="/admin/alerts"
-              aria-label="Open alerts"
-            >
-              <BellRing />
-              <i />
-            </Link>
+                <BellRing />
+                <i />
+              </Link>
+            )}
             <div className="admin-profile">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}

@@ -26,12 +26,19 @@ const money = (value: number, currency: string) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-export default async function QuotesPage() {
-  const user = await requireAdminUser("crm:read");
-  const quotes = await new FirestoreQuoteRepository(user.orgId || "", {
+export default async function QuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ after?: string }>;
+}) {
+  const { after } = await searchParams;
+  const user = await requireAdminUser("quotes:read");
+  const page = await new FirestoreQuoteRepository(user.orgId || "", {
     uid: user.uid,
+    role: user.role,
     canViewAll: managerRoles.has(user.role),
-  }).list();
+  }).listPage(50, after);
+  const quotes = page.items;
   return (
     <>
       <header className="admin-page-head">
@@ -110,6 +117,19 @@ export default async function QuotesPage() {
           </table>
         </div>
       </section>
+      <nav aria-label="Quotes pages">
+        <Link className="button secondary" href="/admin/quotes">
+          First page
+        </Link>
+        {page.next && (
+          <Link
+            className="button secondary"
+            href={`/admin/quotes?after=${encodeURIComponent(page.next)}`}
+          >
+            Next page
+          </Link>
+        )}
+      </nav>
     </>
   );
 }

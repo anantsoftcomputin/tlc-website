@@ -39,12 +39,12 @@ export default async function ClientDashboard() {
       </section>
       <div className="workspace-stat-grid">
         {[
-          ["My enquiries", data.enquiries.length],
-          ["Itineraries", data.quotes.length],
-          ["Bookings", data.bookings.length],
+          ["My enquiries", data.totalEnquiries],
+          ["Itineraries", data.totalItineraries],
+          ["Bookings", data.totalBookings],
           [
             "Open requests",
-            data.support.filter((row) => row.status !== "closed").length,
+            data.openSupportCount,
           ],
         ].map(([label, value]) => (
           <article key={label}>
@@ -70,10 +70,34 @@ export default async function ClientDashboard() {
           <header>
             <div>
               <h2>Your itineraries</h2>
-              <p>Review your proposal and let us know what you think.</p>
+              <p>
+                Review your proposal and let us know what you think.{" "}
+                <Link href="/client/history?kind=itineraries">
+                  Itinerary history
+                </Link>
+              </p>
             </div>
             <FileText />
           </header>
+          {data.pendingRevisions.map((row) => (
+            <article className="client-record" key={row.leadId}>
+              <div>
+                <strong>{row.title}</strong>
+                <p>
+                  {row.revision
+                    ? "Your revised itinerary is being prepared."
+                    : "Your itinerary is being prepared."}
+                </p>
+                {row.previousNumber && (
+                  <small>
+                    {row.previousNumber} has been superseded. TLC will notify
+                    you when the revised proposal is ready.
+                  </small>
+                )}
+              </div>
+              <span className="workspace-status">In preparation</span>
+            </article>
+          ))}
           {data.quotes.length ? (
             data.quotes.map((quote) => (
               <Link className="client-record" href={quote.href} key={quote.id}>
@@ -91,7 +115,9 @@ export default async function ClientDashboard() {
             ))
           ) : (
             <p className="workspace-empty">
-              Your personalised proposals will appear here.
+              {data.pendingRevisions.length
+                ? "Your new proposals will be available here once TLC sends them."
+                : "Your personalised proposals will appear here."}
             </p>
           )}
         </section>
@@ -99,7 +125,10 @@ export default async function ClientDashboard() {
           <header>
             <div>
               <h2>Your enquiries</h2>
-              <p>From first idea to a plan you love.</p>
+              <p>
+                From first idea to a plan you love.{" "}
+                <Link href="/client/history?kind=enquiries">All enquiries</Link>
+              </p>
             </div>
             <Compass />
           </header>
@@ -121,9 +150,14 @@ export default async function ClientDashboard() {
         <header>
           <div>
             <h2>Your bookings</h2>
-            <p>Travel dates, confirmations and document checklists.</p>
+            <p>
+              Travel dates, confirmations and document checklists. Up to 20
+              records are shown in this overview.
+            </p>
           </div>
-          <CalendarDays />
+          <Link href="/client/history?kind=bookings">
+            All bookings & feedback <CalendarDays />
+          </Link>
         </header>
         {data.bookings.length ? (
           <div className="client-bookings">
@@ -155,7 +189,9 @@ export default async function ClientDashboard() {
                     ))}
                   </details>
                 )}
-                {booking.status === "completed" && <TripFeedback bookingId={booking.id} />}
+                {booking.status === "completed" && (
+                  <TripFeedback bookingId={booking.id} />
+                )}
               </article>
             ))}
           </div>
@@ -170,7 +206,10 @@ export default async function ClientDashboard() {
           <header>
             <div>
               <h2>Payments</h2>
-              <p>Secure payment links and recorded transactions.</p>
+              <p>
+                Secure payment links and recorded transactions.{" "}
+                <Link href="/client/history?kind=payments">All payments</Link>
+              </p>
             </div>
           </header>
           {data.payments.length ? (
@@ -203,7 +242,12 @@ export default async function ClientDashboard() {
           <header>
             <div>
               <h2>Invoices & receipts</h2>
-              <p>Your issued travel documents.</p>
+              <p>
+                Your issued travel documents.{" "}
+                <Link href="/client/history?kind=documents">
+                  View all invoices and receipts
+                </Link>
+              </p>
             </div>
           </header>
           {data.documents.length ? (
@@ -256,7 +300,7 @@ export default async function ClientDashboard() {
           <header>
             <div>
               <h2>Your support requests</h2>
-              <p>Messages and replies from the TLC team.</p>
+              <p>Messages and replies from the TLC team. <Link href="/client/history?kind=support">All support requests</Link></p>
             </div>
           </header>
           {data.support.length ? (

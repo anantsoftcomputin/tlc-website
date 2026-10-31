@@ -18,7 +18,9 @@ The model uses current catalogue and retail budget evidence. Currency claims mus
 
 A consultant-review action sends the server-owned brief, priced components, missing components and exclusions to the existing support workflow, assigned to the recorded consultant where available. It also records the client's enquiry event. It does not create a reservation or collect money.
 
-**Verified WhatsApp and email conversations**
+**Verified external conversations**
+
+WhatsApp now supports phone-verified registration and the advisor entirely in chat; see [WHATSAPP_ADVISOR.md](./WHATSAPP_ADVISOR.md). The portal-link flow below remains the email identity mechanism and supports legacy explicit channel connections.
 
 A client can ask the channel bot to use saved preferences/history. Until an explicit connection exists, channel responses remain catalogue-based. The bot supplies a ten-minute, one-use `/connect-travel` link. The client signs into the verified portal, chooses an eligible traveller and approves using that profile and confirmed estimates in the conversation for 24 hours. The channel address must match that same traveller's recorded email or phone. A link alone cannot expose history or attach someone else's account.
 

@@ -143,9 +143,21 @@ export async function planPersonalTrip(
 }
 export async function currentPersonalTrip(personal: PersonalClientContext) {
   const db = getAdminFirestore();
-  const pointer = (
-    await db.collection("clientAdvisorSessions").doc(personal.user.uid).get()
-  ).data();
+  const phoneActor = `wa-${createHash("sha256").update(`${personal.user.orgId}:${personal.customerId}`).digest("hex").slice(0, 40)}`;
+  const pointers = await Promise.all(
+    [personal.user.uid, phoneActor].map(async (uid) =>
+      (await db.collection("clientAdvisorSessions").doc(uid).get()).data(),
+    ),
+  );
+  const pointer = pointers
+    .filter(
+      (value) =>
+        value?.orgId === personal.user.orgId &&
+        value?.customerId === personal.customerId,
+    )
+    .sort((a, b) =>
+      String(b?.updatedAt || "").localeCompare(String(a?.updatedAt || "")),
+    )[0];
   if (
     pointer?.orgId !== personal.user.orgId ||
     pointer.customerId !== personal.customerId
@@ -159,7 +171,7 @@ export async function currentPersonalTrip(personal: PersonalClientContext) {
   )
     return null;
   return plan?.orgId === personal.user.orgId &&
-    plan.clientUid === personal.user.uid &&
+    [personal.user.uid, phoneActor].includes(plan.clientUid) &&
     plan.customerId === personal.customerId
     ? plan.result
     : null;

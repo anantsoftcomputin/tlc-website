@@ -2,13 +2,15 @@
 
 The five personal-advisor connections requested subsequently are implemented locally; see [PERSONAL_TRAVEL_ADVISOR.md](./PERSONAL_TRAVEL_ADVISOR.md) for their behavior and activation requirements.
 
+The subsequent dashboard audit findings are also corrected locally; see [DASHBOARD_CONFIGURATION.md](./DASHBOARD_CONFIGURATION.md) for the role, dispatch, currency, revision and archive changes.
+
 This is the current follow-up to the 29 October project study. The work is local; production resources and provider settings have not been changed.
 
 | Gap | Current result |
 | --- | --- |
 | Inactive tour controls | Implemented combined text/destination/style/duration filters, stable sorting, query restoration, reset links and accessible mobile expansion. Unsupported date/party catalogue controls were replaced with duration/style; dates and party details remain in custom planning. |
 | Customer search candidate cap | Implemented document-order scans with continuation cursors. Each request reads at most 1,000 candidates, returning up to 50 matches; a zero-match scan can still continue. Search pagination retains the query and full email addresses are checked without truncation. |
-| Expensive historical queries | Client identities resolve once, related records and payments use batches of up to 30 identifiers, finance close reads the selected period, and marketing outcomes are indexed before matching deliveries. Full client-history pagination and production-volume measurements remain open. |
+| Expensive historical queries | Client identities resolve once, related records and payments use batches of up to 30 identifiers, finance close reads the selected period, and marketing outcomes are indexed before matching deliveries. Client history/archive pagination was added in the dashboard follow-up; production-volume measurements remain open. |
 | Authorization drift | Server sessions now reject profile/token role and organization mismatches, matching callable checks. Shared permission policy, repository checks and Firestore rules remain separate enforcement surfaces that require coordinated review. |
 | Conflicting documentation | Replaced the obsolete root architecture, added this tracker, updated canonical architecture, delivery plan and communication setup, and labelled the project study as historical. |
 | Unconnected email designs | Added four opt-in, deduplicated adapters: linked enquiry, captured payment, fully confirmed booking, issued finance document. Existing quote/reply/campaign adapters remain. Other scenarios still need their own authoritative events. |
@@ -40,7 +42,7 @@ Logs: `/tmp/tlc-gap-verified-checks.log`, `/tmp/tlc-gap-final-build.log`, `/tmp/
 - Configure/verify Resend sender, inbound domain, callbacks and designated-recipient delivery, then opt into the four new triggers using `EMAIL_LIFECYCLE_ENABLED=true`. The default is false. This enables new eligible events; it is not a historical backfill.
 - Authentication templates need server-generated Firebase action links and a custom delivery path. Reminders, expiry, refund, booking changes/cancellations, saved-plan recovery, birthday/anniversary and post-trip scenarios need dedicated event adapters or approved campaign schedules. A reusable design is not an enabled automation.
 - Expand the local model corpus to the exact application schemas and prompts, train a new candidate, and pass the live application tests plus independent grounding/conversation review. See [TLC_OWNED_AI_2026-10-08.md](./TLC_OWNED_AI_2026-10-08.md). Deployment, licensing, approved training evidence and provider certification were not established in this code pass.
-- Design archive navigation and pagination for very large client histories, and measure finance lock contention and dataset memory at realistic volumes. The query changes reduce repeated work without silently dropping historical customer records or changing finance invariants.
+- Validate the new client archive navigation at production volume, and measure finance lock contention and dataset memory at realistic volumes. The query changes reduce repeated work without silently dropping historical customer records or changing finance invariants.
 
 ## Local commands
 

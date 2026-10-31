@@ -83,6 +83,7 @@ await writeFile(
       exports: {
         ".": { types: "./dist/index.d.ts", default: "./dist/index.js" },
       },
+      dependencies: { "@tlc/shared": "file:../shared" },
     },
     null,
     2,

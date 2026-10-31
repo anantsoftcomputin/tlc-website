@@ -23,10 +23,11 @@ export default async function QuoteDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireAdminUser("crm:read");
+  const user = await requireAdminUser("quotes:read");
   const { id } = await params;
   const quote = await new FirestoreQuoteRepository(user.orgId || "", {
     uid: user.uid,
+    role: user.role,
     canViewAll: broadReadRoles.has(user.role),
   }).get(id);
   if (!quote) notFound();
@@ -34,6 +35,7 @@ export default async function QuoteDetailPage({
     quote.status === "accepted"
       ? await new FirestoreBookingRepository(user.orgId || "", {
           uid: user.uid,
+          role: user.role,
           canViewAll: broadReadRoles.has(user.role),
         }).findByQuote(quote.id)
       : undefined;

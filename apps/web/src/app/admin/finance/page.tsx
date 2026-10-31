@@ -25,12 +25,17 @@ function money(currency: string, value: number) {
   return `${currency} ${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-export default async function FinancePage() {
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ currency?: string }>;
+}) {
+  const params = await searchParams;
   const user = await requireAdminUser("finance:read");
   const workspace = await new FirestoreFinanceRepository(
     user.orgId || "",
-  ).workspace();
-  const currency = workspace.profitability[0]?.currency || "INR";
+  ).workspace(250, params.currency);
+  const currency = workspace.currency;
   const availablePayables = workspace.ledger.filter(
     (entry) =>
       entry.type === "payable" &&
@@ -56,6 +61,23 @@ export default async function FinancePage() {
           Customer payments
         </Link>
       </header>
+      <form method="get" className="workspace-form">
+        <label>
+          Reporting currency
+          <select name="currency" defaultValue={currency}>
+            {workspace.currencies.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="button secondary">Show currency</button>
+        <p>
+          All amounts, reports and exports below are in {currency}. Other
+          currencies are shown separately; no exchange rate is assumed.
+        </p>
+      </form>
       <nav className="finance-subnav" aria-label="Finance sections">
         <a href="#profitability">Profitability</a>
         <a href="#cancellations">Refunds</a>
@@ -199,19 +221,19 @@ export default async function FinancePage() {
           <div className="finance-inline-actions">
             <a
               className="button secondary"
-              href="/admin/finance/export?report=ledger"
+              href={`/admin/finance/export?report=ledger&currency=${currency}`}
             >
               Ledger CSV
             </a>
             <a
               className="button secondary"
-              href="/admin/finance/export?report=profitability"
+              href={`/admin/finance/export?report=profitability&currency=${currency}`}
             >
               Profitability CSV
             </a>
             <a
               className="button secondary"
-              href="/admin/finance/export?report=gst"
+              href={`/admin/finance/export?report=gst&currency=${currency}`}
             >
               GST CSV
             </a>

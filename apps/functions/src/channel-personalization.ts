@@ -1,3 +1,4 @@
+import { whatsappPersonalContext } from "./whatsapp-identity.js";
 import { createHash, randomBytes } from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
@@ -50,6 +51,9 @@ export async function verifiedChannelContext(
   const thread = (
     await db.collection("conversations").doc(conversationId).get()
   ).data();
+  if (thread?.channel === "whatsapp" && thread.whatsappVerifiedMessageId) {
+    return whatsappPersonalContext(db, orgId, conversationId);
+  }
   if (
     thread?.orgId !== orgId ||
     !thread.verifiedClientUid ||

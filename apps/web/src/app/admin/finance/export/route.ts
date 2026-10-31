@@ -10,7 +10,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const workspace = await new FirestoreFinanceRepository(
     user.orgId || "",
-  ).workspace(1000);
+  ).workspace(
+    1000,
+    new URL(request.url).searchParams.get("currency") || undefined,
+  );
   const report = new URL(request.url).searchParams.get("report") || "ledger";
   let rows: Record<string, unknown>[];
   if (report === "profitability")
@@ -28,6 +31,7 @@ export async function GET(request: Request) {
     }));
   else if (report === "gst")
     rows = workspace.documents.map((item) => ({
+      currency: item.currency,
       number: item.number,
       type: item.type,
       date: item.issueDate,
@@ -58,7 +62,7 @@ export async function GET(request: Request) {
   return new Response(toCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="tlc-${report}-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="tlc-${report}-${workspace.currency}-${new Date().toISOString().slice(0, 10)}.csv"`,
       "Cache-Control": "private, no-store",
     },
   });

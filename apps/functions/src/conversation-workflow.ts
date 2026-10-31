@@ -35,6 +35,15 @@ const modelSecrets =
   process.env.TLC_AI_AUTH_REQUIRED === "true"
     ? [defineSecret("TLC_AI_API_KEY")]
     : [];
+const supplierSecrets =
+  process.env.WHATSAPP_LIVE_SEARCH_ENABLED === "true"
+    ? [
+        "TBO_API_USERNAME",
+        "TBO_API_PASSWORD",
+        "TBO_STATIC_USERNAME",
+        "TBO_STATIC_PASSWORD",
+      ].map((name) => defineSecret(name))
+    : [];
 const deliverySecrets = [
   ...(whatsappEnabled ? [accessToken, phoneNumberId] : []),
   ...(emailEnabled ? [emailKey] : []),
@@ -123,6 +132,7 @@ export const whatsappConversationWebhook = onRequest(
               orgId,
               channel: "whatsapp",
               address: message.from,
+              verifiedTransport: true,
               externalId: message.id,
               body,
               receivedAt: new Date(
@@ -319,8 +329,8 @@ export const answerConversationMessage = onDocumentCreated(
   {
     region,
     document: "conversationBotJobs/{id}",
-    timeoutSeconds: 120,
-    secrets: modelSecrets,
+    secrets: [...modelSecrets, ...supplierSecrets],
+    timeoutSeconds: 180,
   },
   async (event) => {
     await processBotJob(database, event.params.id);
@@ -330,8 +340,8 @@ export const recoverCommunicationJobs = onSchedule(
   {
     region,
     schedule: "every 5 minutes",
-    secrets: [...deliverySecrets, ...modelSecrets],
-    timeoutSeconds: 300,
+    secrets: [...deliverySecrets, ...modelSecrets, ...supplierSecrets],
+    timeoutSeconds: 540,
   },
   async () => {
     const bots = await database
