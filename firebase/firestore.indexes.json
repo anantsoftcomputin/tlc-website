@@ -1761,6 +1761,50 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "totals.currency",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "approvedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "totals.sell",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "currency",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "amount",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [
