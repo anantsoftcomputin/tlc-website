@@ -23,6 +23,11 @@ export const journeyBriefSchema = z
       .max(5)
       .optional(),
     startDate: z.string().date().nullable().default(null),
+    originCity: z.string().trim().min(2).max(120).optional(),
+    requestedDestinations: z
+      .array(z.string().trim().min(1).max(120))
+      .max(5)
+      .optional(),
     rooms: z
       .array(
         z.object({

@@ -9,7 +9,7 @@ export function PlanningPrompt() {
     try {
       sessionStorage.setItem("tlc-planner-prompt", value);
     } catch {}
-    router.push("/plan-my-trip");
+    router.push(`/plan-my-trip#idea=${encodeURIComponent(value)}`);
   }
   return (
     <div className="planning-prompt">

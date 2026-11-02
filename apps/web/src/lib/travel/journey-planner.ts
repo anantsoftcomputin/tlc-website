@@ -1,3 +1,4 @@
+import { journeyDates } from "./journey-dates";
 import {
   journeyStops,
   journeyBriefSchema,
@@ -14,6 +15,8 @@ export type PlanningDestination = {
   description: string;
   styles: string[];
   experiences: { title: string; note: string }[];
+  aliases?: string[];
+  sources?: { title: string; url: string }[];
 };
 export function experienceCatalogue(destinations: PlanningDestination[]) {
   return destinations.flatMap((destination) =>
@@ -30,25 +33,65 @@ export function experienceCatalogue(destinations: PlanningDestination[]) {
 export function parseJourneyMessage(
   message: string,
   destinations: PlanningDestination[],
-  current?: JourneyBrief,
+  current?: Partial<JourneyBrief>,
+  now = new Date(),
 ): Partial<JourneyBrief> {
   const text = message.toLowerCase();
+  const origin =
+    /\b(?:i\s+(?:stay|live|am based)\s+in|(?:starting|departing|travelling|traveling)\s+from|from)\s+([a-z][a-z .'-]{1,80}?)(?=\s+(?:want|would|wish|plan|to|and|on|for|going|goto)\b|[,;.!?]|$)/i
+      .exec(message)?.[1]
+      ?.trim();
   const mentioned = destinations
-    .filter((destination) =>
-      new RegExp(
-        `\\b${destination.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-      ).test(text),
+    .filter(
+      (destination) =>
+        [
+          destination.name,
+          destination.slug,
+          ...(destination.aliases || []),
+        ].some((name) =>
+          new RegExp(
+            `\\b${name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+          ).test(text),
+        ) &&
+        ![
+          destination.name,
+          destination.slug,
+          ...(destination.aliases || []),
+        ].some((name) => name.toLowerCase() === origin?.toLowerCase()),
     )
     .sort(
       (a, b) =>
-        text.indexOf(a.name.toLowerCase()) - text.indexOf(b.name.toLowerCase()),
+        Math.min(
+          ...[a.name, a.slug, ...(a.aliases || [])]
+            .map((name) => text.indexOf(name.toLowerCase()))
+            .filter((index) => index >= 0),
+        ) -
+        Math.min(
+          ...[b.name, b.slug, ...(b.aliases || [])]
+            .map((name) => text.indexOf(name.toLowerCase()))
+            .filter((index) => index >= 0),
+        ),
     )
     .map((destination) => destination.slug);
   const patch: Partial<JourneyBrief> = {};
+  if (origin) patch.originCity = origin;
+  const requested =
+    /\b(?:goto|go\s+to|visit|travel\s+to|trip\s+to|holiday\s+(?:in|to))\s+(.+?)(?=\s+(?:on|from|for|with|along|till|until|during|starting|in\s+\d)\b|[.!?;]|$)/i
+      .exec(message)?.[1]
+      ?.trim();
+  if (requested)
+    patch.requestedDestinations = requested
+      .split(/\s+and\s+|\s*,\s*/i)
+      .map((value) => value.trim())
+      .filter((value) => value.length >= 2 && value.length <= 120)
+      .slice(0, 5);
+
   if (mentioned.length)
     patch.destinationSlugs =
       /\b(add|also|include)\b/.test(text) && current
-        ? [...new Set([...current.destinationSlugs, ...mentioned])].slice(0, 5)
+        ? [
+            ...new Set([...(current.destinationSlugs || []), ...mentioned]),
+          ].slice(0, 5)
         : mentioned.slice(0, 5);
   const duration = /\b(\d{1,2})[ -]*(days?|nights?)\b/.exec(text);
   if (duration)
@@ -60,8 +103,7 @@ export function parseJourneyMessage(
       ),
     );
   else if (/\b(a|one|1) week\b/.test(text)) patch.nights = 6;
-  const date = /\b(20\d{2}-\d{2}-\d{2})\b/.exec(text);
-  if (date && !Number.isNaN(Date.parse(date[1]))) patch.startDate = date[1];
+  Object.assign(patch, journeyDates(message, now));
   const budget =
     /(?:budget(?: of| is)?|₹|inr|rs\.?)\s*(\d[\d,.]*)\s*(lakh|lac|k|thousand)?/i.exec(
       text,
@@ -109,10 +151,10 @@ export function parseJourneyMessage(
   if (adults || ages)
     patch.rooms = [
       {
-        adults: Number(adults?.[1] || current?.rooms[0]?.adults || 2),
+        adults: Number(adults?.[1] || current?.rooms?.[0]?.adults || 2),
         childrenAges: ages
           ? ages[1].split(/\s*,\s*|\s+and\s+/).map(Number)
-          : current?.rooms[0]?.childrenAges || [],
+          : current?.rooms?.[0]?.childrenAges || [],
       },
     ];
   if (/\bsolo\b/.test(text)) patch.rooms = [{ adults: 1, childrenAges: [] }];

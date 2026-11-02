@@ -104,6 +104,19 @@ export function JourneyDetails({
             <X />
           </button>
         </header>
+        <label>
+          Starting city
+          <input
+            value={draft.originCity || ""}
+            maxLength={120}
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                originCity: event.target.value || undefined,
+              })
+            }
+          />
+        </label>
         <fieldset>
           <legend>Your route · up to 5 destinations</legend>
           <div className="journey-destination-picks">
@@ -151,6 +164,7 @@ export function JourneyDetails({
                       : "Flexible dates"}
                   </small>
                 </div>
+
                 <label>
                   Nights
                   <input

@@ -118,7 +118,16 @@ export function JourneyWorkspace({
       const result = await action(
         {
           action: "generate",
-          message: value,
+          message: current
+            ? value
+            : [
+                ...messages
+                  .filter((item) => item.role === "user")
+                  .map((item) => item.content),
+                value,
+              ]
+                .join("\n")
+                .slice(-2000),
           ...(current
             ? { planId: current.id, revision: current.revision }
             : {}),
@@ -134,6 +143,15 @@ export function JourneyWorkspace({
           { role: "assistant", content: result.message },
         ]);
       setQuestion(result.question || "");
+      try {
+        sessionStorage.removeItem("tlc-planner-prompt");
+      } catch {}
+      if (!result.record && window.location.hash.startsWith("#idea="))
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -147,6 +165,13 @@ export function JourneyWorkspace({
   }
   useEffect(() => {
     let active = true;
+    let prompt =
+      new URLSearchParams(window.location.hash.slice(1)).get("idea") || "";
+    try {
+      prompt ||= sessionStorage.getItem("tlc-planner-prompt") || "";
+    } catch {}
+    prompt ||= initialPrompt;
+    if (prompt) setText(prompt);
     (async () => {
       try {
         const response = await fetch("/api/concierge/session", {
@@ -164,11 +189,6 @@ export function JourneyWorkspace({
         const data = listed.ok ? await listed.json() : { records: [] };
         if (!active) return;
         setSaved(data.records || []);
-        let prompt = initialPrompt;
-        try {
-          prompt ||= sessionStorage.getItem("tlc-planner-prompt") || "";
-          sessionStorage.removeItem("tlc-planner-prompt");
-        } catch {}
         if (prompt) {
           await send(prompt, session.sessionId, undefined);
         } else {
@@ -618,6 +638,34 @@ export function JourneyWorkspace({
               )}
               <div hidden={tab !== "itinerary"} className="journey-tab-panel">
                 <p className="journey-plan-intro">{plan.summary}</p>
+                {plan.brief.originCity && (
+                  <p>Starting from {plan.brief.originCity}</p>
+                )}
+                {destinations
+                  .filter(
+                    (destination) =>
+                      plan.brief.destinationSlugs.includes(destination.slug) &&
+                      destination.sources?.length,
+                  )
+                  .map((destination) => (
+                    <p key={destination.slug}>
+                      <small>
+                        Sightseeing guide sources:{" "}
+                        {destination.sources!.map((source, index) => (
+                          <span key={source.url}>
+                            {index > 0 && " · "}
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {source.title}
+                            </a>
+                          </span>
+                        ))}
+                      </small>
+                    </p>
+                  ))}
                 <fieldset className="journey-editable" disabled={busy}>
                   <ItineraryDays
                     days={plan.days}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ItineraryDays } from "@/components/journey/itinerary-days";
+import { planningDestinations } from "@/lib/travel/planning-destinations";
 import { getPublicDestinations } from "@/lib/public-content";
 import { readSharedJourney } from "@/repositories/firebase/journey-repository";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function SharedJourneyPage({
   const { token } = await params;
   const plan = await readSharedJourney(token).catch(() => null);
   if (!plan) notFound();
-  const destinations = await getPublicDestinations();
+  const destinations = planningDestinations(await getPublicDestinations());
   const names = Object.fromEntries(
     destinations.map((destination) => [destination.slug, destination.name]),
   );

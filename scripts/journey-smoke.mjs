@@ -95,6 +95,53 @@ try {
   }
   assert(ready);
   browser = await chromium.launch({ headless: true });
+  // Exercise the landing-page handoff with and without browser storage.
+  for (const blockedStorage of [false, true]) {
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 1000 },
+      extraHTTPHeaders: {
+        "x-forwarded-for": `${orgId}-hero-${blockedStorage}`,
+      },
+    });
+    if (blockedStorage)
+      await context.addInitScript(() => {
+        Object.defineProperty(window, "sessionStorage", {
+          get() {
+            throw new Error("Storage blocked");
+          },
+        });
+      });
+    const hero = await context.newPage();
+    await hero.goto(origin);
+    const idea =
+      "Hi i stay in vadodara want to goto ooty on 28th dec till 5th Jan. help me plan my trip along with sightseeing suggestions";
+    await hero.getByLabel("Describe your holiday").fill(idea);
+    const generated = hero.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/concierge/plan") &&
+        response.request().method() === "POST",
+    );
+    await hero.getByRole("button", { name: "Start my trip" }).click();
+    const result = await generated;
+    assert.equal(result.status(), 200, await result.text());
+    const payload = await result.json();
+    assert.deepEqual(payload.record.plan.brief.destinationSlugs, ["ooty"]);
+    assert.equal(payload.record.plan.brief.originCity, "vadodara");
+    assert.equal(payload.record.plan.brief.nights, 8);
+    assert(payload.record.plan.brief.startDate.endsWith("-12-28"));
+    assert.equal(payload.record.plan.days.length, 9);
+    assert(!payload.question.toLowerCase().includes("destination"));
+    assert(!payload.question.toLowerCase().includes("dates"));
+    await hero
+      .getByRole("heading", { name: "Ooty · 9 days", exact: true })
+      .waitFor();
+    assert(!hero.url().includes("#idea="));
+    await hero.reload();
+    await hero
+      .getByRole("heading", { name: "Ooty · 9 days", exact: true })
+      .waitFor();
+    await context.close();
+  }
   page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
     extraHTTPHeaders: { "x-forwarded-for": orgId },
@@ -233,7 +280,9 @@ try {
     await page.locator('[name="checkOut"]').inputValue(),
     arrival(4),
   );
-  await page.getByLabel("Choose a stop", { exact: false }).selectOption("dubai");
+  await page
+    .getByLabel("Choose a stop", { exact: false })
+    .selectOption("dubai");
   assert.equal(await page.locator('[name="checkIn"]').inputValue(), arrival(4));
   assert.equal(
     await page.locator('[name="checkOut"]').inputValue(),
@@ -400,6 +449,8 @@ try {
     JSON.stringify({
       status: "passed",
       checks: [
+        "hero prompt with cross-year dates",
+        "hero handoff with blocked session storage",
         "prompt to itinerary",
         "day edits",
         "reload persistence",

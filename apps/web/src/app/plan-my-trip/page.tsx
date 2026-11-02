@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { VacationDesigner } from "@/components/vacation-designer";
 import { JourneyWorkspace } from "@/components/journey/journey-workspace";
+import { planningDestinations } from "@/lib/travel/planning-destinations";
 import { getPublicContent } from "@/lib/public-content";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default async function PlanPage({
   );
   return (
     <JourneyWorkspace
-      destinations={destinations}
+      destinations={planningDestinations(destinations)}
       initialPrompt={
         destination ? `Plan a relaxed 6-day trip to ${destination.name}` : ""
       }

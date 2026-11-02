@@ -152,3 +152,96 @@ describe("journey planning", () => {
     expect(shared).not.toContain("Private");
   });
 });
+
+describe("natural language trip handoff", () => {
+  const today = new Date("2026-11-02T08:00:00Z");
+  it("keeps the exact hero request with origin, destination and a cross-year date range", async () => {
+    const { planningDestinations } = await import("./planning-destinations");
+    const catalogue = planningDestinations(destinations);
+    const parsed = parseJourneyMessage(
+      "Hi i stay in vadodara want to goto ooty on 28th dec till 5th Jan. help me plan my trip along with sightseeing suggestions",
+      catalogue,
+      undefined,
+      today,
+    );
+    expect(parsed).toMatchObject({
+      originCity: "vadodara",
+      destinationSlugs: ["ooty"],
+      startDate: "2026-12-28",
+      nights: 8,
+    });
+    const plan = buildJourney(parsed, catalogue);
+    expect(plan.days).toHaveLength(9);
+    expect(
+      plan.days
+        .flatMap((day) => day.activities)
+        .some((activity) => activity.title === "Government Botanical Garden"),
+    ).toBe(true);
+    expect(() => assertJourneyGrounded(plan, catalogue)).not.toThrow();
+    expect(publicJourney(plan)).not.toHaveProperty("originCity");
+  });
+  it("does not turn the origin into an itinerary stop and supports destination aliases", async () => {
+    const { planningDestinations } = await import("./planning-destinations");
+    expect(
+      parseJourneyMessage(
+        "I live in Dubai want to go to Udhagamandalam on December 28 till January 5",
+        planningDestinations(destinations),
+        undefined,
+        today,
+      ),
+    ).toMatchObject({
+      originCity: "Dubai",
+      destinationSlugs: ["ooty"],
+      startDate: "2026-12-28",
+      nights: 8,
+    });
+  });
+  it("preserves unsupported destination names instead of discarding the request", () => {
+    expect(
+      parseJourneyMessage(
+        "I stay in Vadodara want to goto Atlantis on 28th Dec till 5th Jan",
+        destinations,
+        undefined,
+        today,
+      ),
+    ).toMatchObject({
+      requestedDestinations: ["Atlantis"],
+      startDate: "2026-12-28",
+      nights: 8,
+    });
+  });
+  it("uses explicit years, rejects invalid dates and never truncates long ranges", () => {
+    expect(
+      parseJourneyMessage(
+        "Dubai 2027-12-28 to 2028-01-05",
+        destinations,
+        undefined,
+        today,
+      ),
+    ).toMatchObject({ startDate: "2027-12-28", nights: 8 });
+    expect(() =>
+      parseJourneyMessage(
+        "Dubai 31st Feb 2027",
+        destinations,
+        undefined,
+        today,
+      ),
+    ).toThrow(/date does not exist/);
+    expect(() =>
+      parseJourneyMessage(
+        "Dubai 2027-02-10 to 2027-02-05",
+        destinations,
+        undefined,
+        today,
+      ),
+    ).toThrow(/return date/);
+    expect(() =>
+      parseJourneyMessage(
+        "Dubai 1 Jan 2027 to 15 Feb 2027",
+        destinations,
+        undefined,
+        today,
+      ),
+    ).toThrow(/30 nights/);
+  });
+});

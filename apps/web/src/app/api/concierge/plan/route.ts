@@ -10,6 +10,8 @@ import {
 import { conversationSession } from "@/lib/security/conversation-session";
 import { getPublicContent } from "@/lib/public-content";
 import { planJourney } from "@/lib/ai/journey-engine";
+import { JourneyInputError } from "@/lib/travel/journey-dates";
+import { planningDestinations } from "@/lib/travel/planning-destinations";
 import { assertJourneyGrounded } from "@/lib/travel/journey-planner";
 import {
   JourneyAccessError,
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
         throw new Error("Tell Tara what you would like to plan.");
       const result = await planJourney(
         input.message,
-        content.destinations,
+        planningDestinations(content.destinations),
         current?.plan,
       );
       plan = result.plan;
@@ -114,7 +116,7 @@ export async function POST(request: Request) {
       usedModel = result.usedModel;
     }
     if (!plan) return NextResponse.json({ message, question, usedModel });
-    assertJourneyGrounded(plan, content.destinations);
+    assertJourneyGrounded(plan, planningDestinations(content.destinations));
     const messages = [
       ...(current?.messages || []),
       ...(input.message
@@ -139,7 +141,8 @@ export async function POST(request: Request) {
       {
         error:
           error instanceof JourneyConflict ||
-          error instanceof JourneyAccessError
+          error instanceof JourneyAccessError ||
+          error instanceof JourneyInputError
             ? error.message
             : "We couldn’t save that change. Check your trip details and try again.",
       },
