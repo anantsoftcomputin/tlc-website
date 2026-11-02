@@ -1,3 +1,4 @@
+import { isVerifiedClient } from "@/lib/auth/verified-identity";
 import { NextResponse } from "next/server";
 import { personalTripInputSchema } from "@tlc/shared";
 import { getSessionUser } from "@/lib/auth/session";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request))
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   const user = await getSessionUser();
-  if (!user || user.role !== "customer" || !user.emailVerified)
+  if (!user || user.role !== "customer" || !isVerifiedClient(user))
     return NextResponse.json(
       { error: "Sign in with a verified client account." },
       { status: 401 },

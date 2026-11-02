@@ -1,3 +1,7 @@
+import {
+  isVerifiedClient,
+  personalizationIdentityMatches,
+} from "@/lib/auth/verified-identity";
 import "server-only";
 import { getSessionUser, type AdminUser } from "@/lib/auth/session";
 import { getAdminFirestore } from "@/lib/firebase/admin";
@@ -16,7 +20,7 @@ export async function personalClientContext(
   if (
     !user ||
     user.role !== "customer" ||
-    !user.emailVerified ||
+    !isVerifiedClient(user) ||
     user.orgId !== (process.env.TLC_ORG_ID || "tlc-vacations")
   )
     return null;
@@ -30,8 +34,7 @@ export async function personalClientContext(
   if (
     !customer ||
     customer.data().communicationPreferences?.personalization !== true ||
-    customer.data().verifiedClientUid !== user.uid ||
-    customer.data().verifiedEmail !== user.email?.toLowerCase()
+    !personalizationIdentityMatches(user, customer.data())
   )
     return null;
   const data = customer.data();

@@ -1,3 +1,4 @@
+import { isVerifiedClient } from "@/lib/auth/verified-identity";
 import "server-only";
 import { getSessionUser } from "@/lib/auth/session";
 import {
@@ -50,7 +51,7 @@ export async function conversationSession(request: Request, id: string) {
 export async function createConversationSession(request: Request) {
   const user = await getSessionUser();
   const clientUid =
-    user?.role === "customer" && user.emailVerified && user.orgId === orgId
+    user?.role === "customer" && isVerifiedClient(user) && user.orgId === orgId
       ? user.uid
       : undefined;
   const current = sessionCookie(request);

@@ -1,3 +1,8 @@
+import {
+  isVerifiedClient,
+  verifiedEmail,
+  customerContactMatches,
+} from "@/lib/auth/verified-identity";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { NextResponse } from "next/server";
@@ -15,7 +20,7 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request))
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   const user = await getSessionUser();
-  if (!user || user.role !== "customer" || !user.emailVerified)
+  if (!user || user.role !== "customer" || !isVerifiedClient(user))
     return NextResponse.json(
       { error: "Sign in with a verified client account." },
       { status: 401 },
@@ -66,7 +71,9 @@ export async function POST(request: Request) {
         client = customer.data();
       const matches =
         data?.channel === "email"
-          ? data.emailAddress === user.email!.toLowerCase()
+          ? Boolean(
+              verifiedEmail(user) && data.emailAddress === verifiedEmail(user),
+            )
           : data?.channel === "whatsapp" &&
             client?.phones?.some(
               (phone: string) =>
@@ -77,7 +84,7 @@ export async function POST(request: Request) {
         client?.orgId !== user.orgId ||
         client?.verifiedClientUid !== user.uid ||
         client?.communicationPreferences?.personalization !== true ||
-        !client?.emails?.includes(user.email!.toLowerCase()) ||
+        !customerContactMatches(user, client || {}) ||
         !matches
       )
         throw new Error("Contact does not match");

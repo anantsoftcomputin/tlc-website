@@ -1,3 +1,9 @@
+import {
+  isVerifiedClient,
+  verifiedEmail,
+  verifiedPhone,
+  customerContactMatches,
+} from "@/lib/auth/verified-identity";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -10,12 +16,7 @@ export async function PUT(request: Request) {
   if (!hasTrustedOrigin(request))
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   const user = await getSessionUser();
-  if (
-    !user?.orgId ||
-    user.role !== "customer" ||
-    !user.emailVerified ||
-    !user.email
-  )
+  if (!user?.orgId || user.role !== "customer" || !isVerifiedClient(user))
     return NextResponse.json(
       { error: "Verified client account required." },
       { status: 401 },
@@ -47,15 +48,18 @@ export async function PUT(request: Request) {
     : owned;
   const { customerId: _selected, ...preferences } = parsed.data;
   void _selected;
+  const emailAddress = verifiedEmail(user),
+    phoneNumber = verifiedPhone(user);
   const db = getAdminFirestore();
   const refs = customers.length
     ? customers.map((doc) => doc.ref)
     : [
-        db
-          .collection("customers")
-          .doc(
-            `portal-${createHash("sha256").update(`${user.orgId}:${user.email.toLowerCase()}`).digest("hex").slice(0, 40)}`,
-          ),
+        db.collection("customers").doc(
+          `portal-${createHash("sha256")
+            .update(`${user.orgId}:${emailAddress || phoneNumber}`)
+            .digest("hex")
+            .slice(0, 40)}`,
+        ),
       ];
   const now = new Date().toISOString();
   await db.runTransaction(async (tx) => {
@@ -64,15 +68,16 @@ export async function PUT(request: Request) {
       if (
         row.exists &&
         (row.data()?.orgId !== user.orgId ||
-          !row.data()?.emails?.includes(user.email!.toLowerCase()))
+          !customerContactMatches(user, row.data()!))
       )
         throw new Error("Client record changed. Please reload.");
       const data = preferences;
       const whatsapp =
         data.whatsappOffers &&
-        Boolean(row.data()?.phones?.length) &&
+        Boolean(row.data()?.phones?.length || phoneNumber) &&
         data.frequency !== "never";
-      const email = data.emailOffers && data.frequency !== "never";
+      const email =
+        Boolean(emailAddress) && data.emailOffers && data.frequency !== "never";
       tx.set(
         refs[i],
         {
@@ -86,8 +91,8 @@ export async function PUT(request: Request) {
                 segments: [],
                 lifecycleStage: "new",
                 mergedFrom: [],
-                emails: [user.email!.toLowerCase()],
-                phones: [],
+                emails: emailAddress ? [emailAddress] : [],
+                phones: phoneNumber ? [phoneNumber] : [],
                 ownerUid: "unassigned",
                 modelTrainingAllowed: false,
                 createdAt: now,
@@ -95,7 +100,8 @@ export async function PUT(request: Request) {
               }
             : {}),
           verifiedClientUid: user.uid,
-          verifiedEmail: user.email!.toLowerCase(),
+          ...(emailAddress ? { verifiedEmail: emailAddress } : {}),
+          ...(phoneNumber ? { verifiedPhone: phoneNumber } : {}),
           identityVerifiedAt: now,
           communicationPreferencesConfirmedAt: now,
           communicationPreferences: {

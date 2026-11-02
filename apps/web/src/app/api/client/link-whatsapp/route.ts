@@ -1,3 +1,9 @@
+import {
+  isVerifiedClient,
+  verifiedEmail,
+  verifiedPhone,
+  customerContactMatches,
+} from "@/lib/auth/verified-identity";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -15,8 +21,7 @@ export async function POST(request: Request) {
     !hasTrustedOrigin(request) ||
     !user ||
     user.role !== "customer" ||
-    !user.emailVerified ||
-    !user.email ||
+    !isVerifiedClient(user) ||
     user.orgId !== (process.env.TLC_ORG_ID || "tlc-vacations")
   )
     return NextResponse.json(
@@ -47,6 +52,7 @@ export async function POST(request: Request) {
       const customer = (await tx.get(customerRef)).data();
       if (
         customer?.orgId !== user.orgId ||
+        (!verifiedEmail(user) && !customerContactMatches(user, customer)) ||
         customer.whatsappRegistrationStatus !== "registered" ||
         !customer.phones?.some(
           (phone: string) => phone.replace(/\D/g, "") === link.address,
@@ -87,11 +93,17 @@ export async function POST(request: Request) {
           .where("clientUid", "==", waActor),
       );
       const now = new Date().toISOString();
-      const email = user.email!.toLowerCase();
+      const email = verifiedEmail(user),
+        phone = verifiedPhone(user);
       tx.update(customerRef, {
-        emails: [...new Set([...(customer.emails || []), email])],
+        ...(email
+          ? {
+              emails: [...new Set([...(customer.emails || []), email])],
+              verifiedEmail: email,
+            }
+          : {}),
+        ...(phone ? { verifiedPhone: phone } : {}),
         verifiedClientUid: user.uid,
-        verifiedEmail: email,
         identityVerifiedAt: now,
         updatedAt: now,
         updatedBy: user.uid,

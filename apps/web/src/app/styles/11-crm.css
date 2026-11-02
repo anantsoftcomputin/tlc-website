@@ -1374,3 +1374,9 @@ body:has(.admin-login-page) {
     width: 520px;
   }
 }
+
+.auth-methods { display: flex; gap: .5rem; margin: 1rem 0; }
+.auth-methods button { flex: 1; border: 1px solid var(--line, #d8d4ca); padding: .7rem .5rem; border-radius: .5rem; background: transparent; cursor: pointer; font: inherit; }
+.auth-methods button[aria-pressed="true"] { background: var(--tlc-red); color: white; }
+.admin-login-form .auth-provider { width: 100%; margin-top: .5rem; border: 1px solid var(--line, #d8d4ca); }
+.admin-login-form button:disabled { cursor: wait; opacity: .65; }

@@ -32,9 +32,12 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-tlc-holidays pnpm see
 
 ```bash
 pnpm admin:set-role -- person@example.com manager   # assigns role and organization claim
-pnpm admin:enable-mfa                               # once: enable authenticator-app MFA
+pnpm admin:enable-mfa                               # enable authenticator-app MFA on an upgraded project
+node scripts/configure-auth.mjs                     # read provider, domain and MFA settings
 pnpm customers:backfill-search                      # once: index existing customers for search
 ```
+
+The login page supports Google, email/password and SMS phone verification. Customer access requires a verified email or phone; staff permissions come from assigned roles. Management requires an authenticator and Google or email as the first factor. Identity Platform must be enabled for TOTP. After reviewing its usage-based pricing, the explicit upgrade command is `node scripts/configure-auth.mjs --enable-totp --upgrade-identity-platform`. The command saves a private configuration backup under `/tmp` and preserves existing providers.
 
 ## Verification
 

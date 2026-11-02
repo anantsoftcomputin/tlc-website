@@ -1,3 +1,5 @@
+import { customerContactMatches } from "@/lib/auth/verified-identity";
+import { isVerifiedClient } from "@/lib/auth/verified-identity";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
@@ -9,7 +11,7 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request))
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   const user = await getSessionUser();
-  if (!user || user.role !== "customer" || !user.emailVerified)
+  if (!user || user.role !== "customer" || !isVerifiedClient(user))
     return NextResponse.json(
       { error: "Verified client account required." },
       { status: 401 },
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
       const customer = (await tx.get(customerRef)).data();
       if (
         customer?.orgId !== user.orgId ||
-        !customer.emails?.includes(user.email!.toLowerCase())
+        !customerContactMatches(user, customer)
       )
         throw new Error("not-found");
       const ref = db

@@ -1,3 +1,4 @@
+import { isVerifiedClient } from "@/lib/auth/verified-identity";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth/session";
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   if (!hasTrustedOrigin(request))
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   const user = await getSessionUser();
-  if (!user?.orgId || user.role !== "customer" || !user.emailVerified)
+  if (!user?.orgId || user.role !== "customer" || !isVerifiedClient(user))
     return NextResponse.json(
       { error: "Verified client account required." },
       { status: 401 },

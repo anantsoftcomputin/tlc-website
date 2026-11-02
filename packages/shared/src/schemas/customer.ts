@@ -112,6 +112,10 @@ export const customerSchema = z
     communicationPreferences: communicationPreferencesSchema.optional(),
     verifiedClientUid: documentIdSchema.optional(),
     verifiedEmail: z.email().optional(),
+    verifiedPhone: z
+      .string()
+      .regex(/^\+[1-9]\d{7,14}$/)
+      .optional(),
     identityVerifiedAt: isoDateTimeSchema.optional(),
     communicationPreferencesConfirmedAt: isoDateTimeSchema.optional(),
     lastFeedbackAt: isoDateTimeSchema.optional(),

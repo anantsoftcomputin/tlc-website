@@ -1,4 +1,5 @@
 import "server-only";
+import { hasVerifiedTokenIdentity } from "./verified-identity";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -18,6 +19,8 @@ export type AdminUser = {
   role: UserRole;
   orgId: string;
   emailVerified?: boolean;
+  phoneNumber?: string;
+  phoneVerified?: boolean;
 };
 export function requiresMfa(role: string) {
   return (
@@ -40,10 +43,7 @@ export async function getSessionUser(): Promise<AdminUser | null> {
         : role === "customer"
           ? process.env.TLC_ORG_ID || "tlc-vacations"
           : "";
-    if (
-      !orgId ||
-      (role === "customer" && (!decoded.email_verified || !decoded.email))
-    )
+    if (!orgId || (role === "customer" && !hasVerifiedTokenIdentity(decoded)))
       return null;
     if (requiresMfa(role) && !decoded.firebase?.sign_in_second_factor)
       return null;
@@ -66,6 +66,8 @@ export async function getSessionUser(): Promise<AdminUser | null> {
       role,
       orgId,
       emailVerified: decoded.email_verified,
+      phoneNumber: decoded.phone_number,
+      phoneVerified: hasVerifiedTokenIdentity({ ...decoded, email: undefined }),
     };
   } catch {
     return null;

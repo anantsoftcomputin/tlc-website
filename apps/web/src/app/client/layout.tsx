@@ -30,7 +30,7 @@ export default async function ClientLayout({
           <a href="/client#support">Help & support</a>
         </nav>
         <div>
-          <span>{user.name || user.email}</span>
+          <span>{user.name || user.email || user.phoneNumber}</span>
           <SignOutButton />
         </div>
       </header>

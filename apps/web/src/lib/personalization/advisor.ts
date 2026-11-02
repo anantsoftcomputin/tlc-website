@@ -1,3 +1,4 @@
+import { customerContactMatches } from "@/lib/auth/verified-identity";
 import "server-only";
 import { createHash } from "node:crypto";
 import {
@@ -105,7 +106,7 @@ export async function planPersonalTrip(
     if (
       customer.data()?.orgId !== personal.user.orgId ||
       customer.data()?.communicationPreferences?.personalization !== true ||
-      !customer.data()?.emails?.includes(personal.user.email!.toLowerCase())
+      !customerContactMatches(personal.user, customer.data() || {})
     )
       throw new Error("Client permission changed.");
     if (prior.exists) {
