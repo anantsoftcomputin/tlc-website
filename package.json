@@ -28,7 +28,8 @@
     "pretypecheck": "pnpm prepare:ci",
     "pretest": "pnpm prepare:ci",
     "prebuild": "pnpm prepare:ci",
-    "email:preview": "pnpm --filter @tlc/integrations build && node scripts/export-email-designs.mjs"
+    "email:preview": "pnpm --filter @tlc/integrations build && node scripts/export-email-designs.mjs",
+    "appcheck:configure": "node --env-file-if-exists=.env scripts/configure-app-check.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

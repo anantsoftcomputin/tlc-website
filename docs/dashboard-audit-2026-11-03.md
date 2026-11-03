@@ -29,9 +29,9 @@ Browser and mutation tests use isolated Firebase emulators and synthetic records
 
 ## Production limitations
 
-1. **App Check is not connected to the website.** Production callable Functions require App Check tokens, while the website has no configured attestation key. This can reject lead, quote, booking and other callable actions even after successful login. The user chose to leave App Check configuration unchanged. Its existing backend enforcement remains enabled; this issue is unresolved.
+1. **App Check setup completed in the subsequent CLI configuration.** A domain-restricted reCAPTCHA Enterprise key is registered for the website, the browser integration obtains App Check tokens, and production deployment settings require verification. Existing callable-Function enforcement remains enabled. This resolves the missing website-key configuration identified in the audit.
 2. **Live TBO inventory credentials are absent from the deployed search Functions.** Their live supplier searches and booking flow require provider configuration and verification.
 3. **Outbound email and WhatsApp are disabled and have no provider secret bindings on the delivery Functions.** Real delivery remains unavailable until those integrations are configured and verified.
 4. Real payment-provider transactions were not performed. Integration tests verify the application's payment and finance behavior using controlled fixtures.
 
-The unresolved configuration items above must be completed before describing every dashboard function as working end to end in production.
+The supplier, delivery and payment configuration/verification items above must be completed before describing every dashboard function as working end to end in production.

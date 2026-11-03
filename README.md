@@ -39,6 +39,8 @@ pnpm customers:backfill-search                      # once: index existing custo
 
 The login page supports Google, email/password and SMS phone verification. Customer access requires a verified email or phone; staff permissions come from assigned roles. Management requires an authenticator and Google or email as the first factor. Identity Platform must be enabled for TOTP. After reviewing its usage-based pricing, the explicit upgrade command is `node scripts/configure-auth.mjs --enable-totp --upgrade-identity-platform`. The command saves a private configuration backup under `/tmp` and preserves existing providers.
 
+App Check can be inspected with `pnpm appcheck:configure`. The explicit `--apply` option registers the domain-restricted Enterprise provider and updates the production Netlify variables. It saves the previous settings privately under `/tmp`; it requires a Firebase CLI login and Netlify CLI access. Rebuild and publish the website after applying it. The build passes App Check configuration through Turbo and rejects a production deployment with missing verification settings. reCAPTCHA Enterprise has a free allowance and usage charges above it; review [Firebase's App Check documentation](https://firebase.google.com/docs/app-check) before activating it in another project.
+
 ## Verification
 
 ```bash

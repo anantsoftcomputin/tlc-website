@@ -41,6 +41,8 @@
     "FIREBASE_*",
     "FIRESTORE_EMULATOR_HOST",
     "GCLOUD_PROJECT",
-    "OPENAI_*"
+    "OPENAI_*",
+    "APP_CHECK_ENFORCEMENT",
+    "CONTEXT"
   ]
 }

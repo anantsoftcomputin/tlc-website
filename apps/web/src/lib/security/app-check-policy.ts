@@ -11,16 +11,25 @@
  */
 export type AppCheckMode = "enforce" | "off";
 
-export function appCheckMode(env: Record<string, string | undefined> = process.env): AppCheckMode {
+export function appCheckMode(
+  env: Record<string, string | undefined> = process.env,
+): AppCheckMode {
   const setting = env.APP_CHECK_ENFORCEMENT?.trim().toLowerCase();
   if (setting === "off") return "off";
   if (setting === "required") return "enforce";
-  if (env.FIREBASE_AUTH_EMULATOR_HOST || env.NODE_ENV !== "production") return "off";
+  if (env.FIREBASE_AUTH_EMULATOR_HOST || env.NODE_ENV !== "production")
+    return "off";
   return env.NEXT_PUBLIC_APP_CHECK_SITE_KEY ? "enforce" : "off";
 }
 
-export function appCheckDeployProblem(env: Record<string, string | undefined> = process.env) {
-  const production = env.CONTEXT === "production" || env.TLC_DEPLOY_ENV === "production";
+export function appCheckDeployProblem(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const provider = env.NEXT_PUBLIC_APP_CHECK_PROVIDER;
+  if (provider && !["recaptcha-v3", "recaptcha-enterprise"].includes(provider))
+    return "NEXT_PUBLIC_APP_CHECK_PROVIDER must be recaptcha-v3 or recaptcha-enterprise.";
+  const production =
+    env.CONTEXT === "production" || env.TLC_DEPLOY_ENV === "production";
   const setting = env.APP_CHECK_ENFORCEMENT?.trim().toLowerCase();
   if (setting && !["off", "required"].includes(setting))
     return `APP_CHECK_ENFORCEMENT must be "required" or "off", not "${setting}".`;
