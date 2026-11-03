@@ -1,4 +1,5 @@
 import "server-only";
+import { Filter } from "firebase-admin/firestore";
 
 import {
   leadPriorities,
@@ -101,8 +102,12 @@ function mapLead(
       ...(data.requirement?.sharedPreferences
         ? { sharedPreferences: data.requirement.sharedPreferences }
         : {}),
-      ...(data.requirement?.vacationShortlist ? { vacationShortlist: data.requirement.vacationShortlist } : {}),
-      ...(data.requirement?.journey ? { journey: data.requirement.journey } : {}),
+      ...(data.requirement?.vacationShortlist
+        ? { vacationShortlist: data.requirement.vacationShortlist }
+        : {}),
+      ...(data.requirement?.journey
+        ? { journey: data.requirement.journey }
+        : {}),
       notes: String(data.requirement?.notes || ""),
     },
     valueEstimate: Number(
@@ -192,7 +197,12 @@ export class FirestoreLeadRepository implements LeadRepository {
       .collection("leads")
       .where("orgId", "==", this.orgId);
     if (!this.viewer.canViewAll)
-      query = query.where("assignedUid", "==", this.viewer.uid);
+      query = query.where(
+        Filter.or(
+          Filter.where("assignedUid", "==", this.viewer.uid),
+          Filter.where("assignedTo", "==", this.viewer.uid),
+        ),
+      );
     const snapshot = await query
       .orderBy("updatedAt", "desc")
       .limit(limit)
@@ -226,7 +236,11 @@ export class FirestoreLeadRepository implements LeadRepository {
     const snapshot = await this.database.collection("leads").doc(leadId).get();
     if (!snapshot.exists || snapshot.data()?.orgId !== this.orgId) return null;
     const lead = mapLead(snapshot);
-    if (!this.viewer.canViewAll && lead.assignedUid !== this.viewer.uid)
+    if (
+      !this.viewer.canViewAll &&
+      snapshot.data()?.assignedUid !== this.viewer.uid &&
+      snapshot.data()?.assignedTo !== this.viewer.uid
+    )
       return null;
     const [customerSnapshot, activitySnapshot] = await Promise.all([
       this.database.collection("customers").doc(lead.customerId).get(),
@@ -254,7 +268,8 @@ export class FirestoreLeadRepository implements LeadRepository {
     return snapshot.docs
       .filter(
         (item) =>
-          item.data().active !== false && item.data().disabled !== true &&
+          item.data().active !== false &&
+          item.data().disabled !== true &&
           [
             "super_admin",
             "owner",

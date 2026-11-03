@@ -86,6 +86,8 @@ export async function POST(request: Request) {
             displayName: input.name,
             role: input.role,
             active: input.active,
+            disabled: !input.active,
+            status: input.active ? "active" : "disabled",
             createdAt: existing.data()?.createdAt || now,
             createdBy: existing.data()?.createdBy || actor.uid,
             updatedAt: now,

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
+import { openSync, closeSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { chromium } from "@playwright/test";
 const require = createRequire(
@@ -56,67 +57,55 @@ for (const role of [
   });
   if (!["customer", "other", "unverified"].includes(role)) {
     await auth.setCustomUserClaims(uid, { role, orgId });
-    await db
-      .doc(`users/${uid}`)
-      .set({
-        uid,
-        orgId,
-        role,
-        email: `${role}@example.test`,
-        displayName: `Test ${role}`,
-        active: true,
-      });
+    await db.doc(`users/${uid}`).set({
+      uid,
+      orgId,
+      role,
+      email: `${role}@example.test`,
+      displayName: `Test ${role}`,
+      active: true,
+    });
   }
 }
-await db
-  .doc(`orgs/${orgId}`)
-  .set({
-    name: "TLC local demo",
-    settings: { leadAssignment: { defaultUid: "smoke-sales" } },
-  });
-await db
-  .doc("customers/smoke-customer")
-  .set({
-    orgId,
-    name: "Demo Traveller",
-    emails: ["customer@example.test"],
-    phones: ["+919999999999"],
-    ownerUid: "smoke-sales",
-  });
-await db
-  .doc("customers/smoke-other")
-  .set({
-    orgId,
-    name: "Private Traveller",
-    emails: ["other@example.test"],
-    ownerUid: "smoke-owner",
-  });
-await db
-  .doc("leads/smoke-lead")
-  .set({
-    id: "smoke-lead",
-    orgId,
-    customerId: "smoke-customer",
-    title: "A week in Bali",
-    assignedUid: "smoke-sales",
-    status: "contacted",
-    priority: "high",
-    createdAt: now,
-    updatedAt: now,
-    sla: { firstResponseDueAt: now },
-  });
-await db
-  .doc("leads/smoke-private")
-  .set({
-    id: "smoke-private",
-    orgId,
-    customerId: "smoke-other",
-    title: "Private Antarctica trip",
-    assignedUid: "smoke-owner",
-    status: "contacted",
-    createdAt: now,
-    updatedAt: now,
-  });
+await db.doc(`orgs/${orgId}`).set({
+  name: "TLC local demo",
+  settings: { leadAssignment: { defaultUid: "smoke-sales" } },
+});
+await db.doc("customers/smoke-customer").set({
+  orgId,
+  name: "Demo Traveller",
+  emails: ["customer@example.test"],
+  phones: ["+919999999999"],
+  ownerUid: "smoke-sales",
+});
+await db.doc("customers/smoke-other").set({
+  orgId,
+  name: "Private Traveller",
+  emails: ["other@example.test"],
+  ownerUid: "smoke-owner",
+});
+await db.doc("leads/smoke-lead").set({
+  id: "smoke-lead",
+  orgId,
+  customerId: "smoke-customer",
+  title: "A week in Bali",
+  assignedUid: "smoke-sales",
+  status: "contacted",
+  priority: "high",
+  createdAt: now,
+  updatedAt: now,
+  sla: { firstResponseDueAt: now },
+});
+await db.doc("leads/smoke-private").set({
+  id: "smoke-private",
+  orgId,
+  customerId: "smoke-other",
+  title: "Private Antarctica trip",
+  assignedUid: "smoke-owner",
+  status: "contacted",
+  createdAt: now,
+  updatedAt: now,
+});
 for (const [id, customerId, leadId, number] of [
   ["smoke-booking", "smoke-customer", "smoke-lead", "TLC-DEMO-BALI"],
   [
@@ -126,33 +115,31 @@ for (const [id, customerId, leadId, number] of [
     "PRIVATE-ANTARCTICA",
   ],
 ]) {
-  await db
-    .doc(`bookings/${id}`)
-    .set({
-      id,
-      orgId,
-      customerId,
-      leadId,
-      bookingNumber: number,
-      status: "confirmed",
-      paymentStatus: "partial",
-      approvedAt: now,
-      totals: { sell: 50000, cost: 35000, currency: "INR" },
-      items: [
-        {
-          id: "stay",
-          kind: "hotel",
-          description: "Bali beach stay",
-          dates: { start: "2027-01-01", end: "2027-01-07" },
-          itemStatus: "confirmed",
-          costPrice: 35000,
-          raw: { secret: "SUPPLIER-SECRET" },
-        },
-      ],
-      documents: [],
-      createdAt: now,
-      updatedAt: now,
-    });
+  await db.doc(`bookings/${id}`).set({
+    id,
+    orgId,
+    customerId,
+    leadId,
+    bookingNumber: number,
+    status: "confirmed",
+    paymentStatus: "partial",
+    approvedAt: now,
+    totals: { sell: 50000, cost: 35000, currency: "INR" },
+    items: [
+      {
+        id: "stay",
+        kind: "hotel",
+        description: "Bali beach stay",
+        dates: { start: "2027-01-01", end: "2027-01-07" },
+        itemStatus: "confirmed",
+        costPrice: 35000,
+        raw: { secret: "SUPPLIER-SECRET" },
+      },
+    ],
+    documents: [],
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 await db
   .doc("financeDocuments/smoke-private")
@@ -193,143 +180,169 @@ const totals = {
   marginPct: 30,
   currency: "INR",
 };
-await db
-  .doc("bookings/smoke-booking")
-  .update({
-    quoteId: "audit-sent",
-    items: [{ ...item, itemStatus: "confirmed" }],
-    travellers: [
-      {
-        id: "traveller",
-        type: "adult",
-        title: "Ms",
-        firstName: "Demo",
-        lastName: "Traveller",
-        dob: "1990-01-01",
-        nationality: "IN",
-      },
-    ],
-    timeline: [],
-    profitability: { revenue: 50000, cost: 35000, gp: 15000, marginPct: 30 },
-    totals,
-    ...audit,
-  });
-await db
-  .doc("bookings/audit-completed")
-  .set({
-    ...(await db.doc("bookings/smoke-booking").get()).data(),
-    id: "audit-completed",
-    bookingNumber: "AUDIT-COMPLETED",
-    status: "completed",
-    completedAt: now,
-    items: [
-      {
-        ...item,
-        itemStatus: "confirmed",
-        dates: { start: "2025-01-01", end: "2025-01-07" },
-      },
-    ],
-  });
+await db.doc("bookings/smoke-booking").update({
+  quoteId: "audit-sent",
+  items: [{ ...item, itemStatus: "confirmed" }],
+  travellers: [
+    {
+      id: "traveller",
+      type: "adult",
+      title: "Ms",
+      firstName: "Demo",
+      lastName: "Traveller",
+      dob: "1990-01-01",
+      nationality: "IN",
+    },
+  ],
+  timeline: [],
+  profitability: { revenue: 50000, cost: 35000, gp: 15000, marginPct: 30 },
+  totals,
+  ...audit,
+});
+await db.doc("bookings/audit-completed").set({
+  ...(await db.doc("bookings/smoke-booking").get()).data(),
+  id: "audit-completed",
+  bookingNumber: "AUDIT-COMPLETED",
+  status: "completed",
+  completedAt: now,
+  items: [
+    {
+      ...item,
+      itemStatus: "confirmed",
+      dates: { start: "2025-01-01", end: "2025-01-07" },
+    },
+  ],
+});
 for (const [id, version, status] of [
   ["audit-sent", 1, "sent"],
   ["audit-draft", 2, "draft"],
 ])
-  await db
-    .doc(`quotes/${id}`)
-    .set({
-      id,
-      orgId,
-      leadId: "smoke-lead",
-      customerId: "smoke-customer",
-      quoteNumber: `AUDIT-QUOTE-V${version}`,
-      version,
-      status,
-      items: [item],
-      totals,
-      validUntil: "2027-01-01T00:00:00.000Z",
-      shareToken: `audit-share-token-${id}-long-enough`,
-      approvals: [],
-      ...audit,
-    });
-await db
-  .doc("leads/audit-marketing-lead")
-  .set({
-    id: "audit-marketing-lead",
+  await db.doc(`quotes/${id}`).set({
+    id,
     orgId,
+    leadId: "smoke-lead",
     customerId: "smoke-customer",
-    title: "Restricted quote for role audit",
-    assignedUid: "smoke-marketing",
-    status: "contacted",
+    quoteNumber: `AUDIT-QUOTE-V${version}`,
+    version,
+    status,
+    items: [item],
+    totals,
+    validUntil: "2027-01-01T00:00:00.000Z",
+    shareToken: `audit-share-token-${id}-long-enough`,
+    approvals: [],
     ...audit,
   });
-await db
-  .doc("quotes/audit-marketing-quote")
-  .set({
-    ...(await db.doc("quotes/audit-sent").get()).data(),
-    id: "audit-marketing-quote",
-    leadId: "audit-marketing-lead",
-    quoteNumber: "AUDIT-RESTRICTED-MARKETING",
-    shareToken: "audit-restricted-token-long-enough",
-  });
-await db
-  .doc("conversations/audit-readonly-thread")
-  .set({
-    id: "audit-readonly-thread",
-    orgId,
-    channel: "web",
-    mode: "text",
-    customerId: "smoke-customer",
-    assignedUid: "smoke-readonly",
-    summary: "Read-only audit thread",
-    status: "bot",
-    lastMessageAt: now,
-    turnCount: 1,
-    personaSnapshot: { name: "Tara", version: 1 },
-    ...audit,
-  });
-await db
-  .doc("conversations/audit-whatsapp-unassigned")
-  .set({
-    id: "audit-whatsapp-unassigned",
-    orgId,
-    channel: "whatsapp",
-    mode: "text",
-    customerId: "smoke-customer",
-    assignedUid: "unassigned",
-    summary: "New WhatsApp unassigned case",
-    status: "human",
-    lastMessageAt: now,
-    turnCount: 1,
-    ...audit,
-  });
+await db.doc("leads/audit-marketing-lead").set({
+  id: "audit-marketing-lead",
+  orgId,
+  customerId: "smoke-customer",
+  title: "Restricted quote for role audit",
+  assignedUid: "smoke-marketing",
+  status: "contacted",
+  ...audit,
+});
+await db.doc("quotes/audit-marketing-quote").set({
+  ...(await db.doc("quotes/audit-sent").get()).data(),
+  id: "audit-marketing-quote",
+  leadId: "audit-marketing-lead",
+  quoteNumber: "AUDIT-RESTRICTED-MARKETING",
+  shareToken: "audit-restricted-token-long-enough",
+});
+await db.doc("conversations/audit-readonly-thread").set({
+  id: "audit-readonly-thread",
+  orgId,
+  channel: "web",
+  mode: "text",
+  customerId: "smoke-customer",
+  assignedUid: "smoke-readonly",
+  summary: "Read-only audit thread",
+  status: "bot",
+  lastMessageAt: now,
+  turnCount: 1,
+  personaSnapshot: { name: "Tara", version: 1 },
+  ...audit,
+});
+await db.doc("conversations/audit-whatsapp-unassigned").set({
+  id: "audit-whatsapp-unassigned",
+  orgId,
+  channel: "whatsapp",
+  mode: "text",
+  customerId: "smoke-customer",
+  assignedUid: "unassigned",
+  summary: "New WhatsApp unassigned case",
+  status: "human",
+  lastMessageAt: now,
+  turnCount: 1,
+  ...audit,
+});
 
-await db
-  .doc("bookings/audit-usd")
-  .set({
-    ...(await db.doc("bookings/smoke-booking").get()).data(),
-    id: "audit-usd",
-    bookingNumber: "AUDIT-USD-BOOKING",
-    customerId: "smoke-other",
-    leadId: "smoke-private",
-    totals: { ...totals, currency: "USD", cost: 700, sell: 1000, gp: 300 },
-    items: [
-      {
-        ...item,
-        currency: "USD",
-        costPrice: 700,
-        sellPrice: 1000,
-        itemStatus: "confirmed",
-      },
-    ],
-    profitability: { revenue: 1000, cost: 700, gp: 300, marginPct: 30 },
-  });
+await db.doc("bookings/audit-usd").set({
+  ...(await db.doc("bookings/smoke-booking").get()).data(),
+  id: "audit-usd",
+  bookingNumber: "AUDIT-USD-BOOKING",
+  customerId: "smoke-other",
+  leadId: "smoke-private",
+  totals: { ...totals, currency: "USD", cost: 700, sell: 1000, gp: 300 },
+  items: [
+    {
+      ...item,
+      currency: "USD",
+      costPrice: 700,
+      sellPrice: 1000,
+      itemStatus: "confirmed",
+    },
+  ],
+  profitability: { revenue: 1000, cost: 700, gp: 300, marginPct: 30 },
+});
 for (const [id, currency, amount, bookingId] of [
   ["audit-inr", "INR", 10000, "smoke-booking"],
   ["audit-usd", "USD", 1000, "audit-usd"],
 ])
-  await db
-    .doc(`ledger/${id}`)
-    .set({
+  await db.doc(`ledger/${id}`).set({
+    id,
+    orgId,
+    type: "receivable",
+    currency,
+    amount,
+    settledAmount: 0,
+    status: "open",
+    bookingId,
+    dueAt: "2027-01-01T00:00:00Z",
+    ...audit,
+  });
+
+const shared = await import(require.resolve("@tlc/shared"));
+await db.doc("financeDocuments/smoke-private").set(
+  shared.financeDocumentSchema.parse({
+    id: "smoke-private",
+    orgId,
+    bookingId: "smoke-private-booking",
+    type: "invoice",
+    number: "AUDIT-PRIVATE-INVOICE",
+    issueDate: "2026-11-01",
+    currency: "INR",
+    customer: { id: "smoke-other", name: "Private Traveller" },
+    seller: shared.defaultTaxProfile(),
+    taxableValue: 1000,
+    gstRatePct: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+    total: 1000,
+    sac: "998551",
+    placeOfSupply: "Maharashtra",
+    status: "issued",
+    issuedAt: now,
+    issuedBy: "smoke-owner",
+    ...audit,
+  }),
+);
+for (const [id, currency, amount, bookingId] of [
+  ["audit-inr", "INR", 10000, "smoke-booking"],
+  ["audit-usd", "USD", 1000, "audit-usd"],
+])
+  await db.doc(`ledger/${id}`).set(
+    shared.ledgerEntrySchema.parse({
       id,
       orgId,
       type: "receivable",
@@ -338,88 +351,110 @@ for (const [id, currency, amount, bookingId] of [
       settledAmount: 0,
       status: "open",
       bookingId,
-      dueAt: "2027-01-01T00:00:00Z",
-      ...audit,
-    });
-
-const shared = await import(require.resolve("@tlc/shared"));
-await db
-  .doc("financeDocuments/smoke-private")
-  .set(
-    shared.financeDocumentSchema.parse({
-      id: "smoke-private",
-      orgId,
-      bookingId: "smoke-private-booking",
-      type: "invoice",
-      number: "AUDIT-PRIVATE-INVOICE",
-      issueDate: "2026-11-01",
-      currency: "INR",
-      customer: { id: "smoke-other", name: "Private Traveller" },
-      seller: shared.defaultTaxProfile(),
-      taxableValue: 1000,
-      gstRatePct: 0,
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
-      total: 1000,
-      sac: "998551",
-      placeOfSupply: "Maharashtra",
-      status: "issued",
-      issuedAt: now,
-      issuedBy: "smoke-owner",
+      dueDate: "2027-01-01",
+      party: {
+        id: currency === "INR" ? "smoke-customer" : "smoke-other",
+        type: "customer",
+        name: "Audit traveller",
+      },
+      gst: { ratePct: 0, amount: 0 },
       ...audit,
     }),
   );
-for (const [id, currency, amount, bookingId] of [
-  ["audit-inr", "INR", 10000, "smoke-booking"],
-  ["audit-usd", "USD", 1000, "audit-usd"],
-])
-  await db
-    .doc(`ledger/${id}`)
-    .set(
-      shared.ledgerEntrySchema.parse({
-        id,
-        orgId,
-        type: "receivable",
-        currency,
-        amount,
-        settledAmount: 0,
-        status: "open",
-        bookingId,
-        dueDate: "2027-01-01",
-        party: {
-          id: currency === "INR" ? "smoke-customer" : "smoke-other",
-          type: "customer",
-          name: "Audit traveller",
-        },
-        gst: { ratePct: 0, amount: 0 },
-        ...audit,
-      }),
-    );
 for (const name of ["smoke-booking", "audit-completed", "audit-usd"])
   shared.bookingSchema.parse((await db.doc(`bookings/${name}`).get()).data());
 for (const name of ["audit-sent", "audit-draft", "audit-marketing-quote"])
   shared.quoteSchema.parse((await db.doc(`quotes/${name}`).get()).data());
 
+// Assignment migrations must preserve the employee pipeline and its detail links.
+await db.doc("leads/audit-legacy-assignment").set({
+  id: "audit-legacy-assignment",
+  orgId,
+  customerId: "smoke-customer",
+  title: "LEGACY-ASSIGNED-LEAD",
+  assignedTo: "smoke-sales",
+  stage: "requirement_received",
+  priority: "normal",
+  createdAt: now,
+  updatedAt: now,
+});
+await db.doc("leads/audit-legacy-private").set({
+  id: "audit-legacy-private",
+  orgId,
+  customerId: "smoke-other",
+  title: "PRIVATE-LEGACY-LEAD",
+  assignedTo: "smoke-owner",
+  stage: "requirement_received",
+  createdAt: now,
+  updatedAt: now,
+});
+await db.doc("leads/smoke-lead").update({ assignedTo: "smoke-sales" });
+await db.doc("trips/audit-catalogue-trip").set({
+  orgId,
+  id: "audit-catalogue-trip",
+  title: "AUDIT-CATALOGUE-TRIP",
+  slug: "audit-catalogue-trip",
+  status: "draft",
+  image: "/images/hero-braies.jpg",
+  destination: "Bali",
+  destinationSlug: "bali",
+  summary: "Demo catalogue record",
+  days: 7,
+  nights: 6,
+  route: [],
+  styles: [],
+  idealFor: [],
+  itinerary: [],
+  inclusions: [],
+  updatedAt: now,
+});
+try {
+  await auth.deleteUser("smoke-reenable");
+} catch {}
+await auth.createUser({
+  uid: "smoke-reenable",
+  email: "reenable@example.test",
+  password,
+  emailVerified: true,
+  disabled: true,
+});
+await auth.setCustomUserClaims("smoke-reenable", { role: "sales", orgId });
+await db.doc("users/smoke-reenable").set({
+  uid: "smoke-reenable",
+  orgId,
+  role: "sales",
+  email: "reenable@example.test",
+  displayName: "Legacy disabled employee",
+  active: false,
+  disabled: true,
+});
+
 const base = process.env.PORTAL_TEST_BASE_URL || "http://127.0.0.1:3145";
+await mkdir("/tmp/tlc-dashboard-smoke", { recursive: true });
+const serverLog = openSync("/tmp/tlc-dashboard-smoke/server.log", "w");
 const server = process.env.PORTAL_TEST_BASE_URL
   ? null
   : spawn(
       process.execPath,
       [
         "scripts/local-web.mjs",
-        "dev",
+        process.env.DASHBOARD_SMOKE_MODE === "production" ? "start" : "dev",
         "--hostname",
         "127.0.0.1",
         "--port",
         "3145",
       ],
       {
-        stdio: "ignore",
+        stdio: ["ignore", serverLog, serverLog],
         detached: true,
-        env: { ...process.env, TLC_NEXT_DIST_DIR: ".next/dashboard-smoke" },
+        env: {
+          ...process.env,
+          TLC_NEXT_DIST_DIR:
+            process.env.TLC_NEXT_DIST_DIR || ".next/dashboard-smoke",
+        },
       },
     );
+closeSync(serverLog);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let browser;
 try {
@@ -443,6 +478,23 @@ try {
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1000 },
     });
+    if (process.env.DASHBOARD_SMOKE_MODE === "production") {
+      // Chromium accepts secure cookies on loopback; Playwright's API client does not.
+      // Mirror the browser's demo session for API checks against the same local server.
+      for (const method of ["get", "post", "put", "patch", "delete"]) {
+        const original = context.request[method].bind(context.request);
+        context.request[method] = async (url, options = {}) =>
+          original(url, {
+            ...options,
+            headers: {
+              cookie: (await context.cookies())
+                .map((cookie) => `${cookie.name}=${cookie.value}`)
+                .join("; "),
+              ...(options.headers || {}),
+            },
+          });
+      }
+    }
     context.setDefaultNavigationTimeout(90000);
     context.setDefaultTimeout(60000);
     const page = await context.newPage();
@@ -459,7 +511,14 @@ try {
     await page.waitForURL(/\/(admin\/(owner|employee)|client)$/, {
       timeout: 45000,
     });
+    await page.locator("main h1").first().waitFor();
     return { page, context };
+  }
+  async function mainText(page) {
+    const snapshot = await page.waitForFunction(
+      () => document.querySelector("main")?.innerText.trim() || false,
+    );
+    return snapshot.jsonValue();
   }
   for (const role of [
     "super_admin",
@@ -483,7 +542,7 @@ try {
       ),
     );
     await page.screenshot({ path: `${output}/${role}.png`, fullPage: true });
-    const text = await page.locator("main").innerText();
+    const text = await mainText(page);
     if (role === "sales") {
       assert.match(text, /TLC-DEMO-BALI/);
       assert.doesNotMatch(text, /PRIVATE-ANTARCTICA/);
@@ -492,7 +551,7 @@ try {
       assert.doesNotMatch(text, /Upcoming departures|Client support/);
     if (role === "owner") {
       await page.goto(`${base}/admin/team`);
-      assert.match(await page.locator("main").innerText(), /Team/);
+      assert.match(await mainText(page), /Team/);
     }
 
     const navLinks = await page
@@ -507,6 +566,16 @@ try {
       const response = await context.request.get(`${base}${link.href}`, {
         maxRedirects: 0,
       });
+      assert.equal(
+        response.status(),
+        200,
+        `${role} navigation ${link.href} returned ${response.status()}`,
+      );
+      const html = await response.text();
+      assert(
+        !html.includes("An error occurred in the Server Components render"),
+        `${role} navigation ${link.href} failed to render`,
+      );
       navigation.push({
         role,
         ...link,
@@ -556,10 +625,7 @@ try {
         /Quotes in progress\n1\n/,
       );
       await page.goto(`${base}/admin/conversations`);
-      assert.doesNotMatch(
-        await page.locator("main").innerText(),
-        /New WhatsApp unassigned case/,
-      );
+      assert.doesNotMatch(await mainText(page), /New WhatsApp unassigned case/);
     }
     if (role === "readonly" || role === "accounts") {
       await page.goto(`${base}/admin/bookings/smoke-booking`);
@@ -596,10 +662,7 @@ try {
     if (role === "marketing") {
       await page.goto(`${base}/admin/quotes/audit-marketing-quote`);
       await page.waitForURL(/\/admin\/employee/);
-      assert.doesNotMatch(
-        await page.locator("main").innerText(),
-        /Supplier cost/,
-      );
+      assert.doesNotMatch(await mainText(page), /Supplier cost/);
       await page.goto(`${base}/admin/crm/audit-marketing-lead`);
       await page.waitForURL(/\/admin\/employee/);
     }
@@ -618,11 +681,125 @@ try {
           .count(),
         0,
       );
+    if (["sales", "travel_consultant", "readonly", "accounts"].includes(role)) {
+      await page.goto(`${base}/admin/content/trips`);
+      assert.equal(
+        await page
+          .getByRole("link", { name: "New package", exact: true })
+          .count(),
+        0,
+      );
+      await page
+        .getByRole("link")
+        .filter({ hasText: "AUDIT-CATALOGUE-TRIP" })
+        .click();
+      await page
+        .getByText("View-only catalogue access.", { exact: false })
+        .waitFor();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Save content", exact: true })
+          .count(),
+        0,
+      );
+      assert.equal(
+        await page.locator('input[name="title"]').isDisabled(),
+        true,
+      );
+      const denied = await context.request.post(`${base}/api/admin/content`, {
+        headers: { origin: base },
+        data: { collection: "trips", data: { id: "audit-catalogue-trip" } },
+      });
+      assert.equal(denied.status(), 403);
+    }
+    if (role === "sales") {
+      await page.goto(`${base}/admin/crm`);
+      assert.match(await mainText(page), /LEGACY-ASSIGNED-LEAD/);
+      assert.doesNotMatch(await mainText(page), /PRIVATE-LEGACY-LEAD/);
+      assert.equal(
+        await page
+          .locator(".lead-card")
+          .filter({ hasText: "A week in Bali" })
+          .count(),
+        1,
+      );
+      await page
+        .getByRole("link")
+        .filter({ hasText: "LEGACY-ASSIGNED-LEAD" })
+        .click();
+      await page
+        .getByRole("heading", { name: "LEGACY-ASSIGNED-LEAD", exact: true })
+        .waitFor();
+    }
+    if (role === "readonly") {
+      await page.goto(`${base}/admin/crm`);
+      assert.equal(
+        await page.getByRole("link", { name: "New lead", exact: true }).count(),
+        0,
+      );
+    }
+    if (role === "owner") {
+      await page.goto(`${base}/admin/team`);
+      const enabled = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/admin/team") &&
+          response.request().method() === "POST",
+      );
+      await page
+        .locator(".client-record")
+        .filter({ hasText: "reenable@example.test" })
+        .getByRole("button", { name: "Enable", exact: true })
+        .click();
+      assert.equal((await enabled).status(), 200);
+      assert.equal(
+        (await db.doc("users/smoke-reenable").get()).data().disabled,
+        false,
+      );
+      assert.equal((await auth.getUser("smoke-reenable")).disabled, false);
+      await page.goto(`${base}/admin/content/trips/audit-catalogue-trip`);
+      await page
+        .getByRole("button", { name: "Save content", exact: true })
+        .waitFor();
+      await page.route("**/api/admin/content", (route) =>
+        route.request().method() === "DELETE"
+          ? route.abort("failed")
+          : route.continue(),
+      );
+      page.once("dialog", (dialog) => dialog.accept());
+      await page
+        .getByRole("button", { name: "Archive tour package", exact: true })
+        .click();
+      await page.locator(".lead-form-error").waitFor();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Archive tour package", exact: true })
+          .isEnabled(),
+        true,
+      );
+      await page.unroute("**/api/admin/content");
+      const restored = await login("reenable");
+      await restored.context.close();
+      const disabled = await context.request.post(`${base}/api/admin/team`, {
+        headers: { origin: base },
+        data: {
+          email: "reenable@example.test",
+          name: "Legacy disabled employee",
+          role: "sales",
+          active: false,
+        },
+      });
+      assert.equal(disabled.status(), 200);
+      assert.equal(
+        (await db.doc("users/smoke-reenable").get()).data().disabled,
+        true,
+      );
+      assert.equal((await auth.getUser("smoke-reenable")).disabled, true);
+    }
     console.log("Role checks passed:", role);
     await context.close();
   }
   const client = await login("customer");
-  const content = await client.page.locator("main").innerText();
+  const content = await mainText(client.page);
   assert.match(content, /Your revised itinerary is being prepared/);
   assert.doesNotMatch(content, /AUDIT-QUOTE-V2/);
   assert.match(content, /TLC-DEMO-BALI/);
@@ -683,7 +860,7 @@ try {
   );
   const other = await login("other");
   assert.doesNotMatch(
-    await other.page.locator("main").innerText(),
+    await mainText(other.page),
     /Airport transfer question|TLC-DEMO-BALI/,
   );
   const unverified = await login("unverified");
@@ -719,38 +896,23 @@ try {
   }
   await batch.commit();
   await employee.page.goto(`${base}/admin/bookings`);
-  assert.match(
-    await employee.page.locator("main").innerText(),
-    /TLC-DEMO-BALI/,
-  );
-  assert.doesNotMatch(
-    await employee.page.locator("main").innerText(),
-    /AUDIT-OTHER/,
-  );
+  assert.match(await mainText(employee.page), /TLC-DEMO-BALI/);
+  assert.doesNotMatch(await mainText(employee.page), /AUDIT-OTHER/);
   await employee.page
     .getByRole("link", { name: "Next page", exact: true })
     .click();
-  assert.match(await employee.page.locator("main").innerText(), /OWN-ARCHIVE/);
-  assert.doesNotMatch(
-    await employee.page.locator("main").innerText(),
-    /AUDIT-OTHER/,
-  );
+  assert.match(await mainText(employee.page), /OWN-ARCHIVE/);
+  assert.doesNotMatch(await mainText(employee.page), /AUDIT-OTHER/);
   await client.page.goto(`${base}/client/history?kind=bookings`);
-  assert.match(await client.page.locator("main").innerText(), /57 records/);
+  assert.match(await mainText(client.page), /57 records/);
   await client.page
     .getByRole("link", { name: "Next page", exact: true })
     .click();
-  assert.match(await client.page.locator("main").innerText(), /OWN-ARCHIVE/);
-  assert.doesNotMatch(
-    await client.page.locator("main").innerText(),
-    /AUDIT-OTHER/,
-  );
+  assert.match(await mainText(client.page), /OWN-ARCHIVE/);
+  assert.doesNotMatch(await mainText(client.page), /AUDIT-OTHER/);
   await client.page.goto(`${base}/client/history?kind=itineraries`);
-  assert.match(await client.page.locator("main").innerText(), /Superseded/);
-  assert.match(
-    await client.page.locator("main").innerText(),
-    /Itinerary in preparation/,
-  );
+  assert.match(await mainText(client.page), /Superseded/);
+  assert.match(await mainText(client.page), /Itinerary in preparation/);
   const owner = await login("owner");
   const dispatchBody = {
     kind: "conversation",
@@ -776,7 +938,11 @@ try {
   await owner.page
     .getByLabel("Assign conversation audit-whatsapp-unassigned")
     .selectOption("smoke-sales");
-  const assignedResponse=owner.page.waitForResponse(response=>response.url().endsWith("/api/admin/assign-work")&&response.request().method()==="PATCH");
+  const assignedResponse = owner.page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/admin/assign-work") &&
+      response.request().method() === "PATCH",
+  );
   await owner.page
     .locator("form")
     .filter({
@@ -786,7 +952,7 @@ try {
     })
     .getByRole("button", { name: "Assign work", exact: true })
     .click();
-  assert.equal((await assignedResponse).status(),200);
+  assert.equal((await assignedResponse).status(), 200);
   await employee.page.goto(`${base}/admin/conversations`);
   await employee.page
     .getByText("New WhatsApp unassigned case", { exact: true })
@@ -807,37 +973,31 @@ try {
   const phone = "919888777666";
   const token = randomBytes(32).toString("hex");
   const hash = createHash("sha256").update(token).digest("hex");
-  await db
-    .doc(`customers/${newCustomer}`)
-    .set({
-      orgId,
-      name: "Linked WhatsApp Traveller",
-      phones: [`+${phone}`],
-      emails: [],
-      ownerUid: "smoke-sales",
-      whatsappRegistrationStatus: "registered",
-      communicationPreferences: { personalization: false },
-    });
-  await db
-    .doc("conversations/link-phone-proof")
-    .set({
-      orgId,
-      customerId: newCustomer,
-      channel: "whatsapp",
-      whatsappAddress: phone,
-      whatsappVerifiedUntil: new Date(Date.now() + 86400000).toISOString(),
-      whatsappIdentityAmbiguous: false,
-    });
-  await db
-    .doc(`whatsappAccountLinks/${hash}`)
-    .set({
-      orgId,
-      customerId: newCustomer,
-      conversationId: "link-phone-proof",
-      address: phone,
-      used: false,
-      expiresAt: new Date(Date.now() + 600000).toISOString(),
-    });
+  await db.doc(`customers/${newCustomer}`).set({
+    orgId,
+    name: "Linked WhatsApp Traveller",
+    phones: [`+${phone}`],
+    emails: [],
+    ownerUid: "smoke-sales",
+    whatsappRegistrationStatus: "registered",
+    communicationPreferences: { personalization: false },
+  });
+  await db.doc("conversations/link-phone-proof").set({
+    orgId,
+    customerId: newCustomer,
+    channel: "whatsapp",
+    whatsappAddress: phone,
+    whatsappVerifiedUntil: new Date(Date.now() + 86400000).toISOString(),
+    whatsappIdentityAmbiguous: false,
+  });
+  await db.doc(`whatsappAccountLinks/${hash}`).set({
+    orgId,
+    customerId: newCustomer,
+    conversationId: "link-phone-proof",
+    address: phone,
+    used: false,
+    expiresAt: new Date(Date.now() + 600000).toISOString(),
+  });
   await client.page.goto(`${base}/connect-whatsapp?token=${token}`);
   await client.page.getByRole("checkbox").check();
   await client.page
@@ -882,10 +1042,16 @@ try {
       .getByRole("heading", { name: "Your travel history", exact: true })
       .waitFor();
     assert.doesNotMatch(
-      await client.page.locator("main").innerText(),
+      await mainText(client.page),
       /AUDIT-PRIVATE-INVOICE|PRIVATE-ANTARCTICA|AUDIT-OTHER/,
     );
-    assert.equal(await client.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`Mobile history overflow: ${kind}`);
+    assert.equal(
+      await client.page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth + 1,
+      ),
+      false,
+      `Mobile history overflow: ${kind}`,
+    );
   }
   assert.deepEqual(errors, []);
   await (

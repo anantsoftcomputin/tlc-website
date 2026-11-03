@@ -29,19 +29,20 @@ export default async function ManagementPage() {
           <p className="eyebrow">Management intelligence</p>
           <h1>Business performance</h1>
           <p>
-            Pre-aggregated daily KPIs and current-month staff performance in
-            India Standard Time.
+            Daily snapshots and current-month staff performance in India
+            Standard Time. Booking value and gross profit include approved INR
+            bookings; review other currencies in Finance.
           </p>
         </div>
         <span className="admin-count">
           <Activity />
-          {today ? `Updated ${today.date}` : "Awaiting first refresh"}
+          {today ? `Daily snapshot: ${today.date}` : "Awaiting first refresh"}
         </span>
       </header>
       <section className="admin-metrics">
         <article className="admin-metric">
           <div>
-            <span>Today&apos;s enquiries</span>
+            <span>Snapshot enquiries</span>
             <strong>{today?.enquiries.toLocaleString("en-IN") || "0"}</strong>
             <small>{today?.leadsCreated || 0} leads created</small>
           </div>
@@ -63,7 +64,7 @@ export default async function ManagementPage() {
         </article>
         <article className="admin-metric">
           <div>
-            <span>Revenue</span>
+            <span>Approved booking value</span>
             <strong className="metric-money">
               {money.format(today?.revenue || 0)}
             </strong>

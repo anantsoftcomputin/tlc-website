@@ -254,6 +254,10 @@
   gap: 8px;
 }
 .cms-editor-layout {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 285px;
   gap: 15px;

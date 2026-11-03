@@ -74,6 +74,28 @@ function responseMinutes(lead: RecordDoc) {
     : undefined;
 }
 
+/** The INR performance report must never add foreign-currency or unapproved quote values. */
+export function reportingBookingValues(data: DocumentData) {
+  if (!data.approvedAt || data.totals?.currency !== "INR")
+    return { revenue: 0, gp: 0 };
+  const finite = (value: unknown) =>
+    Number.isFinite(Number(value)) ? Number(value) : 0;
+  return {
+    revenue: finite(data.profitability?.revenue ?? data.totals?.sell ?? 0),
+    gp: finite(data.profitability?.gp ?? data.totals?.gp ?? 0),
+  };
+}
+export function performanceOwner(booking: DocumentData, lead?: DocumentData) {
+  return String(
+    lead?.assignedUid ||
+      lead?.assignedTo ||
+      booking.assignedUid ||
+      booking.assignedTo ||
+      booking.createdBy ||
+      "",
+  );
+}
+
 async function rebuildOrganization(
   orgId: string,
   actorUid: string,
@@ -104,18 +126,15 @@ async function rebuildOrganization(
     (item) =>
       !["draft", "rejected", "expired"].includes(String(item.data().status)),
   );
-  const dayRevenue = dayBookings.reduce(
-    (sum, item) =>
-      sum +
-      Number(
-        item.data().profitability?.revenue ?? item.data().totals?.sell ?? 0,
-      ),
+  const approvedDayBookings = dayBookings.filter((item) =>
+    Boolean(item.data().approvedAt),
+  );
+  const dayRevenue = approvedDayBookings.reduce(
+    (sum, item) => sum + reportingBookingValues(item.data()).revenue,
     0,
   );
-  const dayGp = dayBookings.reduce(
-    (sum, item) =>
-      sum +
-      Number(item.data().profitability?.gp ?? item.data().totals?.gp ?? 0),
+  const dayGp = approvedDayBookings.reduce(
+    (sum, item) => sum + reportingBookingValues(item.data()).gp,
     0,
   );
   const responseTimes = dayLeads
@@ -132,7 +151,8 @@ async function rebuildOrganization(
       enquiries: dayInquiries.length,
       leadsCreated: dayLeads.length,
       quotesSent: activeDayQuotes.length,
-      bookings: dayBookings.length,
+      bookings: approvedDayBookings.length,
+      currency: "INR",
       revenue: dayRevenue,
       gp: dayGp,
       avgResponseMinutes: responseTimes.length
@@ -140,7 +160,7 @@ async function rebuildOrganization(
           responseTimes.length
         : 0,
       conversionPct: dayLeads.length
-        ? Math.min(100, (dayBookings.length / dayLeads.length) * 100)
+        ? Math.min(100, (approvedDayBookings.length / dayLeads.length) * 100)
         : 0,
       generatedAt,
       createdAt: previousDaily.data()?.createdAt || generatedAt,
@@ -155,14 +175,40 @@ async function rebuildOrganization(
     monthQuotes.map((quote) => [quote.id, String(quote.data().leadId || "")]),
   );
   const leadById = new Map(monthLeads.map((lead) => [lead.id, lead]));
+  const previousLeadIds = [
+    ...new Set(
+      monthBookings
+        .map((booking) =>
+          String(
+            booking.data().leadId ||
+              quoteToLead.get(String(booking.data().quoteId)) ||
+              "",
+          ),
+        )
+        .filter((id) => id && !leadById.has(id)),
+    ),
+  ];
+  for (let offset = 0; offset < previousLeadIds.length; offset += 100) {
+    const linked = await database.getAll(
+      ...previousLeadIds
+        .slice(offset, offset + 100)
+        .map((id) => database.collection("leads").doc(id)),
+    );
+    for (const lead of linked)
+      if (lead.exists && lead.data()?.orgId === orgId)
+        leadById.set(lead.id, lead as RecordDoc);
+  }
   const bookingsByUid = new Map<string, RecordDoc[]>();
   for (const booking of monthBookings) {
+    if (!booking.data().approvedAt) continue;
     const lead = leadById.get(
-      quoteToLead.get(String(booking.data().quoteId)) || "",
+      String(
+        booking.data().leadId ||
+          quoteToLead.get(String(booking.data().quoteId)) ||
+          "",
+      ),
     );
-    const uid = String(
-      lead?.data().assignedUid || booking.data().createdBy || "",
-    );
+    const uid = performanceOwner(booking.data(), lead?.data());
     if (uid)
       bookingsByUid.set(uid, [...(bookingsByUid.get(uid) || []), booking]);
   }
@@ -170,24 +216,19 @@ async function rebuildOrganization(
   for (const user of users.docs) {
     const uid = user.id;
     const leads = monthLeads.filter(
-      (lead) => String(lead.data().assignedUid || "") === uid,
+      (lead) =>
+        String(lead.data().assignedUid || lead.data().assignedTo || "") === uid,
     );
     const bookings = bookingsByUid.get(uid) || [];
     const times = leads
       .map(responseMinutes)
       .filter((value): value is number => value !== undefined);
     const revenue = bookings.reduce(
-      (sum, item) =>
-        sum +
-        Number(
-          item.data().profitability?.revenue ?? item.data().totals?.sell ?? 0,
-        ),
+      (sum, item) => sum + reportingBookingValues(item.data()).revenue,
       0,
     );
     const gp = bookings.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.data().profitability?.gp ?? item.data().totals?.gp ?? 0),
+      (sum, item) => sum + reportingBookingValues(item.data()).gp,
       0,
     );
     const target = Number(
@@ -202,6 +243,7 @@ async function rebuildOrganization(
         uid,
         staffName: String(user.data().displayName || user.data().email || uid),
         month,
+        currency: "INR",
         leadsAssigned: leads.length,
         firstResponseMedianMinutes: median(times),
         conversionPct: leads.length
