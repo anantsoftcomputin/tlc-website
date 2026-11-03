@@ -4,11 +4,46 @@ import { chromium } from "@playwright/test";
 const origin =
   process.env.APP_CHECK_TEST_ORIGIN || "https://tlcweb.netlify.app";
 const browser = await chromium.launch({ headless: true });
+const diagnostics = [];
+const diagnosticPending = [];
 try {
   const context = await browser.newContext({
     viewport: { width: 1365, height: 1000 },
   });
   const page = await context.newPage();
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (/recaptcha|firebaseappcheck/.test(url.hostname + url.pathname))
+      diagnostics.push({
+        request: url.hostname + url.pathname,
+        status: response.status(),
+      });
+    if (
+      url.hostname.endsWith("firebaseappcheck.googleapis.com") &&
+      response.status() >= 400
+    )
+      diagnosticPending.push(
+        response
+          .json()
+          .then((body) =>
+            diagnostics.push({
+              service: "Firebase App Check",
+              status: response.status(),
+              message: body.error?.message,
+              details: body.error?.details,
+            }),
+          )
+          .catch(() => {}),
+      );
+  });
+  page.on("console", (message) => {
+    if (message.type() === "error" || message.type() === "warning") {
+      const codes = message
+        .text()
+        .match(/appCheck\/[a-z-]+|app-check\/[a-z-]+|recaptcha[^\n]{0,100}/gi);
+      if (codes) diagnostics.push({ browser: codes.join("; ") });
+    }
+  });
   let resolveToken, rejectToken;
   const tokenReady = new Promise((resolve, reject) => {
     resolveToken = resolve;
@@ -121,7 +156,9 @@ try {
     }),
   );
 } catch (error) {
+  await Promise.allSettled(diagnosticPending);
   console.error(error.message);
+  if (diagnostics.length) console.error(JSON.stringify(diagnostics));
   process.exitCode = 1;
 } finally {
   await browser.close();

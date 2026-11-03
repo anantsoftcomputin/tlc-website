@@ -49,13 +49,50 @@ const site = netlify("getSite", { site_id: siteId });
 if (site.name !== "tlcweb") throw new Error("Unexpected Netlify site.");
 const providerUrl = `https://firebaseappcheck.googleapis.com/v1/projects/${projectNumber}/apps/${appId}/recaptchaEnterpriseConfig`;
 if (!process.argv.includes("--apply")) {
-  const provider = await call(providerUrl);
+  const [provider, appApi, recaptchaApi, policy] = await Promise.all([
+    call(providerUrl),
+    call(
+      `https://serviceusage.googleapis.com/v1/projects/${projectNumber}/services/firebaseappcheck.googleapis.com`,
+    ),
+    call(
+      `https://serviceusage.googleapis.com/v1/projects/${projectNumber}/services/recaptchaenterprise.googleapis.com`,
+    ),
+    call(
+      `https://cloudresourcemanager.googleapis.com/v1/projects/${project}:getIamPolicy`,
+      "POST",
+      { options: { requestedPolicyVersion: 3 } },
+    ),
+  ]);
+  const env = netlify("getEnvVars", {
+    account_id: site.account_id,
+    site_id: siteId,
+  });
+  const value = (key) => {
+    const entries = env.find((item) => item.key === key)?.values || [];
+    return (
+      entries.find((entry) => entry.context === "production") ||
+      entries.find((entry) => entry.context === "all")
+    )?.value;
+  };
+  const member = `serviceAccount:service-${projectNumber}@gcp-sa-firebaseappcheck.iam.gserviceaccount.com`;
   console.log(
     JSON.stringify({
       project,
       site: site.name,
       provider: "recaptcha-enterprise",
       keyConfigured: !!provider.siteKey,
+      appCheckApiEnabled: appApi.state === "ENABLED",
+      recaptchaApiEnabled: recaptchaApi.state === "ENABLED",
+      serviceAgentConfigured: policy.bindings?.some(
+        (binding) =>
+          binding.role === "roles/firebaseappcheck.serviceAgent" &&
+          !binding.condition &&
+          binding.members?.includes(member),
+      ),
+      productionEnvironmentVerified:
+        value("NEXT_PUBLIC_APP_CHECK_PROVIDER") === "recaptcha-enterprise" &&
+        value("NEXT_PUBLIC_APP_CHECK_SITE_KEY") === provider.siteKey &&
+        value("APP_CHECK_ENFORCEMENT") === "required",
       apply: false,
     }),
   );
@@ -71,12 +108,16 @@ await writeFile(
   JSON.stringify({ provider: previous, environment: envBefore }),
   { mode: 0o600 },
 );
-const services = await call(
-  `https://serviceusage.googleapis.com/v1/projects/${projectNumber}/services/recaptchaenterprise.googleapis.com`,
-);
-if (services.state !== "ENABLED") {
+for (const service of [
+  "firebaseappcheck.googleapis.com",
+  "recaptchaenterprise.googleapis.com",
+]) {
+  const services = await call(
+    `https://serviceusage.googleapis.com/v1/projects/${projectNumber}/services/${service}`,
+  );
+  if (services.state === "ENABLED") continue;
   const operation = await call(
-    `https://serviceusage.googleapis.com/v1/projects/${projectNumber}/services/recaptchaenterprise.googleapis.com:enable`,
+    `https://serviceusage.googleapis.com/v1/projects/${projectNumber}/services/${service}:enable`,
     "POST",
     {},
   );
@@ -89,10 +130,60 @@ if (services.state !== "ENABLED") {
   }
   if (!status.done)
     throw new Error(
-      "reCAPTCHA API enablement is still pending; rerun this command shortly.",
+      `${service} enablement is still pending; rerun this command shortly.`,
     );
   if (status.error) throw new Error(status.error.message);
 }
+// App Check needs its service agent to call the attestation provider.
+const iamUrl = `https://cloudresourcemanager.googleapis.com/v1/projects/${project}`;
+const iam = await call(iamUrl + ":getIamPolicy", "POST", {
+  options: { requestedPolicyVersion: 3 },
+});
+const agent = `service-${projectNumber}@gcp-sa-firebaseappcheck.iam.gserviceaccount.com`,
+  member = `serviceAccount:${agent}`,
+  role = "roles/firebaseappcheck.serviceAgent";
+if (
+  !iam.bindings?.some(
+    (binding) =>
+      binding.role === role &&
+      !binding.condition &&
+      binding.members?.includes(member),
+  )
+) {
+  const identity = await call(
+    `https://serviceusage.googleapis.com/v1beta1/projects/${projectNumber}/services/firebaseappcheck.googleapis.com:generateServiceIdentity`,
+    "POST",
+    {},
+  );
+  if (identity.response?.email && identity.response.email !== agent)
+    throw new Error("Unexpected App Check service agent.");
+  await writeFile(
+    `/tmp/${project}-iam-before-app-check.json`,
+    JSON.stringify(iam),
+    { mode: 0o600 },
+  );
+  const binding = iam.bindings?.find(
+    (binding) => binding.role === role && !binding.condition,
+  );
+  if (binding) binding.members = [...(binding.members || []), member];
+  else (iam.bindings ||= []).push({ role, members: [member] });
+  await call(iamUrl + ":setIamPolicy", "POST", {
+    policy: iam,
+    updateMask: "bindings,etag",
+  });
+}
+const verifiedIam = await call(iamUrl + ":getIamPolicy", "POST", {
+  options: { requestedPolicyVersion: 3 },
+});
+if (
+  !verifiedIam.bindings?.some(
+    (binding) =>
+      binding.role === role &&
+      !binding.condition &&
+      binding.members?.includes(member),
+  )
+)
+  throw new Error("App Check service-agent verification failed.");
 const keys = await call(
   `https://recaptchaenterprise.googleapis.com/v1/projects/${project}/keys`,
 );

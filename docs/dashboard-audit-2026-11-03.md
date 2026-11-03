@@ -29,7 +29,7 @@ Browser and mutation tests use isolated Firebase emulators and synthetic records
 
 ## Production limitations
 
-1. **App Check setup completed in the subsequent CLI configuration.** A domain-restricted reCAPTCHA Enterprise key is registered for the website, the browser integration obtains App Check tokens, and production deployment settings require verification. Existing callable-Function enforcement remains enabled. This resolves the missing website-key configuration identified in the audit.
+1. **App Check setup completed in the subsequent CLI configuration.** A domain-restricted reCAPTCHA Enterprise key is registered for the website, the browser integration obtains App Check tokens, and production deployment settings require verification. Existing callable-Function enforcement remains enabled. Live probes confirmed that browser tokens are generated and accepted by the website and callable Functions, while missing/invalid tokens are rejected and staff authentication is still required. No production client records were created by those probes. This resolves the missing website-key configuration identified in the audit.
 2. **Live TBO inventory credentials are absent from the deployed search Functions.** Their live supplier searches and booking flow require provider configuration and verification.
 3. **Outbound email and WhatsApp are disabled and have no provider secret bindings on the delivery Functions.** Real delivery remains unavailable until those integrations are configured and verified.
 4. Real payment-provider transactions were not performed. Integration tests verify the application's payment and finance behavior using controlled fixtures.
