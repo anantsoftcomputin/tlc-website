@@ -5,6 +5,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 import { bookingStatus, bookingTimeline, commerceActor, commerceAudit } from "./commerce-command.js";
 import { runFinanceTransaction } from "./finance-transaction.js";
+import { hotelGuestRooms, hotelIdentityComplete, hotelIdentityRequirements, hotelIdentitySchema } from "./hotel-guests.js";
 import { flightKey } from "./quote-inventory.js";
 import { onCall } from "./secure-call.js";
 import { tboExchangeSink } from "./tbo-logs.js";
@@ -23,6 +24,8 @@ const inputSchema = z.object({
   acceptCost: z.number().finite().positive().optional(),
   /** Staff confirm they checked TBO after an uncertain earlier attempt. */
   confirmNoDuplicate: z.boolean().optional(),
+  /** PAN, passport and transport details a TBO hotel rate demands. Used for this call only; never stored. */
+  hotelIdentity: hotelIdentitySchema.optional(),
 });
 
 export function travellerType(dob: string, travelDate: string): FlightTraveller["type"] {
@@ -46,7 +49,7 @@ export function priceDecision(planned: number, current: number, tolerancePct: nu
   return { ok: false as const, variance: Math.round(increase * 100) / 100 };
 }
 
-const uncertain = (error: unknown) => error instanceof Error && /timeout|aborted|network|fetch failed|ECONNRESET|socket/i.test(`${error.message} ${(error as { cause?: { code?: string } }).cause?.code || ""}`);
+const uncertain = (error: unknown) => error instanceof Error && /timeout|aborted|network|fetch failed|ECONNRESET|socket|outcome is unknown|requires review|evidence persistence/i.test(`${error.message} ${(error as { cause?: { code?: string } }).cause?.code || ""}`);
 
 /**
  * Books an approved booking item with TBO. Fare and room sessions expire within minutes,
@@ -58,7 +61,7 @@ export const fulfilSupplierItem = onCall({ region, timeoutSeconds: 300, memory: 
   if (!identity.manager) throw new HttpsError("permission-denied", "A manager must approve supplier bookings.");
   const parsed = inputSchema.safeParse(request.data);
   if (!parsed.success) throw new HttpsError("invalid-argument", "Supplier booking request is invalid.");
-  const { bookingId, itemId, acceptCost, confirmNoDuplicate } = parsed.data;
+  const { bookingId, itemId, acceptCost, confirmNoDuplicate, hotelIdentity } = parsed.data;
   const db = getFirestore();
   const ref = db.collection("bookings").doc(bookingId);
   const startedAt = new Date().toISOString();
@@ -77,7 +80,7 @@ export const fulfilSupplierItem = onCall({ region, timeoutSeconds: 300, memory: 
     const fulfilment = found.fulfilment || {};
     if (fulfilment.status === "booking" && Date.now() - Date.parse(String(fulfilment.startedAt)) < lockMs)
       throw new HttpsError("aborted", "A supplier booking for this item is already in progress.");
-    if (fulfilment.status === "unknown" && !confirmNoDuplicate)
+    if ((fulfilment.status === "unknown" || fulfilment.status === "booking") && !confirmNoDuplicate)
       throw new HttpsError("failed-precondition", "The last attempt may have reached TBO. Check the TBO portal for this booking before retrying.", { code: "check-supplier" });
     const items = current.items.map((entry) => (entry.id === itemId ? { ...entry, fulfilment: { status: "booking", startedAt, by: identity.uid } } : entry));
     transaction.update(ref, { items, updatedAt: startedAt, updatedBy: identity.uid });
@@ -111,7 +114,7 @@ export const fulfilSupplierItem = onCall({ region, timeoutSeconds: 300, memory: 
     });
   };
 
-  const registry = new CommerceProviderRegistry({ onTboExchange: tboExchangeSink() });
+  const registry = new CommerceProviderRegistry({ onTboExchange: tboExchangeSink({ runId: `booking-${bookingId}`, caseId: `${itemId}-${startedAt}` }) });
   const raw = (item.raw || {}) as Identity;
   const original = (raw.request || {}) as Record<string, unknown>;
   const organization = await db.collection("orgs").doc(identity.orgId).get();
@@ -157,25 +160,20 @@ export const fulfilSupplierItem = onCall({ region, timeoutSeconds: 300, memory: 
       const provider = registry.hotel("tbo-hotel") as TboHotelProvider;
       provider.rememberHotels([{ hotelCode: String(raw.hotelCode), name: String(raw.hotelName || ""), starRating: 0 }]);
       const rooms = Array.isArray(original.rooms) && original.rooms.length ? (original.rooms as { adults: number; childrenAges?: number[] }[]) : [{ adults: Math.max(1, item.pax.adults) }];
-      const search = await provider.search({ destination: String(original.destination || ""), checkIn: item.dates.start, checkOut: item.dates.end, rooms, hotelCodes: [String(raw.hotelCode)] });
+      const search = await provider.search({ destination: String(original.destination || ""), checkIn: item.dates.start, checkOut: item.dates.end, rooms, guestNationality: String(original.guestNationality || "IN"), hotelCodes: [String(raw.hotelCode)] });
       const candidates = search.data.filter((offer: HotelOffer) => offer.roomName === raw.roomName && offer.mealPlan === raw.mealPlan && offer.refundable === Boolean(raw.refundable));
       const match = candidates[0];
       if (!match) throw new HttpsError("failed-precondition", "The quoted room is no longer available with TBO. Search again and revise the quote.");
       const prebook = await provider.availability(match.offerId);
       const decision = priceDecision(item.costPrice, prebook.data.price.total, tolerancePct, acceptCost);
       if (!decision.ok) throw new HttpsError("failed-precondition", `TBO now prices this room at ${item.currency} ${prebook.data.price.total} (planned ${item.costPrice}).`, { code: "price-changed", currentCost: prebook.data.price.total, plannedCost: item.costPrice });
-      // Spread guests across rooms in the order the original search requested them.
-      const guests = travellers.map((traveller, index) => ({ title: traveller.title, firstName: traveller.firstName, lastName: traveller.lastName, type: traveller.type === "adult" ? ("adult" as const) : ("child" as const), age: traveller.type === "adult" ? 30 : Math.max(0, new Date(item.dates.start).getUTCFullYear() - new Date(traveller.dob).getUTCFullYear()), lead: index === 0, email: index === 0 ? contactEmail : undefined, phone: index === 0 ? contactPhone : undefined }));
-      const perRoom: (typeof guests)[] = rooms.map(() => []);
-      const adults = guests.filter((guest) => guest.type === "adult");
-      const children = guests.filter((guest) => guest.type === "child");
-      rooms.forEach((room, roomIndex) => {
-        perRoom[roomIndex].push(...adults.splice(0, Math.max(1, room.adults)));
-        perRoom[roomIndex].push(...children.splice(0, room.childrenAges?.length || 0));
-      });
-      perRoom[0].push(...adults, ...children);
-      perRoom.forEach((room) => room.forEach((guest, index) => (guest.lead = index === 0)));
-      const booked = await provider.book({ offerId: match.offerId, guestNames: [], guests: perRoom.filter((room) => room.length), netAmount: prebook.data.details?.netAmount, idempotencyKey: `${bookingId}-${itemId}`, approvedBy: identity.uid });
+      // Some rates need PAN, passport or transport details. Ask staff for exactly those before booking.
+      const requirements = hotelIdentityRequirements(prebook.data.details?.validationInfo);
+      if (requirements && !hotelIdentityComplete(requirements, booking.travellers.map((traveller) => traveller.id), hotelIdentity))
+        throw new HttpsError("failed-precondition", "TBO needs traveller identity details for this rate. Enter them to continue.", { code: "identity-required", requirements });
+      const guests = hotelGuestRooms(booking.travellers, rooms, item.dates.start, { email: contactEmail, phone: contactPhone }, hotelIdentity);
+      const booked = await provider.book({ offerId: match.offerId, guestNames: [], guests: guests.rooms, extras: guests.extras, nationality: String(original.guestNationality || "IN"), netAmount: prebook.data.details?.netAmount, idempotencyKey: `${bookingId}-${itemId}`, approvedBy: identity.uid });
+      if (booked.data.status !== "confirmed") throw new Error("TBO booking outcome is unknown or pending. Reconcile Get Booking Details before retrying.");
       supplierCost = prebook.data.price.total;
       pnr = booked.data.supplierConfirmation;
       bookingRef = booked.data.bookingRef;

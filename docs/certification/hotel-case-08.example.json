@@ -1,0 +1,72 @@
+{
+  "caseId": "case-08",
+  "countryCode": "AE",
+  "cityName": "Dubai",
+  "approvedBy": "user-authorized-certification",
+  "search": {
+    "destination": "Dubai",
+    "checkIn": "2026-12-28",
+    "checkOut": "2026-12-30",
+    "guestNationality": "IN",
+    "rooms": [
+      {
+        "adults": 1,
+        "childrenAges": [
+          6,
+          9
+        ]
+      },
+      {
+        "adults": 2,
+        "childrenAges": []
+      }
+    ]
+  },
+  "guests": [
+    [
+      {
+        "title": "Mr",
+        "firstName": "Arun",
+        "lastName": "Testguest",
+        "type": "adult",
+        "lead": true,
+        "email": "test@example.com",
+        "phone": "9999999999"
+      },
+      {
+        "title": "Miss",
+        "firstName": "Bina",
+        "lastName": "Testguest",
+        "type": "child",
+        "age": 6,
+        "lead": false
+      },
+      {
+        "title": "Miss",
+        "firstName": "Cina",
+        "lastName": "Testguest",
+        "type": "child",
+        "age": 9,
+        "lead": false
+      }
+    ],
+    [
+      {
+        "title": "Mr",
+        "firstName": "Karan",
+        "lastName": "Testguest",
+        "type": "adult",
+        "lead": true,
+        "email": "test@example.com",
+        "phone": "9999999999"
+      },
+      {
+        "title": "Mr",
+        "firstName": "Rohan",
+        "lastName": "Testguest",
+        "type": "adult",
+        "lead": false
+      }
+    ]
+  ]
+}

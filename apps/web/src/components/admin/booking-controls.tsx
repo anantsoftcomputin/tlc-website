@@ -13,6 +13,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getFirebaseFunctions } from "@/lib/firebase/client";
+import {
+  HotelIdentityForm,
+  type HotelIdentityRequirements,
+} from "./hotel-identity-form";
 
 function message(error: unknown) {
   return error instanceof Error
@@ -56,7 +60,14 @@ export function BookingControls({
         currentCost: number;
         plannedCost: number;
       }
-    | { itemId: string; kind: "check" };
+    | { itemId: string; kind: "check" }
+    | {
+        itemId: string;
+        kind: "identity";
+        requirements: HotelIdentityRequirements;
+        /** Choices already made in this attempt, such as an accepted price. */
+        extra: Record<string, unknown>;
+      };
   const [supplierPrompt, setSupplierPrompt] = useState<SupplierPrompt>();
   const [supplierNotice, setSupplierNotice] = useState<string>();
   async function bookWithSupplier(
@@ -92,6 +103,7 @@ export function BookingControls({
             code?: string;
             currentCost?: number;
             plannedCost?: number;
+            requirements?: HotelIdentityRequirements;
           };
         }
       ).details;
@@ -104,6 +116,16 @@ export function BookingControls({
         });
       else if (details?.code === "check-supplier")
         setSupplierPrompt({ itemId, kind: "check" });
+      else if (details?.code === "identity-required" && details.requirements) {
+        const kept = { ...extra };
+        delete kept.hotelIdentity;
+        setSupplierPrompt({
+          itemId,
+          kind: "identity",
+          requirements: details.requirements,
+          extra: kept,
+        });
+      }
       setError(message(caught));
       router.refresh();
     } finally {
@@ -358,6 +380,20 @@ export function BookingControls({
                                 Accept and book
                               </button>
                             </div>
+                          )}
+                        {supplierPrompt?.itemId === item.id &&
+                          supplierPrompt.kind === "identity" && (
+                            <HotelIdentityForm
+                              travellers={booking.travellers}
+                              requirements={supplierPrompt.requirements}
+                              busy={Boolean(busy)}
+                              onSubmit={(hotelIdentity) =>
+                                bookWithSupplier(item.id, {
+                                  ...supplierPrompt.extra,
+                                  hotelIdentity,
+                                })
+                              }
+                            />
                           )}
                         {(supplierPrompt?.itemId === item.id &&
                           supplierPrompt.kind === "check") ||

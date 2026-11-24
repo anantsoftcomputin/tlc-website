@@ -1,5 +1,7 @@
 **TLC Travel OS — project study, 6 October 2026**
 
+> Historical snapshot. Many findings below have since been fixed. Current status is in [REMAINING_GAPS.md](./REMAINING_GAPS.md) and [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 This study describes the current working tree, including its substantial uncommitted changes, rather than just the latest commit (`e8a1dfc`). It combines source inspection, documentation comparison, fresh automated verification, and local public-page checks. Application source was not changed. Provider credentials, production data, deployed configuration, and live commercial integrations were not inspected or exercised.
 
 **What the product does**

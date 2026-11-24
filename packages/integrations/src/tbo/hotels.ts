@@ -1,5 +1,7 @@
 import { sourced, systemProviderClock, type ProviderClock } from "../common.js";
 import type { HotelBooking, HotelOffer, HotelProvider, HotelSearchRequest } from "../hotels/index.js";
+import { validateHotelGuests, type TboValidationInfo, type TboGuest, type TboBookingExtras } from "./hotel-validation.js";
+export type { TboGuest } from "./hotel-validation.js";
 import { TboClient, TboError } from "./client.js";
 import type { TboConfig } from "./config.js";
 
@@ -19,7 +21,7 @@ type TboRoom = {
   LastCancellationDeadline?: string;
 };
 type TboHotelResult = { HotelCode: string; Currency: string; Rooms?: TboRoom[] };
-type TboSearchResponse = { Status?: { Code?: number; Description?: string }; HotelResult?: TboHotelResult[]; RateConditions?: string[] };
+type TboSearchResponse = { Status?: { Code?: number; Description?: string }; HotelResult?: TboHotelResult[]; RateConditions?: string[]; ValidationInfo?: TboValidationInfo };
 
 const maxCodesPerSearch = 100;
 const offerLifetimeMs = 15 * 60_000;
@@ -88,8 +90,6 @@ export function mapTboRoom(
   };
 }
 
-export type TboGuest = { title: string; firstName: string; lastName: string; type: "adult" | "child"; age?: number; lead?: boolean; pan?: string; passportNo?: string; email?: string; phone?: string };
-
 /**
  * TBO hotel adapter. Search and prebook use the agency API login (HTTP Basic); booking
  * detail and change requests use the shared daily TokenId. A search needs hotel codes,
@@ -98,6 +98,7 @@ export type TboGuest = { title: string; firstName: string; lastName: string; typ
 export class TboHotelProvider implements HotelProvider {
   readonly key = "tbo-hotel";
   readonly client: TboClient;
+  private readonly occupancy = new Map<string, HotelSearchRequest["rooms"]>();
   private readonly names = new Map<string, { name: string; starRating: number }>();
 
   constructor(config: TboConfig, private readonly clock: ProviderClock = systemProviderClock, client?: TboClient) {
@@ -144,6 +145,7 @@ export class TboHotelProvider implements HotelProvider {
           for (const room of hotel.Rooms || []) offers.push(mapTboRoom(hotel, room, request, this.names, this.clock()));
       }
     }
+    for (const offer of offers) this.occupancy.set(offer.offerId, structuredClone(request.rooms));
     offers.sort((a, b) => a.price.total - b.price.total);
     return sourced(offers, this.key, this.clock);
   }
@@ -153,14 +155,15 @@ export class TboHotelProvider implements HotelProvider {
     const result = await this.client.post<TboSearchResponse>(this.client.config.urls.hotelPreBook, { BookingCode: offerId, PaymentMode: "Limit" }, "api");
     if (result.Status?.Code !== 200) throw new TboError(`TBO prebook: ${result.Status?.Description || "room is no longer available"}.`, result.Status?.Code);
     const hotel = result.HotelResult?.[0];
-    const room = hotel?.Rooms?.find((item) => item.BookingCode === offerId) || hotel?.Rooms?.[0];
+    const room = hotel?.Rooms?.find((item) => item.BookingCode === offerId);
     if (!hotel || !room) throw new TboError("TBO prebook returned no room. Search again.");
     // Stay dates are not echoed by PreBook; the caller's cached offer keeps them.
     const offer = mapTboRoom(hotel, room, { checkIn: "", checkOut: "", destination: "" }, this.names, this.clock(), result.RateConditions || []);
+    offer.details = { ...offer.details, ...(result.ValidationInfo ? { validationInfo: result.ValidationInfo } : {}) };
     return sourced(offer, this.key, this.clock);
   }
 
-  async book(request: Parameters<HotelProvider["book"]>[0] & { guests?: TboGuest[][]; netAmount?: number; nationality?: string }) {
+  async book(request: Parameters<HotelProvider["book"]>[0] & { guests?: TboGuest[][]; netAmount?: number; nationality?: string; isVoucherBooking?: boolean; extras?: TboBookingExtras }) {
     if (!request.approvedBy) throw new TboError("Human approval is required to book.");
     const prebook = await this.availability(request.offerId);
     const rooms: TboGuest[][] = request.guests?.length
@@ -172,49 +175,121 @@ export class TboHotelProvider implements HotelProvider {
           const guest: TboGuest = { title: titled ? title : "Mr", firstName: parts[0] || "Guest", lastName: parts.slice(1).join(" ") || parts[0] || "Guest", type: "adult", lead: index === 0 };
           return guest;
         })];
-    const result = await this.client.post<{ BookResult?: { ResponseStatus?: number; Error?: { ErrorCode: number; ErrorMessage: string }; HotelBookingStatus?: string; ConfirmationNo?: string; BookingRefNo?: string; BookingId?: number; IsPriceChanged?: boolean; TraceId?: string } }>(
+    const searchedRooms = this.occupancy.get(request.offerId);
+    if (searchedRooms && (searchedRooms.length !== rooms.length || rooms.some((guests, index) => {
+      const searched = searchedRooms[index];
+      return guests.filter(guest => guest.type === "adult").length !== searched.adults || guests.filter(guest => guest.type === "child").map(guest => guest.age).sort().join() !== [...(searched.childrenAges || [])].sort().join();
+    }))) throw new TboError("Booking passengers must match the searched room occupancy and child ages.");
+    const validation = validateHotelGuests(prebook.data.details?.validationInfo, rooms, request.extras);
+    const netAmount = prebook.data.details?.netAmount;
+    if (!Number.isFinite(netAmount) || netAmount! <= 0) throw new TboError("PreBook must provide a valid NetAmount before booking.");
+    if (request.netAmount !== undefined && Math.abs(request.netAmount - netAmount!) > 0.01) throw new TboError("PreBook amount changed. Review the new amount before booking.");
+    if (request.isVoucherBooking === false && (!prebook.data.refundable || !prebook.data.cancellationDeadline || Date.parse(prebook.data.cancellationDeadline) <= this.clock().getTime())) throw new TboError("Hold requires a refundable rate with a future cancellation deadline.");
+    let result: { BookResult?: TboBookingResult };
+    try {
+      result = await this.client.post<{ BookResult?: TboBookingResult }>(
       this.client.config.urls.hotelBook,
       {
         BookingCode: request.offerId,
-        IsVoucherBooking: true,
+        IsVoucherBooking: request.isVoucherBooking ?? true,
+        IsCorporate: validation.isCorporate,
+        IsPackageFare: validation.packageFare,
+        ...(request.extras?.arrivalTransport ? { ArrivalTransport: { ArrivalTransportType: request.extras.arrivalTransport.type, TransportInfoId: request.extras.arrivalTransport.infoId, Time: request.extras.arrivalTransport.time } } : {}),
+        ...(request.extras?.departureTransport ? { DepartureTransport: { DepartureTransportType: request.extras.departureTransport.type, TransportInfoId: request.extras.departureTransport.infoId, Time: request.extras.departureTransport.time } } : {}),
         GuestNationality: request.nationality || "IN",
         EndUserIp: this.client.config.endUserIp,
         RequestedBookingMode: 5,
-        NetAmount: request.netAmount ?? prebook.data.details?.netAmount ?? prebook.data.price.total,
+        NetAmount: netAmount,
         ClientReferenceId: request.idempotencyKey.slice(0, 50),
         HotelRoomsDetails: rooms.map((guests) => ({
           HotelPassenger: guests.map((guest, index) => ({
             Title: guest.title, FirstName: guest.firstName, MiddleName: "", LastName: guest.lastName,
             Email: guest.email ?? null, PaxType: guest.type === "child" ? 2 : 1, LeadPassenger: guest.lead ?? index === 0,
-            Age: guest.age ?? 0, PassportNo: guest.passportNo ?? null, PassportIssueDate: null, PassportExpDate: null,
-            Phoneno: guest.phone ?? null, PaxId: 0, PAN: guest.pan ?? null,
+            Age: guest.age ?? 0, PassportNo: guest.passportNo ?? null, PassportIssueDate: guest.passportIssueDate ?? null, PassportExpDate: guest.passportExpDate ?? null,
+            Phoneno: guest.phone ?? null, PaxId: 0, PAN: guest.pan?.trim().toUpperCase() ?? null,
+            ...(!guest.pan && guest.guardian ? { GuardianDetail: { Title: guest.guardian.title, FirstName: guest.guardian.firstName, LastName: guest.guardian.lastName, PAN: guest.guardian.pan.trim().toUpperCase() } } : {}),
+            ...(guest.gst ? { GSTCompanyAddress: guest.gst.companyAddress, GSTCompanyContactNumber: guest.gst.companyContactNumber, GSTCompanyName: guest.gst.companyName, GSTNumber: guest.gst.number, GSTCompanyEmail: guest.gst.companyEmail } : {}),
           })),
         })),
       },
       "api",
     );
+    } catch (error) {
+      // Never resend Book on an uncertain transport result. Recover by the booking-code trace.
+      const traceId = traceFromBookingCode(request.offerId);
+      try {
+        const recovered = await this.getBookingDetails({ traceId }, request.offerId);
+        if (error instanceof TboError && error.code === "EVIDENCE_PERSISTENCE") throw error;
+        return recovered;
+      } catch {
+        throw new TboError("TBO booking outcome is unknown. Reconcile Get Booking Details before retrying.", "UNKNOWN_BOOKING", traceId);
+      }
+    }
     const booked = result.BookResult;
     if (!booked || booked.ResponseStatus !== 1 || booked.Error?.ErrorCode)
       throw new TboError(`TBO hotel book: ${booked?.Error?.ErrorMessage || "booking failed"}.`, booked?.Error?.ErrorCode, booked?.TraceId);
-    if (booked.IsPriceChanged) throw new TboError("TBO reports the price changed during booking. Re-check the room before confirming.");
+    if (booked.IsPriceChanged || booked.IsCancellationPolicyChanged) throw new TboError("TBO booking requires review of changed prices or cancellation policies.", "UNKNOWN_BOOKING", booked.TraceId);
+    try {
+      return await this.getBookingDetails({ bookingId: booked.BookingId, traceId: booked.TraceId || traceFromBookingCode(request.offerId) }, request.offerId);
+    } catch {
+      throw new TboError("TBO booking outcome is unknown. Reconcile Get Booking Details before retrying.", "UNKNOWN_BOOKING", booked.TraceId);
+    }
+  }
+
+  async getBookingDetails(lookup: { bookingId?: number; traceId?: string; confirmationNo?: string; firstName?: string; lastName?: string }, offerId = "") {
+    const identity = lookup.bookingId && Number.isInteger(lookup.bookingId) && lookup.bookingId > 0 ? { BookingId: lookup.bookingId }
+      : lookup.confirmationNo && lookup.firstName && lookup.lastName ? { ConfirmationNo: lookup.confirmationNo, FirstName: lookup.firstName, LastName: lookup.lastName }
+      : lookup.traceId ? { TraceId: lookup.traceId } : undefined;
+    if (!identity) throw new TboError("Booking details require a booking ID, trace ID, or confirmation number with lead name.");
+    const response = await this.client.post<{ GetBookingDetailResult?: TboBookingResult }>(this.client.config.urls.hotelBookingDetail, { ...identity, EndUserIp: this.client.config.endUserIp, TokenId: await this.client.tokenId() });
+    const result = response.GetBookingDetailResult;
+    if (!result || result.ResponseStatus !== 1 || result.Error?.ErrorCode || !result.BookingId) throw new TboError(`TBO booking details: ${result?.Error?.ErrorMessage || "booking could not be verified"}.`);
+    if (result.IsPriceChanged || result.IsCancellationPolicyChanged || result.Status === 3) throw new TboError("TBO booking requires review of changed prices or cancellation policies.", "UNKNOWN_BOOKING", result.TraceId);
+    if (result.Status === 0 || result.HotelBookingStatus === "BookFailed") throw new TboError("TBO booking failed.");
     const booking: HotelBooking = {
-      bookingRef: String(booked.BookingId),
-      supplierConfirmation: booked.ConfirmationNo || booked.BookingRefNo || "",
-      offerId: request.offerId,
-      status: booked.HotelBookingStatus === "Confirmed" ? "confirmed" : "pending",
+      bookingRef: String(result.BookingId), supplierConfirmation: result.ConfirmationNo || result.BookingRefNo || "", offerId,
+      status: result.Status === 6 || result.HotelBookingStatus === "Cancelled" ? "cancelled"
+        : ["Confirmed", "Vouchered"].includes(result.HotelBookingStatus || "") ? "confirmed" : "pending",
     };
     return sourced(booking, this.key, this.clock);
   }
 
+  async generateVoucher(request: { bookingId: number; approvedBy: string }) {
+    if (!request.approvedBy || !Number.isInteger(request.bookingId) || request.bookingId <= 0) throw new TboError("Voucher requires approval and a valid booking ID.");
+    const result = await this.client.post<{ GenerateVoucherResult?: TboBookingResult }>(this.client.config.urls.hotelGenerateVoucher, { BookingId: request.bookingId, EndUserIp: this.client.config.endUserIp, TokenId: await this.client.tokenId() });
+    if (!result.GenerateVoucherResult || result.GenerateVoucherResult.ResponseStatus !== 1 || result.GenerateVoucherResult.Error?.ErrorCode) throw new TboError("TBO voucher generation did not succeed. Check booking details before retrying.");
+    return this.getBookingDetails({ bookingId: request.bookingId });
+  }
+
+  async getChangeRequestStatus(changeRequestId: number) {
+    if (!Number.isInteger(changeRequestId) || changeRequestId <= 0) throw new TboError("A valid change request ID is required.");
+    const result = await this.client.post<{ HotelChangeRequestStatusResult?: { ResponseStatus?: number; ChangeRequestStatus?: number; CancellationCharge?: number; RefundAmount?: number; RefundedAmount?: number; Error?: { ErrorCode: number; ErrorMessage: string } } }>(this.client.config.urls.hotelChangeStatus, { BookingMode: 5, ChangeRequestId: changeRequestId, EndUserIp: this.client.config.endUserIp, TokenId: await this.client.tokenId() });
+    const change = result.HotelChangeRequestStatusResult;
+    if (!change || change.ResponseStatus !== 1 || change.Error?.ErrorCode) throw new TboError(`TBO cancellation status: ${change?.Error?.ErrorMessage || "request failed"}.`);
+    if (change.ChangeRequestStatus === 4) throw new TboError("TBO rejected the cancellation request. Review the supplier response.");
+    return change;
+  }
+
   async cancel(request: Parameters<HotelProvider["cancel"]>[0]) {
     if (!request.approvedBy) throw new TboError("Human approval is required to cancel.");
-    const result = await this.client.post<{ HotelChangeRequestResult?: { ResponseStatus?: number; ChangeRequestStatus?: number; Error?: { ErrorCode: number; ErrorMessage: string } } }>(
+    const result = await this.client.post<{ HotelChangeRequestResult?: { ResponseStatus?: number; ChangeRequestStatus?: number; ChangeRequestId?: number; Error?: { ErrorCode: number; ErrorMessage: string } } }>(
       this.client.config.urls.hotelChangeRequest,
       { BookingMode: 5, RequestType: 4, Remarks: `Cancellation approved by ${request.approvedBy}`, BookingId: Number(request.bookingRef), EndUserIp: this.client.config.endUserIp, TokenId: await this.client.tokenId() },
     );
     const change = result.HotelChangeRequestResult;
     if (!change || change.ResponseStatus !== 1 || change.Error?.ErrorCode)
       throw new TboError(`TBO hotel cancellation: ${change?.Error?.ErrorMessage || "request failed"}.`, change?.Error?.ErrorCode);
-    return sourced({ bookingRef: request.bookingRef, supplierConfirmation: "", offerId: "", status: change.ChangeRequestStatus === 3 ? "cancelled" : "pending" } satisfies HotelBooking, this.key, this.clock);
+    if (!change.ChangeRequestId) throw new TboError("TBO cancellation returned no change request ID. Reconcile before retrying.");
+    const tracked = await this.getChangeRequestStatus(change.ChangeRequestId);
+    return sourced({ bookingRef: request.bookingRef, supplierConfirmation: "", offerId: "", status: tracked.ChangeRequestStatus === 3 ? "cancelled" : "pending" } satisfies HotelBooking, this.key, this.clock);
   }
+}
+
+export type TboBookingResult = {
+  ResponseStatus?: number; Error?: { ErrorCode: number; ErrorMessage: string }; HotelBookingStatus?: string;
+  ConfirmationNo?: string; BookingRefNo?: string; BookingId?: number; IsPriceChanged?: boolean;
+  IsCancellationPolicyChanged?: boolean; TraceId?: string; Status?: number; VoucherStatus?: boolean;
+};
+export function traceFromBookingCode(code: string) {
+  return code.split("!TB!")[2] || "";
 }

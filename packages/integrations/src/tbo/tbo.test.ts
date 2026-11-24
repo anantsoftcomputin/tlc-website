@@ -134,11 +134,13 @@ describe("TBO hotels", () => {
 
   it("prebooks, then books with the prebook NetAmount", async () => {
     const { client, calls } = fakeTbo({
-      "HotelAPI/PreBook": () => ({ Status: { Code: 200 }, HotelResult: [{ HotelCode: "1279415", Currency: "INR", Rooms: [{ ...room, NetAmount: 1250.5 }] }], RateConditions: ["CheckIn Time-Begin: 3:00 PM"] }),
+      "HotelAPI/PreBook": () => ({ Status: { Code: 200 }, HotelResult: [{ HotelCode: "1279415", Currency: "INR", Rooms: [{ ...room, NetAmount: 1250.5 }] }], ValidationInfo: { SamePaxNameAllowed: true }, RateConditions: ["CheckIn Time-Begin: 3:00 PM"] }),
+      Authenticate: () => ({ Status: 1, TokenId: "token-1" }),
+      "rest/Getbookingdetail": () => ({ GetBookingDetailResult: { ResponseStatus: 1, Status: 1, HotelBookingStatus: "Confirmed", ConfirmationNo: "7357382785190", BookingId: 1674788 } }),
       "rest/book": () => ({ BookResult: { ResponseStatus: 1, Error: { ErrorCode: 0 }, HotelBookingStatus: "Confirmed", ConfirmationNo: "7357382785190", BookingId: 1674788, IsPriceChanged: false } }),
     });
     const provider = new TboHotelProvider(config, clock, client);
-    const booking = await provider.book({ offerId: room.BookingCode, guestNames: ["Mrs Asha Rao"], idempotencyKey: "booking-1", approvedBy: "manager" });
+    const booking = await provider.book({ offerId: room.BookingCode, guestNames: [], guests: [[{ title: "Mrs", firstName: "Asha", lastName: "Rao", type: "adult", email: "test@example.test", phone: "9999999999" }]], idempotencyKey: "booking-1", approvedBy: "manager" });
     expect(booking.data).toMatchObject({ bookingRef: "1674788", supplierConfirmation: "7357382785190", status: "confirmed" });
     const book = calls.find((call) => call.url.includes("rest/book"))!;
     expect(book.body).toMatchObject({ BookingCode: room.BookingCode, NetAmount: 1250.5, EndUserIp: "10.0.0.1" });

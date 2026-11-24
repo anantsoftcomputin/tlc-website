@@ -27,7 +27,7 @@ TBO supplies two things to TLC Travel OS: **flights** (Air API) and **hotels** (
 - `vacationSearches` – server-only search snapshots with a safe display projection and separate supplier evidence. Opaque search IDs expire after 48 hours; references are validated against the server record and organization when an enquiry is submitted. Configure a Firestore TTL policy on `vacationSearches.deleteAfter` for cleanup; expiry is enforced even without TTL.
 - `inquiries.vacationShortlist` and `leads.requirement.vacationShortlist` – the client’s chosen alternatives and exact brief. `leads.vacationInventory` retains selected supplier evidence for staff; clients cannot submit their own offer payloads.
 - `supplierRateObservations` – one aggregated row per search: market, travel date, nights, party size, lead days and the min/median/max price. No customer data.
-- `tboApiLogs` – redacted request/response pairs, only while `TBO_LOG_TRAFFIC=true`; deleted after 30 days.
+- `tboApiLogs` – redacted request/response pairs, only while `TBO_LOG_TRAFFIC=true`; deleted after 30 days. Passwords, tokens and guest PAN/passport/GST numbers are masked. Payloads are compressed into chunk documents in the same collection.
 
 ## Configuration
 
@@ -60,10 +60,13 @@ Availability access should be enabled only after TBO accepts the account’s cre
 2. Search inventory as before. Hotel searches use the synced property codes for the destination (TBO searches by code, in parallel batches of 100). Flight searches use TBO's Search; domestic returns pair the cheapest outbound and inbound fares.
 3. *Price check* calls TBO live: FareQuote for flights, PreBook for hotels. The cached offer is updated, so the quote uses the confirmed supplier cost. Flight cost is TBO's OfferedFare (agency net); the published fare is kept alongside.
 4. Booking with suppliers stays human-confirmed, as in the rest of TLC Travel OS. The adapters implement TBO Book/Ticket/Cancel so this can be automated later behind the existing approval controls.
+5. If a hotel rate needs PAN, passport or transport details, **Book with TBO** asks the manager for them. They are sent to TBO with that request only and are never stored. The booking's travellers must match the rooms and child ages that were priced.
 
 ## Certification with TBO
 
-TBO's flow: Authenticate → Search → FareRule → FareQuote → SSR (optional) → Book → Ticket → GetBookingDetails. TBO first wants the sample case, DEL–BOM return for 2 adults, 1 child and 1 infant, then mandatory test cases 1–7.
+For **hotel** certification, use [the hotel certification runbook](certification/HOTEL_CERTIFICATION.md). It records the real confirmed staging sample from 13 November 2026, the eight case templates and the remaining portal validations.
+
+The following older procedure is for **flight** certification only. TBO's flight flow: Authenticate → Search → FareRule → FareQuote → SSR (optional) → Book → Ticket → GetBookingDetails. TBO first wants the sample case, DEL–BOM return for 2 adults, 1 child and 1 infant, then mandatory test cases 1–7.
 
 1. Set `TBO_LOG_TRAFFIC=true` on Functions in staging.
 2. Run each case from the staff inventory screen, noting the start time.

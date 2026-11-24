@@ -20,6 +20,8 @@ export type TboConfig = {
     hotelBook: string;
     hotelBookingDetail: string;
     hotelChangeRequest: string;
+    hotelChangeStatus: string;
+    hotelGenerateVoucher: string;
     staticContent: string;
   };
 };
@@ -33,6 +35,8 @@ export const tboStagingUrls: TboConfig["urls"] = {
   hotelBook: "https://HotelBE.tektravels.com/hotelservice.svc/rest/book/",
   hotelBookingDetail: "https://HotelBE.tektravels.com/hotelservice.svc/rest/Getbookingdetail",
   hotelChangeRequest: "https://HotelBE.tektravels.com/hotelservice.svc/rest/SendChangeRequest",
+  hotelChangeStatus: "https://HotelBE.tektravels.com/hotelservice.svc/rest/GetChangeRequestStatus",
+  hotelGenerateVoucher: "https://HotelBE.tektravels.com/hotelservice.svc/rest/GenerateVoucher",
   staticContent: "https://api.tbotechnology.in/TBOHolidays_HotelAPI",
 };
 
@@ -44,6 +48,8 @@ const urlEnv: Record<keyof TboConfig["urls"], string> = {
   hotelBook: "TBO_HOTEL_BOOK_URL",
   hotelBookingDetail: "TBO_HOTEL_BOOKING_DETAIL_URL",
   hotelChangeRequest: "TBO_HOTEL_CHANGE_REQUEST_URL",
+  hotelChangeStatus: "TBO_HOTEL_CHANGE_STATUS_URL",
+  hotelGenerateVoucher: "TBO_HOTEL_GENERATE_VOUCHER_URL",
   staticContent: "TBO_STATIC_URL",
 };
 

@@ -85,6 +85,9 @@ Desktop.ini
 
 # TBO certification log exports
 tbo-logs/
+# Copies of the certification evidence contain guest identity numbers; never commit them.
+/TLC-TBO-Actual-Hotel-API-Logs/
+/TLC-TBO-Actual-Hotel-API-Logs.zip
 
 # Local AI environments, supplier datasets and trained weights
 /.local-ai/

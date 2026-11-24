@@ -29,7 +29,8 @@
     "pretest": "pnpm prepare:ci",
     "prebuild": "pnpm prepare:ci",
     "email:preview": "pnpm --filter @tlc/integrations build && node scripts/export-email-designs.mjs",
-    "appcheck:configure": "node --env-file-if-exists=.env scripts/configure-app-check.mjs"
+    "appcheck:configure": "node --env-file-if-exists=.env scripts/configure-app-check.mjs",
+    "tbo:hotel-certify": "node --env-file-if-exists=.env scripts/tbo-hotel-certification.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

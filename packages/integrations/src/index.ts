@@ -145,3 +145,5 @@ export * from "./email/index.js";
 
 export * from "./travel/vacation-search.js";
 export * from "./travel/personal-budget.js";
+
+export * from "./tbo/hotel-validation.js";

@@ -1,0 +1,2009 @@
+{
+  "document_title": "TLC VACATIONS LLP — Hotel API scenarios",
+  "schema_version": "1.0",
+  "prepared_date": "2026-11-04",
+  "scope": "Hotel API only — first integration phase",
+  "source_document": "artifacts/tbo-test-plan/TLC-TBO-Test-Scenarios.json",
+  "source_plan_date": "2026-10-17",
+  "document_type": "Scenario specification with illustrative API request templates",
+  "execution_status": "Not run",
+  "format_note": "This is a JSON scenario pack, not executed request/response logs or certification evidence. All {{...}} values require replacement and type resolution. TBO must confirm the entitled endpoint family and payloads before any request is sent.",
+  "counts": {
+    "total": 40,
+    "published_occupancy_cases": 8,
+    "additional_functional_cases": 24,
+    "hotel_access_and_resilience_cases": 8
+  },
+  "common_test_setup": {
+    "execution_date_rule": "D is the actual agreed execution date; calculate check-in D+30 and check-out D+35 each run.",
+    "illustrative_execution_date": "2026-11-04",
+    "illustrative_check_in": "2026-12-04",
+    "illustrative_check_out": "2026-12-09",
+    "illustrative_nights": 5,
+    "availability": "TBO must nominate bookable staging inventory; these cities and dates are candidates.",
+    "nationality": "IN unless a scenario overrides it",
+    "child_ages_at_check_in": [
+      6,
+      10
+    ],
+    "credentials": "Not included; provide securely outside the pack",
+    "booking_approval": "Consultant approval required before a controlled supplier booking",
+    "execution_modes": [
+      "TBO-approved staging",
+      "Supplier-provided mock fixture",
+      "Local fault injection"
+    ],
+    "variant_rule": "Run each listed positive/negative variation independently and record its execution mode."
+  },
+  "required_confirmations": [
+    "Confirm TLC's entitled hotel API family, versions and separate staging URLs for every method; map any Room/Block terminology to the supplied contract.",
+    "Confirm hotel account entitlement, static-content versus hotel credentials, per-service authorization and approved egress IPs. Supply secrets through the agreed secure channel.",
+    "Provide current city/hotel codes, available test dates, sufficient test credit and TBO-approved synthetic guest/contact/document fixtures.",
+    "Resolve the public documentation differences: Search child ages versus Book acceptance, NetAmount scalar versus array wording, and the hold/voucher field names.",
+    "Confirm pending-state polling, expiry, retry limits and lookup after a lost Book response. Confirm whether client-reference reconciliation is available for this account.",
+    "Mark partial cancellation, amendments, special requests and any unsupported capability explicitly; supply the supported alternative and fixture owner/delivery date."
+  ],
+  "workflows": {
+    "HOTEL_BOOKING": [
+      "Resolve current hotel codes and details",
+      "Authorize each service with its agreed account credentials",
+      "Search for the exact stay and room occupancy",
+      "PreBook the selected bookable unit",
+      "Review current amount, restrictions and cancellation terms",
+      "Submit Book after consultant approval",
+      "Retrieve the reservation and reconcile its final status",
+      "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+    ],
+    "OTHER_METHODS": "Static lookups, authorization, balance, voucher and amendment paths must be mapped to the entitled account contract by TBO."
+  },
+  "request_examples": {
+    "HOTEL_SEARCH": {
+      "method": "POST",
+      "url": "{{TBO_STAGING_HOTEL_SEARCH_URL}}",
+      "authentication": "TBO-issued hotel API Basic Auth; send credentials securely outside this file.",
+      "body": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{NEW_DELHI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 2,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      },
+      "notes": [
+        "Hotel codes come from current TBO static data.",
+        "The eight occupancy cases contain their own Search bodies; preserve each room's occupancy."
+      ]
+    },
+    "HOTEL_PREBOOK": {
+      "method": "POST",
+      "url": "{{TBO_STAGING_HOTEL_PREBOOK_URL}}",
+      "authentication": "TBO-issued hotel API Basic Auth, subject to account confirmation.",
+      "body": {
+        "BookingCode": "{{BOOKING_CODE_FROM_SEARCH}}"
+      },
+      "notes": [
+        "Use a current bookable unit and review the returned amount, rules and guest-document requirements."
+      ]
+    },
+    "HOTEL_BOOK": {
+      "method": "POST",
+      "url": "{{TBO_STAGING_HOTEL_BOOK_URL}}",
+      "authentication": "TBO-issued hotel API authorization, as confirmed for this endpoint.",
+      "example_for_scenario": "HTL-C01",
+      "body": {
+        "BookingCode": "{{CURRENT_BOOKING_CODE_FROM_PREBOOK}}",
+        "IsVoucherBooking": true,
+        "GuestNationality": "IN",
+        "EndUserIp": "{{TBO_APPROVED_STAGING_EGRESS_IP}}",
+        "RequestedBookingMode": 5,
+        "NetAmount": "{{NUMERIC_NET_AMOUNT_FROM_PREBOOK}}",
+        "ClientReferenceId": "{{UNIQUE_LOGICAL_BOOKING_REFERENCE}}",
+        "HotelRoomsDetails": [
+          {
+            "HotelPassenger": [
+              {
+                "Title": "Mr",
+                "FirstName": "Sample",
+                "MiddleName": "",
+                "LastName": "Traveller",
+                "Email": "{{TBO_APPROVED_TEST_EMAIL}}",
+                "PaxType": 1,
+                "LeadPassenger": true,
+                "Age": 34,
+                "Phoneno": "{{TBO_APPROVED_TEST_PHONE}}",
+                "PassportNo": null,
+                "PassportIssueDate": null,
+                "PassportExpDate": null,
+                "PAN": null
+              }
+            ]
+          }
+        ]
+      },
+      "notes": [
+        "This example has one adult in one room. For other cases generate the exact scenario guest/room mapping; designate one lead adult per room.",
+        "Replace NetAmount with the numeric value/type required by the entitled schema, not a placeholder string.",
+        "Populate required identity/tax fields only with TBO-approved synthetic test values and returned requirements.",
+        "Confirm RequestedBookingMode, reference limits, hold/voucher fields and any transport-related hotel fields with TBO."
+      ]
+    },
+    "HOTEL_RETRIEVE": {
+      "method": "POST",
+      "url": "{{TBO_STAGING_HOTEL_BOOKING_DETAILS_URL}}",
+      "authentication": "Agreed session-token contract; confirm the endpoint family.",
+      "body": {
+        "EndUserIp": "{{TBO_APPROVED_STAGING_EGRESS_IP}}",
+        "TokenId": "{{TOKEN_ID_FROM_APPROVED_AUTHENTICATION}}",
+        "BookingId": "{{INTEGER_BOOKING_ID_FROM_BOOK_RESPONSE}}"
+      },
+      "notes": [
+        "Replace BookingId with an integer. Ask TBO to provide the supported fallback lookup when the booking response was lost; do not assume client-reference lookup is enabled."
+      ]
+    },
+    "HOTEL_CANCEL": {
+      "method": "POST",
+      "url": "{{TBO_STAGING_HOTEL_CHANGE_REQUEST_URL}}",
+      "authentication": "Agreed session-token contract; confirm the endpoint family.",
+      "body": {
+        "EndUserIp": "{{TBO_APPROVED_STAGING_EGRESS_IP}}",
+        "TokenId": "{{TOKEN_ID_FROM_APPROVED_AUTHENTICATION}}",
+        "BookingId": "{{INTEGER_BOOKING_ID}}",
+        "RequestType": 4,
+        "Remarks": "TLC approved staging cancellation test"
+      },
+      "notes": [
+        "Approved controlled staging cancellation only. Partial-room cancellation needs a separate TBO-confirmed schema and capability."
+      ]
+    },
+    "HOTEL_CANCEL_STATUS": {
+      "method": "POST",
+      "url": "{{TBO_STAGING_HOTEL_CHANGE_STATUS_URL}}",
+      "authentication": "Agreed session-token contract; confirm the endpoint family.",
+      "body": {
+        "EndUserIp": "{{TBO_APPROVED_STAGING_EGRESS_IP}}",
+        "TokenId": "{{TOKEN_ID_FROM_APPROVED_AUTHENTICATION}}",
+        "ChangeRequestId": "{{INTEGER_CHANGE_REQUEST_ID}}"
+      },
+      "notes": [
+        "Track the supplier's final decision and refund evidence independently; a submitted cancellation is not a settled refund."
+      ]
+    }
+  },
+  "evidence_required": [
+    "scenario_id and variant/run ID",
+    "actual execution timestamp with timezone",
+    "endpoint family/version and fixture version",
+    "redacted request and response JSON for each method",
+    "HTTP status, application error/status and elapsed time",
+    "session/trace/reference identifiers required by TBO, through the agreed channel",
+    "final retrieval and confirmation evidence for successful bookings",
+    "final cancellation/refund state where applicable"
+  ],
+  "evidence_submission_note": "After execution, submit each occupancy certification case separately with its actual method-level request/response logs and supplier confirmation evidence; a planning JSON file is not a substitute for those logs.",
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "HTL-C01",
+      "source_scenario_id": "HTL-C01",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "Domestic: one room, one adult",
+      "test_data": "R1: 1A; New Delhi; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 1; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "domestic",
+        "city_candidate": "New Delhi",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{NEW_DELHI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "HTL-C02",
+      "source_scenario_id": "HTL-C02",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "Domestic: one room, two adults and two children",
+      "test_data": "R1: 2A + 2C (6,10); New Delhi; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 2; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "domestic",
+        "city_candidate": "New Delhi",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 2,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{NEW_DELHI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 2,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "HTL-C03",
+      "source_scenario_id": "HTL-C03",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "Domestic: two rooms, one adult in each",
+      "test_data": "R1: 1A; R2: 1A; New Delhi; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 3; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "domestic",
+        "city_candidate": "New Delhi",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          },
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{NEW_DELHI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          },
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "HTL-C04",
+      "source_scenario_id": "HTL-C04",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "Domestic: one adult and two children in room 1; two adults in room 2",
+      "test_data": "R1: 1A + 2C (6,10); R2: 2A; New Delhi; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 4; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "domestic",
+        "city_candidate": "New Delhi",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 1,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          },
+          {
+            "Adults": 2,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{NEW_DELHI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 1,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          },
+          {
+            "Adults": 2,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 5,
+      "scenario_id": "HTL-C05",
+      "source_scenario_id": "HTL-C05",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "International: one room, one adult",
+      "test_data": "R1: 1A; Dubai; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 5; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "international",
+        "city_candidate": "Dubai",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{DUBAI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 6,
+      "scenario_id": "HTL-C06",
+      "source_scenario_id": "HTL-C06",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "International: one room, two adults and two children",
+      "test_data": "R1: 2A + 2C (6,10); Dubai; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 6; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "international",
+        "city_candidate": "Dubai",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 2,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{DUBAI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 2,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 7,
+      "scenario_id": "HTL-C07",
+      "source_scenario_id": "HTL-C07",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "International: two rooms, one adult in each",
+      "test_data": "R1: 1A; R2: 1A; Dubai; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 7; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "international",
+        "city_candidate": "Dubai",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          },
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{DUBAI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          },
+          {
+            "Adults": 1,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 8,
+      "scenario_id": "HTL-C08",
+      "source_scenario_id": "HTL-C08",
+      "category": "hotels",
+      "section": "A. Hotel certification occupancy cases",
+      "priority": "P0",
+      "title": "International: one adult and two children in room 1; two adults in room 2",
+      "test_data": "R1: 1A + 2C (6,10); R2: 2A; Dubai; five nights; current static IDs.",
+      "execution_steps": [
+        "Resolve current hotel codes and details",
+        "Authorize each service with its agreed account credentials",
+        "Search for the exact stay and room occupancy",
+        "PreBook the selected bookable unit",
+        "Review current amount, restrictions and cancellation terms",
+        "Submit Book after consultant approval",
+        "Retrieve the reservation and reconcile its final status",
+        "Retrieve or generate a voucher only when applicable to a confirmed reservation"
+      ],
+      "requested_tbo_fixture": "One available room combination matching this occupancy; full price/policy, guest-room mapping and confirmation evidence.",
+      "acceptance_criteria": [
+        "Exact occupancy preserved per room. No unrequested extra room; room totals reconcile with confirmed booking."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER_IF_REQUIRED"
+      ],
+      "requirement_basis": "Published hotel occupancy case 8; TBO to confirm the binding checklist for TLC.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      },
+      "test_inputs": {
+        "market": "international",
+        "city_candidate": "Dubai",
+        "guest_nationality": "IN",
+        "nights": 5,
+        "rooms": [
+          {
+            "Adults": 1,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          },
+          {
+            "Adults": 2,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ]
+      },
+      "search_request_template": {
+        "CheckIn": "{{CHECK_IN_YYYY_MM_DD}}",
+        "CheckOut": "{{CHECK_OUT_YYYY_MM_DD}}",
+        "HotelCodes": "{{DUBAI_TBO_HOTEL_CODES}}",
+        "GuestNationality": "IN",
+        "PaxRooms": [
+          {
+            "Adults": 1,
+            "Children": 2,
+            "ChildrenAges": [
+              6,
+              10
+            ]
+          },
+          {
+            "Adults": 2,
+            "Children": 0,
+            "ChildrenAges": null
+          }
+        ],
+        "ResponseTime": 23,
+        "IsDetailedResponse": true,
+        "Filters": {
+          "Refundable": false,
+          "NoOfRooms": 0,
+          "MealType": "All"
+        }
+      }
+    },
+    {
+      "scenario_number": 9,
+      "scenario_id": "HTL-01",
+      "source_scenario_id": "HTL-01",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "City and hotel identifier mapping",
+      "test_data": "New city ID and hotel codes from current static feed; retired ID variant.",
+      "execution_steps": [
+        "Resolve city → properties → search."
+      ],
+      "requested_tbo_fixture": "Current mappings and invalid/retired code response.",
+      "acceptance_criteria": [
+        "No airport-code/city-ID confusion; retired property cannot silently map to another hotel."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 10,
+      "scenario_id": "HTL-02",
+      "source_scenario_id": "HTL-02",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Room combinations remain intact",
+      "test_data": "Two rooms, different adults/children and room types.",
+      "execution_steps": [
+        "Search then select one bookable combination and the agreed hotel booking workflow."
+      ],
+      "requested_tbo_fixture": "Combination code, ordered room/guest mapping and per-room/whole-unit prices.",
+      "acceptance_criteria": [
+        "Do not split or recombine rates from unrelated booking codes."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 11,
+      "scenario_id": "HTL-03",
+      "source_scenario_id": "HTL-03",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Child ages and occupancy limits",
+      "test_data": "Missing age, age-count mismatch, extra child, infant, no adult; positive control.",
+      "execution_steps": [
+        "Local validation plus agreed Search/PreBook error fixtures."
+      ],
+      "requested_tbo_fixture": "Allowed ranges and supplier-specific occupancy/extra-bed conditions.",
+      "acceptance_criteria": [
+        "Exact age at check-in preserved; no assumed free infant or guaranteed extra bed."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 12,
+      "scenario_id": "HTL-04",
+      "source_scenario_id": "HTL-04",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Stay/date boundaries",
+      "test_data": "Checkout same/before check-in, past stay, minimum stay, maximum stay, leap-day boundary.",
+      "execution_steps": [
+        "Separate Search/PreBook variants."
+      ],
+      "requested_tbo_fixture": "Validation errors and supported date/stay limits.",
+      "acceptance_criteria": [
+        "Nights calculated correctly; invalid stay cannot be booked."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 13,
+      "scenario_id": "HTL-05",
+      "source_scenario_id": "HTL-05",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Nationality/residency restrictions",
+      "test_data": "Same property/dates for IN and AE guest profiles; rate restricted to one.",
+      "execution_steps": [
+        "Search and the agreed hotel booking workflow using actual declared nationality/residency."
+      ],
+      "requested_tbo_fixture": "Applicable rate/eligibility and mismatch rejection.",
+      "acceptance_criteria": [
+        "Nationality not changed to obtain a cheaper rate; constraints visible to consultant."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 14,
+      "scenario_id": "HTL-06",
+      "source_scenario_id": "HTL-06",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Room-only versus meal plans",
+      "test_data": "Same hotel with room-only, breakfast and all-inclusive options.",
+      "execution_steps": [
+        "Search/PreBook each distinct rate."
+      ],
+      "requested_tbo_fixture": "Exact meal inclusion, guest coverage and rate identifiers.",
+      "acceptance_criteria": [
+        "Do not assume breakfast covers every guest or all-inclusive includes all extras."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 15,
+      "scenario_id": "HTL-07",
+      "source_scenario_id": "HTL-07",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Refundability and deadline boundary",
+      "test_data": "Refundable/non-refundable; cancellation one minute before/after deadline.",
+      "execution_steps": [
+        "PreBook; quote applicable cancellation charge in separate fixtures."
+      ],
+      "requested_tbo_fixture": "Policy ladder, timezone, indexed room scope, fixed/percent/night rules.",
+      "acceptance_criteria": [
+        "Correct policy presented for selected rate; no inferred timezone or free cancellation."
+      ],
+      "api_calls": [
+        "HOTEL_PREBOOK",
+        "HOTEL_CANCEL",
+        "HOTEL_CANCEL_STATUS"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 16,
+      "scenario_id": "HTL-08",
+      "source_scenario_id": "HTL-08",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Price changes at PreBook",
+      "test_data": "Higher/lower total, changed tax or supplement since Search.",
+      "execution_steps": [
+        "Search → PreBook → review."
+      ],
+      "requested_tbo_fixture": "Updated cost/currency and whether new booking code is returned/required.",
+      "acceptance_criteria": [
+        "Reconcile final amount; require review before Book."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 17,
+      "scenario_id": "HTL-09",
+      "source_scenario_id": "HTL-09",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Policy changes without price change",
+      "test_data": "Same total; refundable becomes restricted or meal inclusion changes.",
+      "execution_steps": [
+        "Search then changed PreBook fixture."
+      ],
+      "requested_tbo_fixture": "Changed policy/inclusions and validity metadata.",
+      "acceptance_criteria": [
+        "Terms change triggers review even when total is unchanged."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 18,
+      "scenario_id": "HTL-10",
+      "source_scenario_id": "HTL-10",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Selected room no longer available",
+      "test_data": "Search success; room sold out or booking code expires.",
+      "execution_steps": [
+        "PreBook/Book controlled failure; retrieve if commit outcome uncertain."
+      ],
+      "requested_tbo_fixture": "Sold-out/expired code and permitted re-search path.",
+      "acceptance_criteria": [
+        "No different hotel/room substituted automatically; no false confirmation."
+      ],
+      "api_calls": [
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 19,
+      "scenario_id": "HTL-11",
+      "source_scenario_id": "HTL-11",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Taxes, supplements and currency",
+      "test_data": "Multi-room stay; included tax, pay-at-property city fee and extra guest charge.",
+      "execution_steps": [
+        "Search → PreBook → confirmed retrieval."
+      ],
+      "requested_tbo_fixture": "Charge scope, currency, inclusion flags, nightly/total values and settlement amount.",
+      "acceptance_criteria": [
+        "No double-counted tax; payable-now and payable-at-property clearly separated."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 20,
+      "scenario_id": "HTL-12",
+      "source_scenario_id": "HTL-12",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Minimum selling restriction",
+      "test_data": "Rate with RecommendedSellingRate, zero/absent variant and currency mismatch.",
+      "execution_steps": [
+        "PreBook → TLC quote validation."
+      ],
+      "requested_tbo_fixture": "Restriction applicability and authoritative currency/amount semantics.",
+      "acceptance_criteria": [
+        "Applicable floor enforced; never convert or omit it without an agreed rule."
+      ],
+      "api_calls": [
+        "HOTEL_PREBOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 21,
+      "scenario_id": "HTL-13",
+      "source_scenario_id": "HTL-13",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Mandatory PAN/passport/GST/name fields",
+      "test_data": "PreBook varies document flags and guest naming restrictions.",
+      "execution_steps": [
+        "the agreed hotel booking workflow with one missing/invalid field per variant, then corrected payload."
+      ],
+      "requested_tbo_fixture": "Required-field flags, supported formats, rejection code and accepted guest mapping.",
+      "acceptance_criteria": [
+        "Collect required data securely; no invented identifiers; validation follows returned rules."
+      ],
+      "api_calls": [
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 22,
+      "scenario_id": "HTL-14",
+      "source_scenario_id": "HTL-14",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Package-only rate and transfers",
+      "test_data": "Package fare with mandatory arrival/departure details; transfer inclusion variant.",
+      "execution_steps": [
+        "PreBook then Book with valid/omitted details."
+      ],
+      "requested_tbo_fixture": "Package restrictions, transport fields and transfer coverage/charges.",
+      "acceptance_criteria": [
+        "No package-only rate sold standalone; transfers not promised from hotel description alone."
+      ],
+      "api_calls": [
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 23,
+      "scenario_id": "HTL-15",
+      "source_scenario_id": "HTL-15",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Special requests and accessibility",
+      "test_data": "Twin beds, adjoining rooms, late arrival, wheelchair-accessible room.",
+      "execution_steps": [
+        "Submit only supported request fields; retrieve."
+      ],
+      "requested_tbo_fixture": "Accepted request versus guaranteed amenity; unsupported field response.",
+      "acceptance_criteria": [
+        "Requested features remain unconfirmed unless explicit supplier evidence supports them."
+      ],
+      "api_calls": [
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 24,
+      "scenario_id": "HTL-16",
+      "source_scenario_id": "HTL-16",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Booking pending/on request",
+      "test_data": "Book accepted but supplier confirmation delayed.",
+      "execution_steps": [
+        "the agreed hotel booking workflow then agreed polling/status retrieval."
+      ],
+      "requested_tbo_fixture": "Pending→confirmed and pending→failed sequences with polling guidance.",
+      "acceptance_criteria": [
+        "No voucher or confirmed notice while pending; timeout escalates to consultant."
+      ],
+      "api_calls": [
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 25,
+      "scenario_id": "HTL-17",
+      "source_scenario_id": "HTL-17",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Timeout after Book",
+      "test_data": "Supplier created reservation but response lost; alternate no-booking variant.",
+      "execution_steps": [
+        "LOCAL response loss with TBO reconciliation fixtures."
+      ],
+      "requested_tbo_fixture": "Lookup using client reference/session/known IDs; eventual final states.",
+      "acceptance_criteria": [
+        "No blind duplicate reservation; unresolved stays unknown."
+      ],
+      "api_calls": [
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 26,
+      "scenario_id": "HTL-18",
+      "source_scenario_id": "HTL-18",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Duplicate and concurrent hotel Book",
+      "test_data": "Two identical requests, same room code/reference.",
+      "execution_steps": [
+        "LOCAL concurrency test and approved staging duplicate fixture."
+      ],
+      "requested_tbo_fixture": "Deduplication contract, duplicate error or existing reservation retrieval.",
+      "acceptance_criteria": [
+        "One logical reservation; de-duplication does not block a deliberate separate booking."
+      ],
+      "api_calls": [
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 27,
+      "scenario_id": "HTL-19",
+      "source_scenario_id": "HTL-19",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P0",
+      "title": "Multi-room partial failure",
+      "test_data": "One of two rooms unavailable during commitment.",
+      "execution_steps": [
+        "TBO-provided atomic-failure or partial-success fixture."
+      ],
+      "requested_tbo_fixture": "Document whether whole unit fails or partial reservation exists; exact financial state.",
+      "acceptance_criteria": [
+        "Never assume atomicity; reconcile and display every room’s actual status."
+      ],
+      "api_calls": [
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 28,
+      "scenario_id": "HTL-20",
+      "source_scenario_id": "HTL-20",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Voucher issuance and retrieval",
+      "test_data": "Confirmed reservation; pending state; duplicate voucher request.",
+      "execution_steps": [
+        "GetBookingDetails and GenerateVoucher where applicable."
+      ],
+      "requested_tbo_fixture": "Voucher availability, confirmation/reference fields and premature-request error.",
+      "acceptance_criteria": [
+        "Voucher reflects confirmed dates, guests and room scope; no duplicate booking from reprint."
+      ],
+      "api_calls": [
+        "HOTEL_RETRIEVE",
+        "HOTEL_VOUCHER"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 29,
+      "scenario_id": "HTL-21",
+      "source_scenario_id": "HTL-21",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Full/partial cancellation",
+      "test_data": "Whole booking and one room; free/penalty/non-refundable variants.",
+      "execution_steps": [
+        "Approved cancel/change path → status → retrieve."
+      ],
+      "requested_tbo_fixture": "Supported scope, charge, request/final status and remaining rooms.",
+      "acceptance_criteria": [
+        "No automatic full cancellation when partial unsupported; reconcile deductions."
+      ],
+      "api_calls": [
+        "HOTEL_CANCEL",
+        "HOTEL_CANCEL_STATUS",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 30,
+      "scenario_id": "HTL-22",
+      "source_scenario_id": "HTL-22",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Amendment, shortening and extension",
+      "test_data": "Guest correction, arrival shift, one-night shortening/extension.",
+      "execution_steps": [
+        "Use supported amendment or explicit cancel/rebook alternative."
+      ],
+      "requested_tbo_fixture": "Availability, fare/policy changes and unsupported operation response.",
+      "acceptance_criteria": [
+        "Never treat an email request as supplier-approved change; re-approve costs."
+      ],
+      "api_calls": [
+        "HOTEL_AMEND_OR_APPROVED_ALTERNATIVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 31,
+      "scenario_id": "HTL-23",
+      "source_scenario_id": "HTL-23",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "No-show, early checkout and refund",
+      "test_data": "Confirmed stay not used or guest leaves early.",
+      "execution_steps": [
+        "Use supplier-supported change/refund status workflow."
+      ],
+      "requested_tbo_fixture": "Policy outcome, penalty, approved/refused refund and settlement evidence.",
+      "acceptance_criteria": [
+        "No promised refund without supplier outcome; avoid duplicate financial posting."
+      ],
+      "api_calls": [
+        "HOTEL_CANCEL_STATUS",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 32,
+      "scenario_id": "HTL-24",
+      "source_scenario_id": "HTL-24",
+      "category": "hotels",
+      "section": "B. Functional and recovery scenarios",
+      "priority": "P1",
+      "title": "Stale/missing booking details",
+      "test_data": "Unknown reference, eventual consistency, changed supplier status.",
+      "execution_steps": [
+        "Retrieve using supported identifiers and bounded retries."
+      ],
+      "requested_tbo_fixture": "Not-found versus pending versus final failure; updated booking details.",
+      "acceptance_criteria": [
+        "Do not mark cancelled from transient not-found; escalate unresolved mismatch."
+      ],
+      "api_calls": [
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 33,
+      "scenario_id": "HTL-A01",
+      "source_scenario_id": "AUTH-01",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P0",
+      "title": "Hotel service authorization succeeds",
+      "test_data": "TBO-issued hotel staging login, approved agency profile and whitelisted egress IP.",
+      "execution_steps": [
+        "Authorize each entitled hotel service and call an enabled hotel read method. Use Basic Auth or a session token only where specified for that service."
+      ],
+      "requested_tbo_fixture": "Successful authorization/read examples for the hotel account; session expiry metadata where applicable. Supply credentials separately.",
+      "acceptance_criteria": [
+        "Static-content access and hotel availability access are verified independently; no secret is included in the sharing pack."
+      ],
+      "api_calls": [
+        "HOTEL_AUTHORIZATION",
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 34,
+      "scenario_id": "HTL-A02",
+      "source_scenario_id": "AUTH-02",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P0",
+      "title": "Invalid or incomplete hotel credentials",
+      "test_data": "Incorrect hotel credentials, omitted required authentication value, and incorrect agency/profile identifier as separate variants.",
+      "execution_steps": [
+        "Make one TBO-approved negative request per variant, followed by a corrected request."
+      ],
+      "requested_tbo_fixture": "The exact authorization errors and the supported correction procedure.",
+      "acceptance_criteria": [
+        "A rejected identity cannot proceed to a hotel reservation; distinguish authentication failure from zero availability."
+      ],
+      "api_calls": [
+        "HOTEL_AUTHORIZATION",
+        "HOTEL_SEARCH"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 35,
+      "scenario_id": "HTL-A03",
+      "source_scenario_id": "AUTH-03",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P0",
+      "title": "Hotel session or selection expires",
+      "test_data": "Expired session token where required, and a selected hotel BookingCode that has expired.",
+      "execution_steps": [
+        "Test the session-based method and stale selection separately; follow the account-specific renewal and re-search procedure."
+      ],
+      "requested_tbo_fixture": "Expiry errors, applicable lifetimes and approved recovery paths.",
+      "acceptance_criteria": [
+        "Do not apply token renewal rules to Basic Auth calls; refresh expired selections and reconcile any uncertain booking first."
+      ],
+      "api_calls": [
+        "HOTEL_PREBOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 36,
+      "scenario_id": "HTL-A04",
+      "source_scenario_id": "AUTH-04",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P0",
+      "title": "Hotel account entitlement denied",
+      "test_data": "Static hotel content is accessible but Search, PreBook or Book entitlement is not enabled.",
+      "execution_steps": [
+        "Call each hotel service using its own entitled credentials and isolate the denied capability."
+      ],
+      "requested_tbo_fixture": "Entitlement-specific response and the account enablement procedure.",
+      "acceptance_criteria": [
+        "A configuration/access error is not displayed as a successful search with no rooms."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 37,
+      "scenario_id": "HTL-A05",
+      "source_scenario_id": "AUTH-05",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P0",
+      "title": "Hotel egress IP or agency profile rejected",
+      "test_data": "TBO-approved allowed and denied IP/profile fixtures.",
+      "execution_steps": [
+        "Use TBO-controlled denial fixtures; verify a corrected hotel request with the approved egress IP."
+      ],
+      "requested_tbo_fixture": "The exact rejection and diagnostic fields, plus whitelisting requirements.",
+      "acceptance_criteria": [
+        "The rejection is actionable and no reservation is reported as confirmed."
+      ],
+      "api_calls": [
+        "HOTEL_AUTHORIZATION",
+        "HOTEL_BOOK"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 38,
+      "scenario_id": "HTL-A06",
+      "source_scenario_id": "AUTH-06",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P1",
+      "title": "Hotel throttling or temporary read outage",
+      "test_data": "Controlled rate-limit, timeout and service-unavailable fixtures; no uncontrolled load test.",
+      "execution_steps": [
+        "Exercise Search or static lookup with bounded retries under TBO's documented policy."
+      ],
+      "requested_tbo_fixture": "HTTP/application errors, retry headers and permitted retry intervals.",
+      "acceptance_criteria": [
+        "Back off within the request deadline; never convert an outage into a no-availability result."
+      ],
+      "api_calls": [
+        "STATIC_LOOKUP",
+        "HOTEL_SEARCH"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 39,
+      "scenario_id": "HTL-A07",
+      "source_scenario_id": "AUTH-07",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P0",
+      "title": "Insufficient hotel wallet or credit",
+      "test_data": "Staging credit below the selected hotel's final amount.",
+      "execution_steps": [
+        "Use balance lookup if supported, then one approved hotel Book attempt and authoritative reconciliation."
+      ],
+      "requested_tbo_fixture": "Insufficient-credit response, any debit/release details, and the final reservation state.",
+      "acceptance_criteria": [
+        "No false confirmation, repeated debit or blind booking retry."
+      ],
+      "api_calls": [
+        "HOTEL_BALANCE_IF_SUPPORTED",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    },
+    {
+      "scenario_number": 40,
+      "scenario_id": "HTL-A08",
+      "source_scenario_id": "AUTH-08",
+      "category": "hotels",
+      "section": "C. Hotel access and API resilience",
+      "priority": "P1",
+      "title": "Malformed, partial or interrupted hotel response",
+      "test_data": "Separate fixtures for a business error in HTTP 200, missing required field, invalid JSON and a lost response.",
+      "execution_steps": [
+        "Use TBO fixtures or local fault injection at read and booking boundaries."
+      ],
+      "requested_tbo_fixture": "Documented error contracts and a reconciliation fixture for uncertain Book results.",
+      "acceptance_criteria": [
+        "Reject incomplete success data. Preserve an unknown booking outcome until supplier retrieval resolves it."
+      ],
+      "api_calls": [
+        "HOTEL_SEARCH",
+        "HOTEL_PREBOOK",
+        "HOTEL_BOOK",
+        "HOTEL_RETRIEVE"
+      ],
+      "requirement_basis": "TLC-proposed hotel test coverage; confirm applicability with TBO.",
+      "execution_status": "Not run",
+      "company_response": {
+        "support_status": "Pending confirmation",
+        "api_version": null,
+        "request_fixture": null,
+        "response_fixture": null,
+        "seed_or_trigger_instructions": null,
+        "owner": null,
+        "target_delivery_date": null,
+        "comments": null
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "H1",
+      "title": "Hotel certification occupancy cases",
+      "url": "https://apidoc.tektravels.com/hotelnew/Certification.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H2",
+      "title": "Hotel API guide",
+      "url": "https://apidoc.tektravels.com/hotelnew/apiguide.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H3",
+      "title": "Hotel search",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelSearch.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H4",
+      "title": "Hotel PreBook",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelPreBook.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H5",
+      "title": "Hotel Book fields",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelBook.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H6",
+      "title": "Hotel Book JSON example",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelBook_Json.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H7",
+      "title": "Booking retrieval",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelGetbookingdetail.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H8",
+      "title": "Cancellation request",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelSendChange.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H9",
+      "title": "Cancellation status",
+      "url": "https://apidoc.tektravels.com/hotelnew/HotelGetChangeRequestStatus.aspx",
+      "checked_on": "2026-11-04"
+    },
+    {
+      "id": "H10",
+      "title": "Per-service authorization",
+      "url": "https://apidoc.tektravels.com/hotelnew/Authorization.aspx",
+      "checked_on": "2026-11-04"
+    }
+  ]
+}

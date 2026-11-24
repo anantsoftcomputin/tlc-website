@@ -17,7 +17,7 @@ export function istDay(date: Date) {
   return new Date(date.getTime() + 330 * 60_000).toISOString().slice(0, 10);
 }
 
-export type TboExchange = { method: string; url: string; request: unknown; response: unknown; status: number; startedAt: string; durationMs: number; traceId?: string };
+export type TboExchange = { runId?: string; caseId?: string; httpMethod?: string; sessionId?: string; networkError?: string; method: string; url: string; request: unknown; response: unknown; status: number; startedAt: string; durationMs: number; traceId?: string };
 
 /** Removes credentials and tokens before any request/response is logged. */
 export function redactTbo(value: unknown): unknown {
@@ -32,6 +32,9 @@ export class TboClient {
   private tokenRequest?: Promise<string>;
   /** Optional sink for certification logs (TBO asks for request/response JSON per test case). */
   onExchange?: (exchange: TboExchange) => void | Promise<void>;
+  certificationContext?: { runId: string; caseId: string };
+  /** Certification runs fail if evidence cannot be persisted. */
+  requireEvidence = false;
   constructor(
     readonly config: TboConfig,
     private readonly http: TboFetch = fetch,
@@ -41,40 +44,62 @@ export class TboClient {
   ) {}
 
   async post<T>(url: string, body: unknown, auth: "api" | "static" | "none" = "none", timeoutMs = this.timeoutMs): Promise<T> {
+    return this.exchange<T>("POST", url, body, auth, timeoutMs);
+  }
+
+  async get<T>(url: string, auth: "static"): Promise<T> {
+    return this.exchange<T>("GET", url, null, auth, this.timeoutMs);
+  }
+
+  private async exchange<T>(httpMethod: string, url: string, body: unknown, auth: "api" | "static" | "none", timeoutMs: number): Promise<T> {
     const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", "Accept-Encoding": "gzip" };
     if (auth === "api") headers.Authorization = basic(this.config.apiUsername, this.config.apiPassword);
     if (auth === "static") headers.Authorization = basic(this.config.staticUsername, this.config.staticPassword);
     const startedAt = this.now();
-    const response = await this.http(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(Math.min(timeoutMs, this.maxTimeoutMs)),
-    });
-    const text = await response.text();
-    let parsed: unknown;
+    const context = this.certificationContext ? { ...this.certificationContext } : {};
+    let response: Response | undefined;
+    let parsed: unknown = null;
+    let failure: unknown;
+    let nonJson = false;
     try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = undefined;
-    }
+      response = await this.http(url, {
+        method: httpMethod, headers,
+        ...(httpMethod === "POST" ? { body: JSON.stringify(body) } : {}),
+        signal: AbortSignal.timeout(Math.min(timeoutMs, this.maxTimeoutMs)),
+      });
+      const raw = await response.text();
+      try { parsed = JSON.parse(raw); }
+      catch { parsed = raw; nonJson = true; }
+    } catch (error) { failure = error; }
+    const findTrace = (value: unknown): string | undefined => {
+      if (!value || typeof value !== "object") return undefined;
+      const record = value as Record<string, unknown>;
+      if (typeof record.TraceId === "string") return record.TraceId;
+      for (const nested of Object.values(record)) {
+        const trace = findTrace(nested);
+        if (trace) return trace;
+      }
+      return undefined;
+    };
+    const sessionId = response?.headers.get("sessionId") || response?.headers.get("session-id");
+    const traceId = findTrace(body) || findTrace(parsed);
     if (this.onExchange) {
-      const traceId = (body as { TraceId?: string })?.TraceId || (parsed as { Response?: { TraceId?: string }; TraceId?: string })?.Response?.TraceId || (parsed as { TraceId?: string })?.TraceId;
-      await Promise.resolve(this.onExchange({ method: url.replace(/\/+$/, "").split("/").pop() || url, url, request: redactTbo(body), response: redactTbo(parsed ?? text.slice(0, 2000)), status: response.status, startedAt: startedAt.toISOString(), durationMs: this.now().getTime() - startedAt.getTime(), traceId })).catch(() => undefined);
+      const evidence: TboExchange = {
+        ...context, httpMethod, method: url.replace(/\/+$/, "").split("/").pop() || url, url,
+        request: redactTbo(body), response: redactTbo(parsed), status: response?.status || 0,
+        startedAt: startedAt.toISOString(), durationMs: this.now().getTime() - startedAt.getTime(),
+        ...(traceId ? { traceId } : {}), ...(sessionId ? { sessionId } : {}),
+        ...(failure ? { networkError: failure instanceof Error ? failure.name : "NetworkError" } : {}),
+      };
+      try { await this.onExchange(evidence); }
+      catch {
+        if (this.requireEvidence) throw new TboError("Certification evidence persistence failed; supplier outcome may be unknown. Reconcile before retrying.", "EVIDENCE_PERSISTENCE");
+      }
     }
-    if (!response.ok) throw new TboError(`TBO request failed (${response.status}).`, response.status);
-    if (parsed === undefined) throw new TboError("TBO returned a response that is not JSON.");
+    if (failure) throw failure;
+    if (!response?.ok) throw new TboError(`TBO request failed (${response?.status}).`, response?.status);
+    if (nonJson) throw new TboError("TBO returned a response that is not JSON.");
     return parsed as T;
-  }
-
-  async get<T>(url: string, auth: "static"): Promise<T> {
-    const response = await this.http(url, {
-      headers: { Accept: "application/json", Authorization: basic(this.config.staticUsername, this.config.staticPassword) },
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
-    if (!response.ok) throw new TboError(`TBO request failed (${response.status}).`, response.status);
-    void auth;
-    return (await response.json()) as T;
   }
 
   /** Shared-API token used by air methods and hotel booking-detail/change requests. */

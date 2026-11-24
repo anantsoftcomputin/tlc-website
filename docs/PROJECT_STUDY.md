@@ -1,5 +1,7 @@
 TLC Travel OS — project study
 
+> Historical snapshot from 17 September 2026. Many findings below have since been fixed. Current status is in [REMAINING_GAPS.md](./REMAINING_GAPS.md) and [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 Reviewed on 17 September 2026. This assessment combines repository inspection, fresh automated checks, and local HTTP smoke checks. It describes the checked-out code, not the configuration or operating status of the deployed service. No production records, external messages, payments, or deployments were created during this review.
 
 **What the project is**

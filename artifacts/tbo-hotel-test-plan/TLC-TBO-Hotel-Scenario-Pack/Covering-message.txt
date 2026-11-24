@@ -1,0 +1,12 @@
+Subject: TLC VACATIONS LLP — Hotel API Phase 1 scenarios and JSON fixture request
+
+Dear TBO Integration Team,
+
+Please find attached our hotel-only point-wise scenario document and matching JSON pack. The first eight scenarios cover the published hotel occupancy certification cases. The remaining scenarios request applicable hotel functionality, error and recovery fixtures.
+
+Please confirm our entitled hotel API family, staging URLs, per-method authorization, current hotel codes, bookable dates and required guest fields. Please return supported/conditional/unsupported status, accepted request and response JSON, reproducible fixture instructions, owner and target delivery date for each applicable case.
+
+All cases are Not run. The JSON includes illustrative request templates; these are not executed certification logs. Please prioritize the eight occupancy cases and clarify any schema differences before execution.
+
+Regards,
+TLC VACATIONS LLP

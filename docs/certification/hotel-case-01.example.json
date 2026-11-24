@@ -1,0 +1,31 @@
+{
+  "caseId": "case-01",
+  "countryCode": "IN",
+  "cityName": "New Delhi / Delhi",
+  "approvedBy": "user-authorized-certification",
+  "search": {
+    "destination": "Delhi",
+    "checkIn": "2026-12-28",
+    "checkOut": "2026-12-30",
+    "guestNationality": "IN",
+    "rooms": [
+      {
+        "adults": 1,
+        "childrenAges": []
+      }
+    ]
+  },
+  "guests": [
+    [
+      {
+        "title": "Mr",
+        "firstName": "Arun",
+        "lastName": "Testguest",
+        "type": "adult",
+        "lead": true,
+        "email": "test@example.com",
+        "phone": "9999999999"
+      }
+    ]
+  ]
+}

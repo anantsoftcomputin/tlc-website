@@ -33,6 +33,7 @@ export type HotelOffer = {
   expiresAt: string;
   /** Supplier-specific details shown to staff (inclusions, policies, room count). */
   details?: {
+    validationInfo?: import("../tbo/hotel-validation.js").TboValidationInfo;
     inclusions?: string[];
     rateConditions?: string[];
     rooms?: number;
