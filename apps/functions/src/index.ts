@@ -135,7 +135,9 @@ export {
   recoverCommunicationJobs,
 } from "./conversation-workflow.js";
 
-setGlobalOptions({ region: "asia-south1", maxInstances: 20 });
+// Cloud Run reserves CPU quota for every function's maximum instances. With about ninety
+// functions, a cap of 20 each exhausted the regional quota and blocked deploys.
+setGlobalOptions({ region: "asia-south1", maxInstances: 5 });
 
 const app = getApps()[0] ?? initializeApp();
 const database = getFirestore(app);
