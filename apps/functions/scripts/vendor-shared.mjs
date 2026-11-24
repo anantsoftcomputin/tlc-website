@@ -83,7 +83,10 @@ await writeFile(
       exports: {
         ".": { types: "./dist/index.d.ts", default: "./dist/index.js" },
       },
-      dependencies: { "@tlc/shared": "file:../shared" },
+      dependencies: {
+        "@tlc/shared": "file:../shared",
+        "@anthropic-ai/sdk": "^1.13.0",
+      },
     },
     null,
     2,

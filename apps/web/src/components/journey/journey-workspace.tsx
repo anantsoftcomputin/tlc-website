@@ -29,8 +29,8 @@ import {
 } from "@tlc/shared";
 import { publicRequestHeaders } from "@/lib/firebase/client";
 import {
-  buildJourney,
-  preserveJourneyNotes,
+  isOnRequest,
+  onRequestDestinations,
   type PlanningDestination,
 } from "@/lib/travel/journey-planner";
 import { VacationDesigner } from "@/components/vacation-designer";
@@ -45,7 +45,7 @@ const greeting: Message = {
     "Hi, I’m Tara. Tell me where you’d love to go, who’s coming and the kind of holiday you have in mind. We’ll build it together, one good idea at a time.",
 };
 export function JourneyWorkspace({
-  destinations,
+  destinations: published,
   initialPrompt = "",
   initialPlanId = "",
 }: {
@@ -68,8 +68,19 @@ export function JourneyWorkspace({
   const [saved, setSaved] = useState<JourneyRecord[]>([]);
   const [shareUrl, setShareUrl] = useState("");
   const [question, setQuestion] = useState("");
+  const [suggestions, setSuggestions] = useState<
+    { slug: string; name: string; reason: string }[]
+  >([]);
+  const [journeys, setJourneys] = useState<
+    { slug: string; title: string; days: number }[]
+  >([]);
   const [inventoryStop, setInventoryStop] = useState("");
   const thread = useRef<HTMLDivElement>(null);
+  // A trip may include a place outside TLC's published collection.
+  const destinations = [
+    ...published,
+    ...onRequestDestinations(plan?.brief, published),
+  ];
   const names = Object.fromEntries(
     destinations.map((destination) => [destination.slug, destination.name]),
   );
@@ -143,6 +154,8 @@ export function JourneyWorkspace({
           { role: "assistant", content: result.message },
         ]);
       setQuestion(result.question || "");
+      setSuggestions(result.suggestions || []);
+      setJourneys(result.journeys || []);
       try {
         sessionStorage.removeItem("tlc-planner-prompt");
       } catch {}
@@ -228,16 +241,17 @@ export function JourneyWorkspace({
       behavior: "smooth",
     });
   }, [messages, busy]);
-  async function save(next = plan) {
+  async function save(next = plan, replanBrief?: JourneyBrief) {
     if (!next || !record) return;
     setBusy(true);
     setError("");
     try {
       const result = await action({
-        action: "save",
         planId: record.id,
         revision: record.revision,
-        plan: next,
+        ...(replanBrief
+          ? { action: "replan", brief: replanBrief }
+          : { action: "save", plan: next }),
       });
       accept(result.record);
     } catch (reason) {
@@ -392,6 +406,33 @@ export function JourneyWorkspace({
               <div className="journey-thinking" role="status">
                 <LoaderCircle className="spin" size={16} /> Shaping your trip…
               </div>
+            )}
+            {suggestions.length > 0 && !busy && !plan && (
+              <div className="journey-chat-options">
+                {suggestions.map((item) => (
+                  <button
+                    key={item.slug}
+                    disabled={busy}
+                    onClick={() => void send(`Plan a trip to ${item.name}`)}
+                  >
+                    <b>{item.name}</b>
+                    {item.reason && <small>{item.reason}</small>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {journeys.length > 0 && !busy && plan && (
+              <p className="journey-next-question">
+                Ready-made TLC journeys to compare:{" "}
+                {journeys.map((item, index) => (
+                  <span key={item.slug}>
+                    {index > 0 && ", "}
+                    <Link href={`/trips/${item.slug}`} target="_blank">
+                      {item.title} ({item.days} days)
+                    </Link>
+                  </span>
+                ))}
+              </p>
             )}
             {question && !busy && (
               <p className="journey-next-question">{question}</p>
@@ -785,6 +826,12 @@ export function JourneyWorkspace({
                   )}
                   {dirty ? (
                     <p>Save your itinerary before searching.</p>
+                  ) : isOnRequest(stop || "") ? (
+                    <p className="journey-notice">
+                      {names[stop!]} is outside TLC’s ready-to-search hotel
+                      collection. Request your quote and your consultant will
+                      source stays and transport for these dates.
+                    </p>
                   ) : (
                     <VacationDesigner
                       key={`${record?.id}-${record?.revision}-${stop}`}
@@ -856,7 +903,9 @@ export function JourneyWorkspace({
                           planId: record!.id,
                           revision: record!.revision,
                         },
-                        destinationIds: plan.brief.destinationSlugs,
+                        destinationIds: plan.brief.destinationSlugs.map(
+                          (slug) => (isOnRequest(slug) ? names[slug] : slug),
+                        ),
                         requirements: plan.brief.notes,
                       }}
                     />
@@ -880,12 +929,14 @@ export function JourneyWorkspace({
                 brief.pace !== plan.brief.pace ||
                 brief.destinationSlugs.join() !==
                   plan.brief.destinationSlugs.join();
-              const next = rebuild
-                ? preserveJourneyNotes(plan, buildJourney(brief, destinations))
-                : { ...plan, brief };
-              setPlan(next);
               setDetails(false);
-              void save(next);
+              // The server rebuilds the days so places and TLC journeys are used again.
+              if (rebuild) void save(plan, brief);
+              else {
+                const next = { ...plan, brief };
+                setPlan(next);
+                void save(next);
+              }
             } catch (reason) {
               setDetails(false);
               setError(

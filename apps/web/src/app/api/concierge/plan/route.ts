@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { journeyPlanSchema } from "@tlc/shared";
+import { journeyBriefSchema, journeyPlanSchema } from "@tlc/shared";
 import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import {
   checkPublicRequest,
@@ -9,9 +9,15 @@ import {
 } from "@/lib/security/public-request";
 import { conversationSession } from "@/lib/security/conversation-session";
 import { getPublicContent } from "@/lib/public-content";
-import { planJourney } from "@/lib/ai/journey-engine";
+import { planJourney, rebuildJourney } from "@/lib/ai/journey-engine";
 import { JourneyInputError } from "@/lib/travel/journey-dates";
+import { onRequestDestinations } from "@/lib/travel/journey-planner";
 import { planningDestinations } from "@/lib/travel/planning-destinations";
+import {
+  loadDestinationPlaces,
+  placesConfigured,
+  resolveDestination,
+} from "@/lib/travel/destination-places";
 import { assertJourneyGrounded } from "@/lib/travel/journey-planner";
 import {
   JourneyAccessError,
@@ -28,9 +34,11 @@ const schema = z.object({
   planId: z.string().uuid().optional(),
   revision: z.number().int().min(0).default(0),
   requestId: z.string().uuid(),
-  action: z.enum(["generate", "save", "share", "unshare"]),
+  action: z.enum(["generate", "save", "replan", "share", "unshare"]),
   message: z.string().trim().min(1).max(2000).optional(),
   plan: journeyPlanSchema.optional(),
+  /** Replan only: the edited trip details. The saved days no longer fit it, so no plan is sent. */
+  brief: journeyBriefSchema.optional(),
 });
 export async function GET(request: Request) {
   try {
@@ -102,21 +110,53 @@ export async function POST(request: Request) {
     let message = "Your changes are saved.";
     let question = "";
     let usedModel = false;
+    let suggestions: unknown[] = [];
+    let journeys: unknown[] = [];
+    let catalogue = planningDestinations(content.destinations, content.trips);
+    // Stops outside the published collection are vouched for by the saved revision only.
+    catalogue = [
+      ...catalogue,
+      ...onRequestDestinations(current?.plan.brief, catalogue),
+    ];
     if (input.action === "generate") {
       if (!input.message)
         throw new Error("Tell Tara what you would like to plan.");
       const result = await planJourney(
         input.message,
-        planningDestinations(content.destinations),
+        catalogue,
         current?.plan,
+        placesConfigured()
+          ? {
+              loadPlaces: loadDestinationPlaces,
+              resolvePlace: resolveDestination,
+            }
+          : {},
       );
+      if (result.destinations) catalogue = result.destinations;
       plan = result.plan;
       message = result.message;
       question = result.question;
       usedModel = result.usedModel;
+      suggestions = result.suggestions;
+      journeys = result.journeys;
     }
-    if (!plan) return NextResponse.json({ message, question, usedModel });
-    assertJourneyGrounded(plan, planningDestinations(content.destinations));
+    if (input.action === "replan") {
+      // Trip details changed the route, length or pace: rebuild the days on the server.
+      if (!input.brief || !current) throw new Error("Save the trip first.");
+      const rebuilt = await rebuildJourney(
+        input.brief,
+        catalogue,
+        current.plan,
+        placesConfigured() ? { loadPlaces: loadDestinationPlaces } : {},
+      );
+      plan = rebuilt.plan;
+      catalogue = rebuilt.destinations;
+      message = "Your itinerary has been reshaped to match.";
+    }
+    if (!plan)
+      return NextResponse.json({ message, question, usedModel, suggestions });
+    // Places are only trusted as the server wrote them: in this reply or the saved revision.
+    assertJourneyGrounded(plan, catalogue, current?.plan);
     const messages = [
       ...(current?.messages || []),
       ...(input.message
@@ -133,7 +173,7 @@ export async function POST(request: Request) {
       messages,
     });
     return NextResponse.json(
-      { record, message, question, usedModel },
+      { record, message, question, usedModel, suggestions, journeys },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

@@ -12,6 +12,7 @@
     }
   },
   "dependencies": {
-    "@tlc/shared": "file:../shared"
+    "@tlc/shared": "file:../shared",
+    "@anthropic-ai/sdk": "^1.13.0"
   }
 }

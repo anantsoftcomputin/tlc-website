@@ -42,6 +42,9 @@
     "FIRESTORE_EMULATOR_HOST",
     "GCLOUD_PROJECT",
     "OPENAI_*",
+    "ANTHROPIC_*",
+    "GOOGLE_PLACES_*",
+    "GEMINI_*",
     "APP_CHECK_ENFORCEMENT",
     "CONTEXT"
   ]

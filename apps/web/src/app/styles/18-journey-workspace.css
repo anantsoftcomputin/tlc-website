@@ -147,6 +147,35 @@
   padding-left: 12px;
   border-left: 2px solid #e1b6b7;
 }
+.journey-places-credit {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #77605e;
+}
+.journey-chat-options {
+  display: grid;
+  gap: 8px;
+}
+.journey-chat-options button {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid #e1b6b7;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+.journey-chat-options button:hover:not(:disabled) {
+  background: #fbf1f0;
+}
+.journey-chat-options small {
+  font-size: 12px;
+  color: #77605e;
+}
+.journey-next-question a {
+  text-decoration: underline;
+}
 .journey-chat-compose {
   padding: 16px;
   border-top: 1px solid var(--journey-line);

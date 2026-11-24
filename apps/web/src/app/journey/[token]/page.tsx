@@ -1,3 +1,4 @@
+import { onRequestName } from "@/lib/travel/journey-planner";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -31,7 +32,7 @@ export default async function SharedJourneyPage({
         <p>{plan.summary}</p>
         <p>
           {plan.nights} nights · {plan.startDate || "Flexible dates"} ·{" "}
-          {plan.destinationSlugs.map((slug) => names[slug] || slug).join(" → ")}
+          {plan.destinationSlugs.map((slug) => names[slug] || onRequestName(slug)).join(" → ")}
         </p>
         <small>
           This is a shared planning snapshot. Availability, transport,

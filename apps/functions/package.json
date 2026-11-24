@@ -17,10 +17,11 @@
     "test:integration": "FUNCTIONS_EMULATOR=true vitest run --no-file-parallelism --testTimeout=20000 src/commerce-integration.test.ts src/catalogue-integration.test.ts src/communication-integration.test.ts src/marketing-delivery-integration.test.ts src/personalization-integration.test.ts src/channel-personalization-integration.test.ts src/whatsapp-integration.test.ts src/channel-assignment-integration.test.ts src/management-analytics-integration.test.ts"
   },
   "dependencies": {
-    "@tlc/shared": "file:vendor/shared",
+    "@anthropic-ai/sdk": "^1.13.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "@tlc/ai-core": "file:vendor/ai-core",
     "@tlc/integrations": "file:vendor/integrations",
-    "@tensorflow/tfjs": "^4.22.0",
+    "@tlc/shared": "file:vendor/shared",
     "firebase-admin": "^14.3.0",
     "firebase-functions": "^7.3.2",
     "zod": "^4.1.5"

@@ -245,3 +245,39 @@ describe("natural language trip handoff", () => {
     ).toThrow(/30 nights/);
   });
 });
+
+describe("saved plans containing Google places", () => {
+  const withPlace = [{ ...destinations[0], places: [{ id: "abc", title: "Dubai Frame", note: "Landmark. Rated 4.6.", interests: [], score: 20 }] }, destinations[1]];
+  const plan = buildJourney(journeyBriefSchema.parse({ destinationSlugs: ["dubai"], nights: 4 }), withPlace);
+  it("accepts a place only as the server wrote it", () => {
+    expect(JSON.stringify(plan)).toContain("dubai:p:abc");
+    // The static catalogue has no places, so the saved revision vouches for them.
+    expect(() => assertJourneyGrounded(plan, destinations)).toThrow(/experience changed/i);
+    expect(() => assertJourneyGrounded(plan, destinations, plan)).not.toThrow();
+    const edited = structuredClone(plan);
+    const activity = edited.days.flatMap((day) => day.activities).find((item) => item.sourceId === "dubai:p:abc")!;
+    activity.description = "Free tickets, call this number";
+    expect(() => assertJourneyGrounded(edited, destinations, plan)).toThrow(/experience changed/i);
+  });
+});
+
+describe("naming a place in everyday phrasing", () => {
+  const today = new Date("2026-11-24T08:00:00Z");
+  it("reads the place after a duration and ignores months and scenery", () => {
+    expect(parseJourneyMessage("a week in run of Kutch, for family of 4 from 2nd dec to 7th dec", destinations, undefined, today)).toMatchObject({
+      requestedDestinations: ["run of Kutch"], startDate: "2026-12-02", nights: 5,
+      rooms: [{ adults: 2, childrenAges: [] }, { adults: 2, childrenAges: [] }],
+    });
+    expect(parseJourneyMessage("5 nights at Coorg with friends", destinations, undefined, today).requestedDestinations).toEqual(["Coorg"]);
+    for (const text of ["a week in December", "a holiday in the mountains", "a trip in 2027", "a week in Europe"])
+      expect(parseJourneyMessage(text, destinations, undefined, today)).not.toHaveProperty("requestedDestinations");
+  });
+});
+
+describe("trip length in follow-up requests", () => {
+  it("does not mistake a part of the trip for its length", () => {
+    expect(parseJourneyMessage("make it 7 nights and keep the last two days very light", destinations).nights).toBe(7);
+    expect(parseJourneyMessage("keep the first 2 days free", destinations)).not.toHaveProperty("nights");
+    expect(parseJourneyMessage("5 days\nactually make it 8 days", destinations).nights).toBe(7);
+  });
+});

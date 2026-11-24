@@ -55,9 +55,52 @@ const ooty: PlanningDestination = {
     },
   ],
 };
+type PublishedTrip = {
+  slug: string;
+  title: string;
+  destinationSlug: string;
+  nights: number;
+  styles?: string[];
+  itinerary?: { day: number; title: string; description: string }[];
+};
+const travelDay =
+  /\b(arriv\w*|depart\w*|journey home|fly(?:ing)? home|head(?:ing)? home|homeward|farewell|check[- ]?out|airport)\b/i;
+
+/** Sightseeing days of each published trip, without its arrival and departure days. */
+function withRoutes(
+  destination: PlanningDestination,
+  trips: PublishedTrip[],
+): PlanningDestination {
+  const routes = trips
+    .filter((trip) => trip.destinationSlug === destination.slug)
+    .slice(0, 6)
+    .map((trip) => {
+      const itinerary = [...(trip.itinerary || [])].sort((a, b) => a.day - b.day);
+      return {
+        slug: trip.slug,
+        title: trip.title,
+        nights: trip.nights,
+        styles: trip.styles || [],
+        days: itinerary
+          .filter(
+            (day, index) =>
+              index > 0 &&
+              index < itinerary.length - 1 &&
+              !travelDay.test(day.title),
+          )
+          .slice(0, 14)
+          .map((day) => ({ day: day.day, title: day.title, note: day.description })),
+      };
+    })
+    .filter((route) => route.days.length);
+  return routes.length ? { ...destination, routes } : destination;
+}
+
 export function planningDestinations(
   published: PlanningDestination[],
+  trips: PublishedTrip[] = [],
 ): PlanningDestination[] {
+  published = published.map((destination) => withRoutes(destination, trips));
   return published.some(
     (destination) =>
       destination.slug === ooty.slug ||

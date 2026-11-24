@@ -109,11 +109,14 @@ export function ItineraryDays({
                   )}
                   {activity.kind === "experience" && (
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${activity.title} ${names[day.destinationSlug] || day.destinationSlug}`)}`}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${activity.title} ${names[day.destinationSlug] || day.destinationSlug}`)}${/^[a-z0-9-]+:p:/.test(activity.sourceId || "") ? `&query_place_id=${encodeURIComponent(activity.sourceId!.replace(/^[a-z0-9-]+:p:/, ""))}` : ""}`}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Explore on map <ExternalLink size={12} />
+                      {/^[a-z0-9-]+:p:/.test(activity.sourceId || "")
+                        ? "View on Google Maps"
+                        : "Explore on map"}{" "}
+                      <ExternalLink size={12} />
                     </a>
                   )}
                   {activity.kind === "note" && (
@@ -194,6 +197,16 @@ export function ItineraryDays({
           </div>
         </section>
       ))}
+      {days.some((day) =>
+        day.activities.some((activity) =>
+          /^[a-z0-9-]+:p:/.test(activity.sourceId || ""),
+        ),
+      ) && (
+        <p className="journey-places-credit">
+          Place names, ratings and map links from Google Maps. Opening times
+          and tickets are confirmed by TLC with your quote.
+        </p>
+      )}
     </div>
   );
 }

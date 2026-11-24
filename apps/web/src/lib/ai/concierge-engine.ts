@@ -219,14 +219,16 @@ async function generateReply(
     telemetry.provider = result.provider;
     telemetry.inputTokens = result.inputTokens;
     telemetry.outputTokens = result.outputTokens;
-    const inputRate =
+    const prefix =
       result.provider === "openai"
-        ? process.env.OPENAI_INPUT_INR_PER_MILLION
-        : process.env.TLC_AI_INPUT_INR_PER_MILLION;
-    const outputRate =
-      result.provider === "openai"
-        ? process.env.OPENAI_OUTPUT_INR_PER_MILLION
-        : process.env.TLC_AI_OUTPUT_INR_PER_MILLION;
+        ? "OPENAI"
+        : result.provider === "anthropic"
+          ? "ANTHROPIC"
+          : result.provider === "gemini"
+            ? "GEMINI"
+            : "TLC_AI";
+    const inputRate = process.env[`${prefix}_INPUT_INR_PER_MILLION`];
+    const outputRate = process.env[`${prefix}_OUTPUT_INR_PER_MILLION`];
     telemetry.cost =
       inputRate &&
       outputRate &&

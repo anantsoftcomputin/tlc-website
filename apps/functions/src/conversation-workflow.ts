@@ -32,9 +32,13 @@ const phoneNumberId = whatsappEnabled ? defineSecret("WHATSAPP_PHONE_NUMBER_ID")
 const emailKey = emailEnabled ? defineSecret("RESEND_API_KEY") : null;
 const emailSecret = emailEnabled ? defineSecret("RESEND_WEBHOOK_SECRET") : null;
 const modelSecrets =
-  process.env.TLC_AI_AUTH_REQUIRED === "true"
-    ? [defineSecret("TLC_AI_API_KEY")]
-    : [];
+  process.env.TLC_AI_PROVIDER === "anthropic"
+    ? [defineSecret("ANTHROPIC_API_KEY")]
+    : process.env.TLC_AI_PROVIDER === "gemini"
+      ? [defineSecret("GEMINI_API_KEY")]
+    : process.env.TLC_AI_AUTH_REQUIRED === "true"
+      ? [defineSecret("TLC_AI_API_KEY")]
+      : [];
 const supplierSecrets =
   process.env.WHATSAPP_LIVE_SEARCH_ENABLED === "true"
     ? [

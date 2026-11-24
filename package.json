@@ -30,6 +30,8 @@
     "prebuild": "pnpm prepare:ci",
     "email:preview": "pnpm --filter @tlc/integrations build && node scripts/export-email-designs.mjs",
     "appcheck:configure": "node --env-file-if-exists=.env scripts/configure-app-check.mjs",
+    "places:configure": "node --env-file-if-exists=.env scripts/configure-places.mjs",
+    "gemini:configure": "node --env-file-if-exists=.env scripts/configure-gemini.mjs",
     "tbo:hotel-certify": "node --env-file-if-exists=.env scripts/tbo-hotel-certification.mjs"
   },
   "devDependencies": {
