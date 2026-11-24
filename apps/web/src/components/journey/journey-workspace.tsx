@@ -39,6 +39,16 @@ import { ItineraryDays } from "./itinerary-days";
 import { JourneyDetails } from "./journey-details";
 
 type Message = { role: "user" | "assistant"; content: string };
+/** "2026-12-02" reads as "2 Dec 2026"; a range in one month reads as "2 – 7 Dec 2026". */
+function friendlyDates(start: string, end: string) {
+  const day = (iso: string, options: Intl.DateTimeFormatOptions) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", {
+      timeZone: "UTC",
+      ...options,
+    });
+  const sameMonth = start.slice(0, 7) === end.slice(0, 7);
+  return `${day(start, sameMonth ? { day: "numeric" } : { day: "numeric", month: "short", ...(start.slice(0, 4) === end.slice(0, 4) ? {} : { year: "numeric" }) })} – ${day(end, { day: "numeric", month: "short", year: "numeric" })}`;
+}
 const greeting: Message = {
   role: "assistant",
   content:
@@ -76,6 +86,14 @@ export function JourneyWorkspace({
   >([]);
   const [inventoryStop, setInventoryStop] = useState("");
   const thread = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
+  // The message box grows with the text and shrinks again once it is sent.
+  useEffect(() => {
+    const field = composer.current;
+    if (!field) return;
+    field.style.height = "auto";
+    field.style.height = `${Math.min(field.scrollHeight, 160)}px`;
+  }, [text, mobilePane]);
   // A trip may include a place outside TLC's published collection.
   const destinations = [
     ...published,
@@ -121,6 +139,8 @@ export function JourneyWorkspace({
   }
   async function send(value: string, sid = sessionId, current = record) {
     if (!value.trim() || busy || !sid) return;
+    // On a phone the conversation and the itinerary are separate views.
+    setMobilePane("chat");
     setBusy(true);
     setError("");
     setText("");
@@ -437,6 +457,18 @@ export function JourneyWorkspace({
             {question && !busy && (
               <p className="journey-next-question">{question}</p>
             )}
+            {plan && !busy && (
+              <button
+                className="journey-plan-ready"
+                onClick={() => setMobilePane("plan")}
+              >
+                <span>
+                  <small>Your itinerary</small>
+                  <b>{plan.title}</b>
+                </span>
+                <ArrowRight size={18} />
+              </button>
+            )}
           </div>
           <div className="journey-chat-compose">
             {plan && (
@@ -466,12 +498,14 @@ export function JourneyWorkspace({
                 aria-label="Message Tara"
                 placeholder={
                   plan
-                    ? "Make it more relaxed, add another destination…"
+                    ? "Ask Tara to change anything…"
                     : "Tell me about your dream trip…"
                 }
                 maxLength={2000}
+                rows={1}
                 value={text}
                 onChange={(event) => setText(event.target.value)}
+                ref={composer}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -498,6 +532,15 @@ export function JourneyWorkspace({
           </div>
         </aside>
         <main className="journey-canvas">
+          {!booting && (
+            <button
+              className="journey-ask-tara"
+              onClick={() => setMobilePane("chat")}
+            >
+              <Sparkles size={17} />{" "}
+              {plan ? "Ask Tara to change it" : "Tell Tara your idea"}
+            </button>
+          )}
           {error && (
             <div className="journey-error" role="alert">
               <p>{error}</p>
@@ -586,7 +629,10 @@ export function JourneyWorkspace({
                   <span>
                     <CalendarDays size={16} />
                     {plan.brief.startDate
-                      ? `${plan.brief.startDate} – ${journeyDate(plan.brief.startDate, plan.brief.nights)}`
+                      ? friendlyDates(
+                          plan.brief.startDate,
+                          journeyDate(plan.brief.startDate, plan.brief.nights)!,
+                        )
                       : `${plan.brief.nights} nights · flexible dates`}
                   </span>
                   <span>

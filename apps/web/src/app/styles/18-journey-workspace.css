@@ -1435,3 +1435,704 @@
 .journey-quote .form-error a {
   color: inherit;
 }
+
+/* Shown only in the phone layout below. */
+.journey-plan-ready,
+.journey-ask-tara {
+  display: none;
+}
+
+/*
+ * Phone layout. The conversation and the itinerary are two full-screen views with a
+ * segmented switch; everything is sized for thumbs and for reading at arm's length.
+ */
+@media (max-width: 760px) {
+  .journey-workspace {
+    background: #fbf8f4;
+  }
+  .journey-workspace input,
+  .journey-workspace textarea,
+  .journey-workspace select {
+    /* 16px stops iOS zooming the page when a field is focused. */
+    font-size: 16px !important;
+  }
+  .journey-topbar {
+    height: 56px;
+    padding: 0 14px;
+    background: rgb(255 255 255 / 92%);
+    backdrop-filter: blur(14px);
+  }
+  .journey-topbar img {
+    width: 84px;
+  }
+  .journey-topbar nav {
+    gap: 8px;
+  }
+  .journey-topbar nav button {
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    gap: 6px;
+  }
+
+  /* Segmented switch between the two views. */
+  .journey-mobile-switch {
+    height: 56px;
+    padding: 8px 14px;
+    gap: 6px;
+    border-bottom: 0;
+    background: rgb(255 255 255 / 92%);
+    box-shadow: 0 1px 0 var(--journey-line);
+  }
+  .journey-mobile-switch button {
+    flex: 1;
+    justify-content: center;
+    height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7b6a64;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      box-shadow 0.2s;
+  }
+  .journey-mobile-switch .active {
+    background: #fdeeee;
+    color: #b3222c;
+    box-shadow: 0 0 0 1px #f3d5d5;
+  }
+  .journey-layout {
+    height: calc(100dvh - 112px);
+  }
+
+  /* Conversation */
+  .journey-chat {
+    border-right: 0;
+    background: #fbf8f4;
+  }
+  .journey-chat > header {
+    display: none;
+  }
+  .journey-chat-thread {
+    padding: 18px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .journey-chat-message {
+    margin: 0;
+    max-width: 92%;
+    padding: 12px 15px;
+    border-radius: 6px 20px 20px 20px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(60 30 20 / 6%);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .journey-chat-message small {
+    font-size: 10px;
+  }
+  .journey-chat-message p {
+    margin-top: 4px;
+  }
+  .journey-chat-message.user {
+    align-self: flex-end;
+    max-width: 86%;
+    margin-left: 0;
+    padding: 12px 15px;
+    border-radius: 20px 20px 6px 20px;
+    background: linear-gradient(135deg, #c9242e, #8f1820);
+    color: #fff;
+    box-shadow: 0 4px 14px rgb(160 30 40 / 22%);
+  }
+  .journey-thinking {
+    align-self: flex-start;
+    padding: 11px 15px;
+    border-radius: 6px 20px 20px 20px;
+    background: #fff;
+    font-size: 14px;
+    box-shadow: 0 1px 2px rgb(60 30 20 / 6%);
+  }
+  .journey-next-question {
+    margin: 0;
+    padding: 12px 15px;
+    border: 0;
+    border-radius: 16px;
+    background: #fdeeee;
+    color: #6d2a2f;
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .journey-next-question a {
+    font-weight: 600;
+  }
+  .journey-chat-options {
+    gap: 10px;
+  }
+  .journey-chat-options button {
+    min-height: 56px;
+    padding: 12px 15px;
+    border: 1px solid #efd9d6;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgb(60 30 20 / 6%);
+  }
+  .journey-chat-options b {
+    font-size: 16px;
+  }
+  .journey-chat-options small {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .journey-plan-ready {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 64px;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #4a1619, #2a0b0d);
+    color: #fff;
+    text-align: left;
+    box-shadow: 0 8px 22px rgb(50 12 16 / 28%);
+  }
+  .journey-plan-ready span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .journey-plan-ready small {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f1c4c4;
+  }
+  .journey-plan-ready b {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Message box */
+  .journey-chat-compose {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 0;
+    background: #fff;
+    box-shadow: 0 -6px 20px rgb(60 30 20 / 7%);
+  }
+  .journey-chat-suggestions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    margin: 0 -12px 10px;
+    padding: 0 12px;
+    scrollbar-width: none;
+  }
+  .journey-chat-suggestions::-webkit-scrollbar {
+    display: none;
+  }
+  .journey-chat-suggestions button {
+    flex: none;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .journey-chat-compose textarea {
+    min-height: 48px;
+    max-height: 160px;
+    resize: none;
+    padding: 12px 54px 12px 16px;
+    border-radius: 24px;
+    border-color: #e6d9d3;
+    background: #fbf8f4;
+    line-height: 1.45;
+  }
+  .journey-chat-compose textarea:focus {
+    outline: 0;
+    border-color: #d58a8f;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgb(215 43 52 / 10%);
+  }
+  .journey-chat-compose form button {
+    right: 5px;
+    bottom: 5px;
+    width: 40px;
+    height: 40px;
+  }
+  .journey-chat-compose > small {
+    display: inline;
+    font-size: 11px;
+    margin: 0;
+  }
+  .journey-chat-compose > small::after {
+    content: " · ";
+  }
+  .journey-chat-compose > a {
+    display: inline-flex;
+    font-size: 11px;
+  }
+
+  /* Before a trip exists */
+  .journey-empty {
+    padding: 26px 16px calc(96px + env(safe-area-inset-bottom));
+  }
+  .journey-empty h1 {
+    font-size: 34px;
+    line-height: 1.08;
+  }
+  .journey-empty > p {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .journey-inspiration {
+    display: flex;
+    gap: 12px;
+    margin-inline: -16px;
+    padding: 4px 16px 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .journey-inspiration::-webkit-scrollbar {
+    display: none;
+  }
+  .journey-inspiration button {
+    flex: none;
+    width: 68vw;
+    max-width: 280px;
+    aspect-ratio: 4 / 5;
+    height: auto;
+    border-radius: 22px;
+    scroll-snap-align: start;
+  }
+  .journey-inspiration b {
+    font-size: 26px;
+  }
+  .journey-fineprint {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Itinerary */
+  .journey-canvas {
+    position: relative;
+    scroll-padding-top: 64px;
+  }
+  .journey-cover {
+    height: 230px;
+    margin: 10px 12px 0;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  .journey-cover > div {
+    padding: 20px;
+    background: linear-gradient(180deg, transparent 20%, rgb(30 8 10 / 78%));
+  }
+  .journey-cover h1 {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+  .journey-cover p {
+    font-size: 14px;
+  }
+  .journey-summary {
+    padding: 14px 12px 12px;
+    background: transparent;
+  }
+  .journey-summary-facts {
+    gap: 8px;
+  }
+  .journey-summary-facts > span {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 0 0 1px #efe4df;
+    font-size: 13px;
+    color: #5c4a45;
+  }
+  .journey-actions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    margin: 12px -12px 0;
+    padding: 2px 12px;
+    scrollbar-width: none;
+  }
+  .journey-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .journey-actions button {
+    flex: none;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    gap: 8px;
+  }
+  .journey-actions > span {
+    flex: none;
+    font-size: 12px;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .journey-share {
+    margin: 0 12px;
+    border-radius: 16px;
+  }
+  .journey-tabs {
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 0;
+    background: rgb(251 248 244 / 94%);
+    backdrop-filter: blur(12px);
+    scrollbar-width: none;
+  }
+  .journey-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .journey-tabs button {
+    flex: none;
+    height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 0 0 1px #ebe0db;
+    font-size: 14px;
+    color: #6f5f5a;
+  }
+  .journey-tabs button[aria-selected="true"] {
+    background: #4a1619;
+    box-shadow: none;
+    color: #fff;
+    font-weight: 600;
+  }
+  .journey-save-bar {
+    position: sticky;
+    top: 60px;
+    margin: 0 12px;
+    padding: 10px 10px 10px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    box-shadow: 0 6px 18px rgb(120 80 20 / 16%);
+  }
+  .journey-save-bar button {
+    min-height: 40px;
+    font-size: 13px;
+  }
+  .journey-save-bar .journey-primary {
+    font-size: 13px !important;
+    padding: 10px 14px !important;
+    border-radius: 999px;
+  }
+  .journey-tab-panel {
+    padding: 14px 12px calc(96px + env(safe-area-inset-bottom));
+  }
+  .journey-plan-intro {
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+
+  /* One card per day */
+  .journey-day {
+    display: block;
+    margin-bottom: 14px;
+    padding: 16px 14px 8px;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow:
+      0 1px 2px rgb(60 30 20 / 5%),
+      0 8px 24px rgb(60 30 20 / 5%);
+  }
+  .journey-day-marker {
+    display: none;
+  }
+  .journey-day-content {
+    padding-bottom: 6px;
+  }
+  .journey-day-content > header {
+    margin-bottom: 10px;
+  }
+  .journey-day-content > header small {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #fdeeee;
+    color: #a3262f;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .journey-day-content > header small span {
+    color: #a3262f;
+    font-weight: 500;
+  }
+  .journey-day-content > header input,
+  .journey-day-content > header h3 {
+    margin-top: 8px;
+    font-size: 23px !important;
+    line-height: 1.2;
+  }
+  .journey-activity {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    margin: 8px 0;
+    padding: 14px;
+    border-radius: 16px;
+    background: #fbf8f4;
+    border-color: #f0e7e2;
+  }
+  .journey-activity > div:not(.journey-activity-controls) {
+    flex: 1 1 0;
+  }
+  .journey-activity h4 {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .journey-activity p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .journey-activity a {
+    min-height: 36px;
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .journey-activity small {
+    font-size: 12px;
+  }
+  .journey-activity-controls {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 6px;
+    width: 100%;
+    margin-top: -4px;
+  }
+  .journey-activity-controls button {
+    /* 40px targets; the visible chip is lighter than the tap area. */
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: transparent;
+    color: #a08a82;
+  }
+  .journey-activity-controls button:active {
+    background: #f1e7e2;
+  }
+  .journey-add-note {
+    min-height: 44px;
+    font-size: 14px !important;
+    font-weight: 600;
+  }
+  .journey-places-credit {
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  .journey-route article {
+    border-radius: 18px;
+  }
+  .journey-route article h3 {
+    font-size: 19px;
+  }
+
+  /* Back to the conversation from anywhere in the itinerary. */
+  .journey-ask-tara {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    right: 14px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 20;
+    height: 52px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #d72b34, #a01a23);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 10px 26px rgb(170 30 40 / 38%);
+  }
+
+  /* Dialogs rise from the bottom like a native sheet. */
+  .journey-modal {
+    place-items: end stretch;
+    padding: 0;
+  }
+  .journey-modal > form,
+  .journey-modal > section {
+    max-width: none;
+    max-height: 92dvh;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 26px 26px 0 0;
+    animation: journey-sheet 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .journey-modal header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: 0 -16px 14px;
+    padding: 18px 16px 12px;
+    background: #fffcf8;
+    border-bottom: 1px solid #f0e6e0;
+  }
+  .journey-modal header::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    border-radius: 4px;
+    background: #e3d5ce;
+    transform: translateX(-50%);
+  }
+  .journey-modal h2 {
+    font-size: 24px;
+  }
+  .journey-modal header button {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #f6eeea;
+  }
+  .journey-modal label {
+    font-size: 14px;
+  }
+  .journey-modal small {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .journey-modal input:not([type="checkbox"]),
+  .journey-modal select,
+  .journey-modal textarea {
+    min-height: 48px;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .journey-modal fieldset {
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .journey-modal legend {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .journey-details-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 12px;
+  }
+  /* Destinations as tappable chips instead of small checkboxes. */
+  .journey-destination-picks {
+    gap: 8px;
+  }
+  .journey-destination-picks label {
+    position: relative;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 0 0 1px #e6d9d3;
+    font-size: 14px;
+    color: #4d3d38;
+  }
+  .journey-destination-picks label:has(input:checked) {
+    background: #4a1619;
+    box-shadow: none;
+    color: #fff;
+  }
+  .journey-destination-picks input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+  }
+  .journey-destination-picks label:has(input:focus-visible) {
+    outline: 3px solid #cb8990;
+    outline-offset: 2px;
+  }
+  .journey-stop-editor li {
+    grid-template-columns: minmax(0, 1fr) 76px 44px;
+  }
+  .journey-stop-editor strong {
+    font-size: 15px;
+  }
+  .journey-stop-order button {
+    min-height: 40px;
+  }
+  .journey-modal .journey-text-button {
+    font-size: 14px;
+    min-height: 40px;
+  }
+  .journey-modal .journey-primary {
+    width: 100%;
+    min-height: 52px;
+    border-radius: 999px;
+    font-size: 16px !important;
+  }
+
+  /* Home page prompt */
+  .planning-prompt form {
+    padding: 16px;
+    border-radius: 24px;
+  }
+  .planning-prompt form span {
+    font-size: 11px;
+    max-width: 150px;
+  }
+  .planning-prompt form button {
+    min-height: 48px;
+  }
+  .planning-starters {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    margin-inline: -16px;
+    padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .planning-starters::-webkit-scrollbar {
+    display: none;
+  }
+  .planning-starters button {
+    flex: none;
+    min-height: 40px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+@keyframes journey-sheet {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-modal > form,
+  .journey-modal > section {
+    animation: none;
+  }
+  .journey-chat-thread {
+    scroll-behavior: auto;
+  }
+}

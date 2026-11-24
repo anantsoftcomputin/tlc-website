@@ -42,7 +42,9 @@ export function ItineraryDays({
             <header>
               <small>
                 DAY {day.day}
-                {startDate ? ` · ${journeyDate(startDate, index)}` : ""}{" "}
+                {startDate
+                  ? ` · ${new Date(`${journeyDate(startDate, index)}T12:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" })}`
+                  : ""}{" "}
                 <span>
                   {" "}
                   · {names[day.destinationSlug] || day.destinationSlug}
